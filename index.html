@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <script src="https://cdn.tailwindcss.com"></script>
-
 <script>
 tailwind.config = {
   theme: {
@@ -32,19 +31,16 @@ tailwind.config = {
 
 <div class="flex h-full">
 
-<!-- CHAT -->
+<!-- MAIN CHAT -->
 <main class="flex flex-col flex-1 border-r border-border">
 
-<!-- HEADER -->
 <header class="bg-panel border-b border-border px-4 py-3">
   <div class="flex justify-between items-start">
 
     <div class="flex gap-4">
       <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-2"></i>
 
-      <img src="assets/logo.png"
-           class="w-10 h-10 object-contain mt-0.5"
-           alt="Abrox"/>
+      <img src="assets/logo.png" class="w-10 h-10 object-contain mt-0.5"/>
 
       <div>
         <div class="text-sm font-semibold">
@@ -57,7 +53,7 @@ tailwind.config = {
           <span class="mx-1">·</span>
           <span>Members: 4,872</span>
           <span class="mx-1">·</span>
-          <span>Online: <span id="onlineCount">143</span></span>
+          <span>Online: <span id="onlineCount">132</span></span>
         </div>
 
         <div class="text-xs text-muted mt-1">
@@ -66,10 +62,10 @@ tailwind.config = {
       </div>
     </div>
 
-    <div class="hidden md:flex gap-4 text-muted">
+    <!-- mobile toggle -->
+    <button class="md:hidden text-muted" onclick="openMembers()">
       <i data-lucide="users" class="w-5 h-5"></i>
-      <i data-lucide="menu" class="w-5 h-5"></i>
-    </div>
+    </button>
 
   </div>
 </header>
@@ -93,7 +89,6 @@ tailwind.config = {
 <!-- MESSAGES -->
 <section class="flex-1 px-4 overflow-y-auto space-y-4 pb-6">
 
-<!-- message -->
 <div class="flex gap-3 items-start">
   <img src="https://i.pravatar.cc/40?img=32" class="w-9 h-9 rounded-full"/>
   <div>
@@ -135,66 +130,93 @@ tailwind.config = {
 
 </main>
 
-<!-- SIDEBAR -->
-<aside class="hidden md:block w-80 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
-
-<div class="space-y-6">
-
-<div>
-  <div class="text-xs text-muted mb-2">ADMINS (2)</div>
-  <div class="flex items-center gap-3">
-    <img src="https://i.pravatar.cc/32?img=12" class="w-8 h-8 rounded-full"/>
-    <span class="text-sm">Sam_Admin</span>
-    <span class="ml-auto w-2 h-2 bg-accent rounded-full"></span>
-  </div>
-</div>
-
-<div>
-  <div class="text-xs text-muted mb-2">MODERATORS (4)</div>
-  <div class="flex items-center gap-3">
-    <img src="https://i.pravatar.cc/32?img=15" class="w-8 h-8 rounded-full"/>
-    <span class="text-sm">Sara_mod</span>
-  </div>
-</div>
-
-<div>
-  <div class="text-xs text-muted mb-2">VERIFIED MEMBERS</div>
-  <div class="flex items-center gap-3">
-    <img src="https://i.pravatar.cc/32?img=32" class="w-8 h-8 rounded-full"/>
-    <span class="text-sm">Mina_fx</span>
-  </div>
-</div>
-
-<div>
-  <div class="text-xs text-muted mb-2">PENDING</div>
-  <div class="text-sm text-muted">newbie_021</div>
-</div>
-
-</div>
+<!-- DESKTOP SIDEBAR -->
+<aside id="desktopSidebar"
+       class="hidden md:block w-80 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
 </aside>
 
 </div>
 
+<!-- MOBILE SIDEBAR -->
+<div id="mobileMembers" class="fixed inset-0 bg-black/60 hidden z-50">
+  <aside id="mobileSidebar"
+         class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5 overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <span class="text-sm font-semibold">Members</span>
+      <button onclick="closeMembers()">
+        <i data-lucide="x" class="w-5 h-5 text-muted"></i>
+      </button>
+    </div>
+  </aside>
+</div>
+
+<!-- SINGLE SOURCE OF TRUTH -->
+<template id="membersTemplate">
+  <div class="space-y-6">
+
+    <div>
+      <div class="text-xs text-muted mb-2">ADMINS</div>
+      <div class="flex items-center gap-3">
+        <img src="https://i.pravatar.cc/32?img=12" class="w-8 h-8 rounded-full"/>
+        <span class="text-sm">Sam_Admin</span>
+        <span class="ml-auto w-2 h-2 bg-accent rounded-full"></span>
+      </div>
+    </div>
+
+    <div>
+      <div class="text-xs text-muted mb-2">MODERATORS</div>
+      <div class="flex items-center gap-3">
+        <img src="https://i.pravatar.cc/32?img=15" class="w-8 h-8 rounded-full"/>
+        <span class="text-sm">Sara_mod</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="text-xs text-muted mb-2">VERIFIED MEMBERS</div>
+      <div class="flex items-center gap-3">
+        <img src="https://i.pravatar.cc/32?img=32" class="w-8 h-8 rounded-full"/>
+        <span class="text-sm">Mina_fx</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="text-xs text-muted mb-2">PENDING</div>
+      <div class="text-sm text-muted">newbie_021</div>
+    </div>
+
+  </div>
+</template>
+
 <script>
 lucide.createIcons();
 
-// REALISTIC ONLINE BEHAVIOR
+/* SYNC SIDEBARS */
+const tpl = document.getElementById('membersTemplate').content;
+document.getElementById('desktopSidebar').appendChild(tpl.cloneNode(true));
+document.getElementById('mobileSidebar').appendChild(tpl.cloneNode(true));
+
+/* MOBILE TOGGLE */
+function openMembers() {
+  document.getElementById('mobileMembers').classList.remove('hidden');
+}
+function closeMembers() {
+  document.getElementById('mobileMembers').classList.add('hidden');
+}
+
+/* REALISTIC ONLINE COUNT */
 const members = 4872;
 const el = document.getElementById('onlineCount');
-
 let online = Math.floor(members * (Math.random()*0.035 + 0.02));
 
 function fluctuate() {
-  const wave = Math.floor(members * (Math.random()*0.003));
-  if (Math.random() > 0.55) online += wave;
-  else online -= wave;
+  const drift = Math.floor(members * (Math.random()*0.003));
+  online += Math.random() > 0.55 ? drift : -drift;
 
   const min = Math.floor(members * 0.02);
   const max = Math.floor(members * 0.055);
-
   online = Math.max(min, Math.min(max, online));
-  el.textContent = online.toLocaleString();
 
+  el.textContent = online.toLocaleString();
   setTimeout(fluctuate, Math.random()*12000 + 9000);
 }
 
