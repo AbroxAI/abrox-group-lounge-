@@ -41,18 +41,28 @@ tailwind.config = {
     <div class="flex gap-4">
       <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
 
+      <img src="assets/logo.png" alt="Abrox" class="w-10 h-10 object-contain"/>
+
       <div class="leading-tight space-y-1">
         <div class="text-sm font-semibold">
           Abrox Binary Bot – Private Lounge
         </div>
+
         <div class="flex items-center gap-1 text-xs text-muted">
           <i data-lucide="lock" class="w-3.5 h-3.5"></i>
           <span>Private Group</span>
         </div>
+
+        <div class="text-xs text-muted">
+          Members: 4,872 • Online: <span id="onlineCount">132</span>
+        </div>
+
+        <div class="text-[11px] text-muted/80">
+          Demo discussion · Verification required
+        </div>
       </div>
     </div>
 
-    <!-- MOBILE MEMBERS BUTTON -->
     <button class="md:hidden text-muted" onclick="openMembers()">
       <i data-lucide="users" class="w-5 h-5"></i>
     </button>
@@ -60,16 +70,59 @@ tailwind.config = {
   </div>
 </header>
 
-<!-- MESSAGES -->
-<section id="chatMessages"
-  class="flex-1 px-4 overflow-y-auto space-y-4 pb-6">
+<!-- RULES -->
+<section class="p-4">
+  <div class="bg-panel/60 rounded-xl p-4">
+    <div class="flex items-center gap-2 mb-2">
+      <span>📌</span>
+      <span class="text-sm font-medium">Group Rules</span>
+    </div>
+    <ul class="text-sm text-muted list-disc list-inside space-y-1">
+      <li>New members are read-only until verified</li>
+      <li>Admins DM individually</li>
+      <li>No screenshots in chat</li>
+      <li>Ignore unsolicited messages</li>
+    </ul>
+  </div>
 </section>
 
-<!-- INPUT -->
+<!-- MESSAGES -->
+<section id="chatMessages" class="flex-1 px-4 overflow-y-auto space-y-4 pb-6">
+
+  <div class="flex gap-3 items-start">
+    <img src="https://i.pravatar.cc/40?img=32" class="w-9 h-9 rounded-full"/>
+    <div>
+      <div class="text-xs text-muted mb-1">
+        <span class="text-accent font-medium">Mina_fx</span>
+        <span class="ml-2">07:28</span>
+      </div>
+      <div class="bg-bubble px-3 py-1.5 rounded-[14px_14px_14px_4px] text-sm">
+        morning all
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-3 items-start">
+    <img src="https://i.pravatar.cc/40?img=12" class="w-9 h-9 rounded-full"/>
+    <div>
+      <div class="text-xs text-muted mb-1">
+        <span class="text-admin font-medium">Sam_Admin</span>
+        <span class="ml-1">(Admin)</span>
+        <span class="ml-2">07:35</span>
+      </div>
+      <div class="bg-bubble px-3 py-1.5 rounded-[14px_14px_14px_4px] text-sm">
+        Low activity today. Demo only.
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- INPUT (WHATSAPP STYLE) -->
 <footer class="bg-panel border-t border-border px-3 py-2 pb-[env(safe-area-inset-bottom)]">
   <div class="flex items-center gap-2 bg-bg rounded-full px-3 py-2 min-h-[44px]">
 
-    <button type="button" class="text-muted">
+    <button class="text-muted">
       <i data-lucide="smile" class="w-5 h-5"></i>
     </button>
 
@@ -77,22 +130,17 @@ tailwind.config = {
       id="chatInput"
       class="flex-1 bg-transparent outline-none text-sm placeholder-muted"
       placeholder="Message"
-      autocomplete="off"
     />
 
-    <button type="button" class="text-muted">
+    <button class="text-muted">
       <i data-lucide="paperclip" class="w-5 h-5"></i>
     </button>
 
-    <button id="micBtn" type="button" class="text-muted">
+    <button id="micBtn" class="text-muted">
       <i data-lucide="mic" class="w-5 h-5"></i>
     </button>
 
-    <button
-      id="sendBtn"
-      type="button"
-      class="hidden text-accent hover:opacity-80 transition"
-    >
+    <button id="sendBtn" class="hidden text-accent hover:opacity-80 transition">
       <i data-lucide="send" class="w-5 h-5"></i>
     </button>
 
@@ -101,34 +149,27 @@ tailwind.config = {
 
 </main>
 
-<!-- ================= DESKTOP SIDEBAR ================= -->
-<aside
-  id="desktopSidebar"
-  class="hidden md:block w-80 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
+<!-- DESKTOP SIDEBAR -->
+<aside id="desktopSidebar"
+       class="hidden md:block w-80 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
 </aside>
 
 </div>
 
-<!-- ================= MOBILE SIDEBAR ================= -->
-<div id="mobileMembers"
-  class="fixed inset-0 bg-black/60 hidden z-50">
-
-  <aside
-    class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5 overflow-y-auto">
-
+<!-- MOBILE SIDEBAR -->
+<div id="mobileMembers" class="fixed inset-0 bg-black/60 hidden z-50">
+  <aside class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5 overflow-y-auto">
     <div class="flex justify-between items-center mb-4">
       <span class="text-sm font-semibold">Members</span>
       <button onclick="closeMembers()">
         <i data-lucide="x" class="w-5 h-5 text-muted"></i>
       </button>
     </div>
-
     <div id="mobileSidebar"></div>
-
   </aside>
 </div>
 
-<!-- ================= MEMBERS TEMPLATE ================= -->
+<!-- MEMBERS TEMPLATE -->
 <template id="membersTemplate">
   <div class="space-y-6">
 
@@ -136,16 +177,8 @@ tailwind.config = {
       <div class="text-xs text-muted mb-2">ADMINS</div>
       <div class="flex items-center gap-3">
         <img src="https://i.pravatar.cc/32?img=12" class="w-8 h-8 rounded-full"/>
-        <span class="text-sm text-admin">Sam_Admin</span>
+        <span class="text-sm">Sam_Admin</span>
         <span class="ml-auto w-2 h-2 bg-accent rounded-full"></span>
-      </div>
-    </div>
-
-    <div>
-      <div class="text-xs text-muted mb-2">MODERATORS</div>
-      <div class="flex items-center gap-3">
-        <img src="https://i.pravatar.cc/32?img=15" class="w-8 h-8 rounded-full"/>
-        <span class="text-sm">Sara_mod</span>
       </div>
     </div>
 
@@ -157,76 +190,92 @@ tailwind.config = {
       </div>
     </div>
 
-    <div>
-      <div class="text-xs text-muted mb-2">PENDING</div>
-      <div class="text-sm text-muted">newbie_021</div>
-    </div>
-
   </div>
 </template>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+lucide.createIcons();
 
-  lucide.createIcons();
+/* SIDEBAR SYNC */
+const tpl = document.getElementById('membersTemplate').content;
+document.getElementById('desktopSidebar').appendChild(tpl.cloneNode(true));
+document.getElementById('mobileSidebar').appendChild(tpl.cloneNode(true));
 
-  /* ===== SIDEBAR CLONE ===== */
-  const tpl = document.getElementById('membersTemplate').content;
-  document.getElementById('desktopSidebar').appendChild(tpl.cloneNode(true));
-  document.getElementById('mobileSidebar').appendChild(tpl.cloneNode(true));
+function openMembers() {
+  document.getElementById('mobileMembers').classList.remove('hidden');
+}
+function closeMembers() {
+  document.getElementById('mobileMembers').classList.add('hidden');
+}
 
-  /* ===== MOBILE SIDEBAR ===== */
-  window.openMembers = function () {
-    document.getElementById('mobileMembers').classList.remove('hidden');
-  };
+/* ONLINE COUNT */
+const members = 4872;
+const el = document.getElementById('onlineCount');
+let online = Math.floor(members * (Math.random()*0.035 + 0.02));
 
-  window.closeMembers = function () {
-    document.getElementById('mobileMembers').classList.add('hidden');
-  };
+function fluctuate() {
+  const drift = Math.floor(members * (Math.random()*0.003));
+  online += Math.random() > 0.55 ? drift : -drift;
+  online = Math.max(97, Math.min(268, online));
+  el.textContent = online.toLocaleString();
+  setTimeout(fluctuate, Math.random()*12000 + 9000);
+}
+el.textContent = online.toLocaleString();
+setTimeout(fluctuate, 7000);
 
-  /* ===== CHAT LOGIC ===== */
-  const chat = document.getElementById('chatMessages');
-  const input = document.getElementById('chatInput');
-  const micBtn = document.getElementById('micBtn');
-  const sendBtn = document.getElementById('sendBtn');
+/* CHAT LOGIC */
+const chat = document.getElementById('chatMessages');
+const input = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const micBtn = document.getElementById('micBtn');
 
-  function toggleButtons() {
-    const hasText = input.value.trim().length > 0;
-    micBtn.classList.toggle('hidden', hasText);
-    sendBtn.classList.toggle('hidden', !hasText);
+function toggleButtons() {
+  if (input.value.trim().length > 0) {
+    micBtn.classList.add('hidden');
+    sendBtn.classList.remove('hidden');
+  } else {
+    micBtn.classList.remove('hidden');
+    sendBtn.classList.add('hidden');
   }
+}
 
-  function sendMessage() {
-    const text = input.value.trim();
-    if (!text) return;
+function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
 
-    const msg = document.createElement('div');
-    msg.className = 'flex justify-end';
-
-    msg.innerHTML = `
-      <div class="bg-accent/20 px-3 py-1.5 rounded-xl text-sm max-w-[70%]">
-        ${text}
-      </div>
-    `;
-
-    chat.appendChild(msg);
-    input.value = '';
-    toggleButtons();
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  input.addEventListener('input', toggleButtons);
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      sendMessage();
-    }
+  const time = new Date().toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit'
   });
 
-  sendBtn.addEventListener('click', sendMessage);
+  const bubble = document.createElement('div');
+  bubble.className = 'flex justify-end pr-1';
 
+  bubble.innerHTML = `
+    <div class="max-w-[70%] text-right">
+      <div class="text-xs text-muted mb-1">
+        You • ${time}
+      </div>
+      <div class="bg-accent/20 px-3 py-1.5 rounded-[14px_14px_4px_14px] text-sm">
+        ${text}
+      </div>
+    </div>
+  `;
+
+  chat.appendChild(bubble);
+  input.value = '';
   toggleButtons();
+  chat.scrollTop = chat.scrollHeight;
+}
+
+input.addEventListener('input', toggleButtons);
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    sendMessage();
+  }
 });
+sendBtn.addEventListener('click', sendMessage);
 </script>
 
 </body>
