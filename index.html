@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Group Chat UI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#1c1f26',
+            panel: '#232833',
+            card: '#2b3040',
+            border: '#343a4a',
+            muted: '#a0a6b5',
+            accent: '#2ecc71',
+            admin: '#f1c40f'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="bg-bg text-white h-screen overflow-hidden">
+
+<div class="flex h-full relative">
+
+  <!-- MAIN CHAT -->
+  <div class="flex flex-col w-full md:flex-1 md:border-r border-border">
+
+    <!-- HEADER -->
+    <div class="flex items-center justify-between px-3 md:px-5 py-3 md:py-4 bg-panel border-b border-border">
+      <div class="flex items-center gap-2 md:gap-3">
+        <i data-lucide="arrow-left" class="w-5 h-5 text-muted"></i>
+        <i data-lucide="lock" class="w-4 h-4 text-muted hidden sm:block"></i>
+
+        <div>
+          <div class="font-semibold text-sm leading-tight">
+            Abrox Binary Bot – Private Lounge
+          </div>
+          <div class="text-xs text-muted hidden sm:block">
+            Private Group · 4,872 members · 9 online
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop actions -->
+      <div class="hidden md:flex items-center gap-4 text-muted">
+        <i data-lucide="users" class="w-5 h-5"></i>
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </div>
+
+      <!-- Mobile members button -->
+      <button onclick="openSidebar()" class="md:hidden text-muted">
+        <i data-lucide="users" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- PINNED RULES -->
+    <div class="p-3 md:p-5">
+      <div class="bg-card rounded-xl p-4 border border-border">
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="pin" class="w-4 h-4 text-muted"></i>
+          <span class="font-medium text-sm">Group Rules</span>
+        </div>
+
+        <ul class="text-sm text-muted space-y-1 list-disc list-inside">
+          <li>New members are read-only until verified</li>
+          <li>Admins DM individually</li>
+          <li>No screenshots in chat</li>
+          <li>Ignore unsolicited messages</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="flex-1 px-3 md:px-5 space-y-4 overflow-y-auto pb-6">
+
+      <div class="flex gap-3">
+        <img src="https://i.pravatar.cc/40?img=32" class="w-9 h-9 rounded-full" />
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-accent">Mina_fx</span>
+            <span class="text-xs text-muted">07:28</span>
+          </div>
+          <div class="text-sm">morning all</div>
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <img src="https://i.pravatar.cc/40?img=12" class="w-9 h-9 rounded-full" />
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-admin">Sam_Admin</span>
+            <span class="text-xs text-muted">(Admin)</span>
+            <span class="text-xs text-muted">07:35</span>
+          </div>
+          <div class="text-sm">Low activity today. Demo only.</div>
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <img src="https://i.pravatar.cc/40?img=47" class="w-9 h-9 rounded-full" />
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-accent">Zahra_new</span>
+            <span class="text-xs text-muted">(Verified)</span>
+            <span class="text-xs text-muted">08:14</span>
+          </div>
+          <div class="text-sm text-muted">
+            When I joined, I was locked too. Admin unlocked me later.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- INPUT -->
+    <div class="px-3 md:px-5 py-3 md:py-4 bg-panel border-t border-border">
+      <div class="flex items-center gap-3 bg-bg rounded-xl px-4 py-3">
+        <input
+          type="text"
+          placeholder="Type a message"
+          class="flex-1 bg-transparent outline-none text-sm placeholder-muted"
+        />
+        <i data-lucide="mic" class="w-5 h-5 text-muted"></i>
+        <i data-lucide="send" class="w-5 h-5 text-accent"></i>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DESKTOP SIDEBAR -->
+  <aside class="hidden md:block w-80 bg-panel px-4 py-5 overflow-y-auto">
+    <div class="space-y-6">
+
+      <div>
+        <div class="text-xs text-muted mb-2">ADMINS</div>
+        <div class="flex items-center gap-3">
+          <img src="https://i.pravatar.cc/32?img=12" class="w-8 h-8 rounded-full" />
+          <span class="text-sm">Sam_Admin</span>
+          <span class="w-2 h-2 bg-accent rounded-full ml-auto"></span>
+        </div>
+      </div>
+
+      <div>
+        <div class="text-xs text-muted mb-2">MODERATORS</div>
+        <div class="flex items-center gap-3">
+          <img src="https://i.pravatar.cc/32?img=15" class="w-8 h-8 rounded-full" />
+          <span class="text-sm">Sara_mod</span>
+          <span class="w-2 h-2 bg-accent rounded-full ml-auto"></span>
+        </div>
+      </div>
+
+      <div>
+        <div class="text-xs text-muted mb-2">VERIFIED MEMBERS</div>
+        <div class="flex items-center gap-3">
+          <img src="https://i.pravatar.cc/32?img=32" class="w-8 h-8 rounded-full" />
+          <span class="text-sm">Mina_fx</span>
+          <span class="w-2 h-2 bg-accent rounded-full ml-auto"></span>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- MOBILE SIDEBAR -->
+  <div id="mobileSidebar" class="fixed inset-0 bg-black/60 hidden z-50 md:hidden">
+    <div class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5 overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <span class="font-semibold text-sm">Members</span>
+        <button onclick="closeSidebar()">
+          <i data-lucide="x" class="w-5 h-5 text-muted"></i>
+        </button>
+      </div>
+
+      <div class="space-y-6">
+        <div>
+          <div class="text-xs text-muted mb-2">ADMINS</div>
+          <div class="flex items-center gap-3">
+            <img src="https://i.pravatar.cc/32?img=12" class="w-8 h-8 rounded-full" />
+            <span class="text-sm">Sam_Admin</span>
+            <span class="w-2 h-2 bg-accent rounded-full ml-auto"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  lucide.createIcons();
+
+  function openSidebar() {
+    document.getElementById('mobileSidebar').classList.remove('hidden');
+  }
+
+  function closeSidebar() {
+    document.getElementById('mobileSidebar').classList.add('hidden');
+  }
+</script>
+
+</body>
+</html>
