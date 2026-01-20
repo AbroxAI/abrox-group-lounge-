@@ -39,33 +39,34 @@ tailwind.config = {
   <div class="flex justify-between items-start">
 
     <div class="flex gap-4">
-      <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1.5"></i>
+      <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
 
+      <!-- LOGO -->
       <img
         src="assets/logo.png"
         alt="Abrox"
-        class="w-10 h-10 object-contain mt-0.5"
+        class="w-10 h-10 object-contain"
       />
 
-      <!-- TITLE + META -->
+      <!-- TEXT STACK (FIXED EXACTLY AS REQUESTED) -->
       <div class="leading-tight">
+        <!-- LINE 1 -->
         <div class="text-sm font-semibold">
           Abrox Binary Bot – Private Lounge
         </div>
 
-        <!-- PRIVATE + MEMBERS + ONLINE (ONE LINE) -->
-        <div class="flex flex-wrap items-center gap-1 text-xs text-muted mt-0.5">
+        <!-- LINE 2 -->
+        <div class="flex items-center gap-1 text-xs text-muted mt-0.5">
           <i data-lucide="lock" class="w-3.5 h-3.5"></i>
           <span>Private Group</span>
-          <span class="mx-1">·</span>
-          <span>Members: 4,872</span>
-          <span class="mx-1">·</span>
-          <span>
-            Online: <span id="onlineCount">132</span>
-          </span>
         </div>
 
-        <!-- SYSTEM CONTEXT -->
+        <!-- LINE 3 -->
+        <div class="text-xs text-muted mt-0.5">
+          Members: 4,872 • Online: <span id="onlineCount">132</span>
+        </div>
+
+        <!-- LINE 4 -->
         <div class="text-[11px] text-muted/80 mt-0.5">
           Demo discussion · Verification required
         </div>
@@ -131,10 +132,8 @@ tailwind.config = {
 <!-- INPUT -->
 <footer class="bg-panel border-t border-border px-4 py-3">
   <div class="flex gap-3 items-center bg-bg rounded-xl px-4 py-2">
-    <input
-      class="flex-1 bg-transparent outline-none text-sm placeholder-muted"
-      placeholder="Type a message"
-    />
+    <input class="flex-1 bg-transparent outline-none text-sm placeholder-muted"
+           placeholder="Type a message"/>
     <i data-lucide="mic" class="w-5 h-5 text-muted"></i>
     <i data-lucide="send" class="w-5 h-5 text-accent"></i>
   </div>
@@ -142,19 +141,17 @@ tailwind.config = {
 
 </main>
 
-<!-- ================= DESKTOP SIDEBAR ================= -->
-<aside
-  id="desktopSidebar"
-  class="hidden md:block w-80 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
+<!-- DESKTOP SIDEBAR -->
+<aside id="desktopSidebar"
+       class="hidden md:block w-80 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
 </aside>
 
 </div>
 
-<!-- ================= MOBILE SIDEBAR ================= -->
+<!-- MOBILE SIDEBAR -->
 <div id="mobileMembers" class="fixed inset-0 bg-black/60 hidden z-50">
-  <aside
-    id="mobileSidebar"
-    class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5 overflow-y-auto">
+  <aside id="mobileSidebar"
+         class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5 overflow-y-auto">
     <div class="flex justify-between items-center mb-4">
       <span class="text-sm font-semibold">Members</span>
       <button onclick="closeMembers()">
@@ -164,7 +161,7 @@ tailwind.config = {
   </aside>
 </div>
 
-<!-- ================= SIDEBAR TEMPLATE (SINGLE SOURCE) ================= -->
+<!-- SIDEBAR TEMPLATE -->
 <template id="membersTemplate">
   <div class="space-y-6">
 
@@ -201,11 +198,10 @@ tailwind.config = {
   </div>
 </template>
 
-<!-- ================= SCRIPTS ================= -->
 <script>
 lucide.createIcons();
 
-/* SYNC SIDEBARS */
+/* SIDEBAR SYNC */
 const tpl = document.getElementById('membersTemplate').content;
 document.getElementById('desktopSidebar').appendChild(tpl.cloneNode(true));
 document.getElementById('mobileSidebar').appendChild(tpl.cloneNode(true));
@@ -221,10 +217,10 @@ function closeMembers() {
 /* REALISTIC ONLINE COUNT */
 const members = 4872;
 const el = document.getElementById('onlineCount');
-let online = Math.floor(members * (Math.random() * 0.035 + 0.02));
+let online = Math.floor(members * (Math.random()*0.035 + 0.02));
 
 function fluctuate() {
-  const drift = Math.floor(members * (Math.random() * 0.003));
+  const drift = Math.floor(members * (Math.random()*0.003));
   online += Math.random() > 0.55 ? drift : -drift;
 
   const min = Math.floor(members * 0.02);
@@ -232,7 +228,7 @@ function fluctuate() {
   online = Math.max(min, Math.min(max, online));
 
   el.textContent = online.toLocaleString();
-  setTimeout(fluctuate, Math.random() * 12000 + 9000);
+  setTimeout(fluctuate, Math.random()*12000 + 9000);
 }
 
 el.textContent = online.toLocaleString();
