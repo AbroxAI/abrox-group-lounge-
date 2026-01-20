@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Group Chat UI</title>
+  <title>Abrox Group – Private Lounge</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Tailwind CDN -->
@@ -36,30 +36,40 @@
 <div class="flex h-full">
 
   <!-- MAIN CHAT -->
-  <div class="flex flex-col flex-1 border-r border-border">
+  <main class="flex flex-col flex-1 border-r border-border">
 
     <!-- HEADER -->
-    <div class="px-4 py-4 bg-panel border-b border-border">
+    <header class="px-4 py-4 bg-panel border-b border-border">
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <i data-lucide="arrow-left" class="w-5 h-5 text-muted"></i>
 
-          <!-- LOGO -->
-          <img src="assets/logo.png" class="w-9 h-9 object-contain rounded-md" alt="Abrox Logo" />
+        <div class="flex items-start gap-4">
+          <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-2"></i>
 
+          <!-- LOGO CONTAINER (FIXED & BALANCED) -->
+          <div class="w-12 h-12 flex items-center justify-center rounded-md bg-bg">
+            <img
+              src="assets/logo.png"
+              alt="Abrox"
+              class="w-9 h-9 object-contain"
+            />
+          </div>
+
+          <!-- TITLE BLOCK -->
           <div>
             <div class="font-semibold text-sm">
               Abrox Binary Bot – Private Lounge
             </div>
 
-            <!-- PRIVATE GROUP LINE -->
-            <div class="text-xs text-muted flex items-center gap-1 mt-0.5">
+            <!-- LOCK + PRIVATE GROUP -->
+            <div class="flex items-center gap-1 text-xs text-muted mt-0.5">
               <i data-lucide="lock" class="w-3.5 h-3.5"></i>
               <span>Private Group</span>
-              <span class="mx-1">·</span>
-              <span>Members: 4,872</span>
-              <span class="mx-1">·</span>
-              <span>Online: <span id="onlineCount">9</span></span>
+            </div>
+
+            <!-- MEMBERS + ONLINE -->
+            <div class="text-xs text-muted mt-0.5">
+              Members: <span id="memberCount">4,872</span> ·
+              Online: <span id="onlineCount">132</span>
             </div>
           </div>
         </div>
@@ -73,10 +83,10 @@
       <div class="text-xs text-muted text-center mt-2">
         Demo discussion · Verification required
       </div>
-    </div>
+    </header>
 
     <!-- GROUP RULES -->
-    <div class="p-4">
+    <section class="p-4">
       <div class="bg-card rounded-xl p-4 border border-border">
         <div class="flex items-center gap-2 mb-2">
           <span class="text-lg">📌</span>
@@ -89,10 +99,10 @@
           <li>Ignore unsolicited messages</li>
         </ul>
       </div>
-    </div>
+    </section>
 
     <!-- MESSAGES -->
-    <div class="flex-1 px-4 space-y-4 overflow-y-auto pb-6">
+    <section class="flex-1 px-4 space-y-4 overflow-y-auto pb-6">
 
       <div class="flex gap-3">
         <img src="https://i.pravatar.cc/40?img=32" class="w-9 h-9 rounded-full" />
@@ -117,24 +127,10 @@
         </div>
       </div>
 
-      <div class="flex gap-3">
-        <img src="https://i.pravatar.cc/40?img=47" class="w-9 h-9 rounded-full" />
-        <div class="bg-bubble rounded-xl px-4 py-2 max-w-xl">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="text-sm text-accent">Zahra_new</span>
-            <span class="text-xs text-muted">(Verified)</span>
-            <span class="text-xs text-muted">08:14</span>
-          </div>
-          <div class="text-sm text-muted">
-            When I joined, I was locked too. Admin unlocked me later.
-          </div>
-        </div>
-      </div>
-
-    </div>
+    </section>
 
     <!-- INPUT -->
-    <div class="px-4 py-4 bg-panel border-t border-border">
+    <footer class="px-4 py-4 bg-panel border-t border-border">
       <div class="flex items-center gap-3 bg-bg rounded-xl px-4 py-3">
         <input
           type="text"
@@ -144,16 +140,16 @@
         <i data-lucide="mic" class="w-5 h-5 text-muted"></i>
         <i data-lucide="send" class="w-5 h-5 text-accent"></i>
       </div>
-    </div>
+    </footer>
 
-  </div>
+  </main>
 
   <!-- SIDEBAR -->
   <aside class="hidden md:block w-80 bg-panel px-4 py-5 overflow-y-auto">
     <div class="space-y-6">
 
       <div>
-        <div class="text-xs text-muted mb-2">ADMINS</div>
+        <div class="text-xs text-muted mb-2">ADMINS (2)</div>
         <div class="flex items-center gap-3">
           <img src="https://i.pravatar.cc/32?img=12" class="w-8 h-8 rounded-full" />
           <span class="text-sm">Sam_Admin</span>
@@ -162,13 +158,11 @@
       </div>
 
       <div>
-        <div class="text-xs text-muted mb-2">MODERATORS</div>
-        <div class="space-y-2">
-          <div class="flex items-center gap-3">
-            <img src="https://i.pravatar.cc/32?img=15" class="w-8 h-8 rounded-full" />
-            <span class="text-sm">Sara_mod</span>
-            <span class="w-2 h-2 bg-accent rounded-full ml-auto"></span>
-          </div>
+        <div class="text-xs text-muted mb-2">MODERATORS (4)</div>
+        <div class="flex items-center gap-3">
+          <img src="https://i.pravatar.cc/32?img=15" class="w-8 h-8 rounded-full" />
+          <span class="text-sm">Sara_mod</span>
+          <span class="w-2 h-2 bg-accent rounded-full ml-auto"></span>
         </div>
       </div>
 
@@ -198,19 +192,30 @@
 <script>
   lucide.createIcons();
 
-  let online = 9;
-  const minOnline = 6;
-  const maxOnline = 14;
+  const members = 4872;
   const onlineEl = document.getElementById('onlineCount');
 
+  // realistic starting value (1.5% – 4.5%)
+  let online = Math.floor(members * (Math.random() * 0.03 + 0.015));
+
   function fluctuateOnline() {
-    const change = Math.floor(Math.random() * 3) - 1;
-    online = Math.max(minOnline, Math.min(maxOnline, online + change));
-    onlineEl.textContent = online;
-    setTimeout(fluctuateOnline, Math.random() * 7000 + 8000);
+    // small wave movement
+    const variance = Math.floor(members * (Math.random() * 0.002));
+    const direction = Math.random() > 0.5 ? 1 : -1;
+
+    online += variance * direction;
+
+    const min = Math.floor(members * 0.015);
+    const max = Math.floor(members * 0.045);
+
+    online = Math.max(min, Math.min(max, online));
+    onlineEl.textContent = online.toLocaleString();
+
+    setTimeout(fluctuateOnline, Math.random() * 10000 + 10000);
   }
 
-  setTimeout(fluctuateOnline, 5000);
+  onlineEl.textContent = online.toLocaleString();
+  setTimeout(fluctuateOnline, 8000);
 </script>
 
 </body>
