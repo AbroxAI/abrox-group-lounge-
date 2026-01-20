@@ -31,38 +31,48 @@ tailwind.config = {
 
 <div class="flex h-full">
 
-<!-- MAIN CHAT -->
+<!-- ================= MAIN CHAT ================= -->
 <main class="flex flex-col flex-1 border-r border-border">
 
+<!-- HEADER -->
 <header class="bg-panel border-b border-border px-4 py-3">
   <div class="flex justify-between items-start">
 
     <div class="flex gap-4">
-      <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-2"></i>
+      <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1.5"></i>
 
-      <img src="assets/logo.png" class="w-10 h-10 object-contain mt-0.5"/>
+      <img
+        src="assets/logo.png"
+        alt="Abrox"
+        class="w-10 h-10 object-contain mt-0.5"
+      />
 
-      <div>
+      <!-- TITLE + META -->
+      <div class="leading-tight">
         <div class="text-sm font-semibold">
           Abrox Binary Bot – Private Lounge
         </div>
 
-        <div class="flex items-center gap-1 text-xs text-muted mt-0.5">
+        <!-- PRIVATE + MEMBERS + ONLINE (ONE LINE) -->
+        <div class="flex flex-wrap items-center gap-1 text-xs text-muted mt-0.5">
           <i data-lucide="lock" class="w-3.5 h-3.5"></i>
           <span>Private Group</span>
           <span class="mx-1">·</span>
           <span>Members: 4,872</span>
           <span class="mx-1">·</span>
-          <span>Online: <span id="onlineCount">132</span></span>
+          <span>
+            Online: <span id="onlineCount">132</span>
+          </span>
         </div>
 
-        <div class="text-xs text-muted mt-1">
+        <!-- SYSTEM CONTEXT -->
+        <div class="text-[11px] text-muted/80 mt-0.5">
           Demo discussion · Verification required
         </div>
       </div>
     </div>
 
-    <!-- mobile toggle -->
+    <!-- MOBILE MEMBERS TOGGLE -->
     <button class="md:hidden text-muted" onclick="openMembers()">
       <i data-lucide="users" class="w-5 h-5"></i>
     </button>
@@ -89,40 +99,42 @@ tailwind.config = {
 <!-- MESSAGES -->
 <section class="flex-1 px-4 overflow-y-auto space-y-4 pb-6">
 
-<div class="flex gap-3 items-start">
-  <img src="https://i.pravatar.cc/40?img=32" class="w-9 h-9 rounded-full"/>
-  <div>
-    <div class="text-xs text-muted mb-1">
-      <span class="text-accent font-medium">Mina_fx</span>
-      <span class="ml-2">07:28</span>
-    </div>
-    <div class="bg-bubble px-3 py-1.5 rounded-[14px_14px_14px_4px] text-sm">
-      morning all
+  <div class="flex gap-3 items-start">
+    <img src="https://i.pravatar.cc/40?img=32" class="w-9 h-9 rounded-full"/>
+    <div>
+      <div class="text-xs text-muted mb-1">
+        <span class="text-accent font-medium">Mina_fx</span>
+        <span class="ml-2">07:28</span>
+      </div>
+      <div class="bg-bubble px-3 py-1.5 rounded-[14px_14px_14px_4px] text-sm">
+        morning all
+      </div>
     </div>
   </div>
-</div>
 
-<div class="flex gap-3 items-start">
-  <img src="https://i.pravatar.cc/40?img=12" class="w-9 h-9 rounded-full"/>
-  <div>
-    <div class="text-xs text-muted mb-1">
-      <span class="text-admin font-medium">Sam_Admin</span>
-      <span class="ml-1">(Admin)</span>
-      <span class="ml-2">07:35</span>
-    </div>
-    <div class="bg-bubble px-3 py-1.5 rounded-[14px_14px_14px_4px] text-sm">
-      Low activity today. Demo only.
+  <div class="flex gap-3 items-start">
+    <img src="https://i.pravatar.cc/40?img=12" class="w-9 h-9 rounded-full"/>
+    <div>
+      <div class="text-xs text-muted mb-1">
+        <span class="text-admin font-medium">Sam_Admin</span>
+        <span class="ml-1">(Admin)</span>
+        <span class="ml-2">07:35</span>
+      </div>
+      <div class="bg-bubble px-3 py-1.5 rounded-[14px_14px_14px_4px] text-sm">
+        Low activity today. Demo only.
+      </div>
     </div>
   </div>
-</div>
 
 </section>
 
 <!-- INPUT -->
 <footer class="bg-panel border-t border-border px-4 py-3">
   <div class="flex gap-3 items-center bg-bg rounded-xl px-4 py-2">
-    <input class="flex-1 bg-transparent outline-none text-sm placeholder-muted"
-           placeholder="Type a message"/>
+    <input
+      class="flex-1 bg-transparent outline-none text-sm placeholder-muted"
+      placeholder="Type a message"
+    />
     <i data-lucide="mic" class="w-5 h-5 text-muted"></i>
     <i data-lucide="send" class="w-5 h-5 text-accent"></i>
   </div>
@@ -130,17 +142,19 @@ tailwind.config = {
 
 </main>
 
-<!-- DESKTOP SIDEBAR -->
-<aside id="desktopSidebar"
-       class="hidden md:block w-80 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
+<!-- ================= DESKTOP SIDEBAR ================= -->
+<aside
+  id="desktopSidebar"
+  class="hidden md:block w-80 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
 </aside>
 
 </div>
 
-<!-- MOBILE SIDEBAR -->
+<!-- ================= MOBILE SIDEBAR ================= -->
 <div id="mobileMembers" class="fixed inset-0 bg-black/60 hidden z-50">
-  <aside id="mobileSidebar"
-         class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5 overflow-y-auto">
+  <aside
+    id="mobileSidebar"
+    class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5 overflow-y-auto">
     <div class="flex justify-between items-center mb-4">
       <span class="text-sm font-semibold">Members</span>
       <button onclick="closeMembers()">
@@ -150,7 +164,7 @@ tailwind.config = {
   </aside>
 </div>
 
-<!-- SINGLE SOURCE OF TRUTH -->
+<!-- ================= SIDEBAR TEMPLATE (SINGLE SOURCE) ================= -->
 <template id="membersTemplate">
   <div class="space-y-6">
 
@@ -187,6 +201,7 @@ tailwind.config = {
   </div>
 </template>
 
+<!-- ================= SCRIPTS ================= -->
 <script>
 lucide.createIcons();
 
@@ -206,10 +221,10 @@ function closeMembers() {
 /* REALISTIC ONLINE COUNT */
 const members = 4872;
 const el = document.getElementById('onlineCount');
-let online = Math.floor(members * (Math.random()*0.035 + 0.02));
+let online = Math.floor(members * (Math.random() * 0.035 + 0.02));
 
 function fluctuate() {
-  const drift = Math.floor(members * (Math.random()*0.003));
+  const drift = Math.floor(members * (Math.random() * 0.003));
   online += Math.random() > 0.55 ? drift : -drift;
 
   const min = Math.floor(members * 0.02);
@@ -217,7 +232,7 @@ function fluctuate() {
   online = Math.max(min, Math.min(max, online));
 
   el.textContent = online.toLocaleString();
-  setTimeout(fluctuate, Math.random()*12000 + 9000);
+  setTimeout(fluctuate, Math.random() * 12000 + 9000);
 }
 
 el.textContent = online.toLocaleString();
