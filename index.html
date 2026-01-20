@@ -48,26 +48,22 @@ tailwind.config = {
         class="w-10 h-10 object-contain"
       />
 
-      <!-- TEXT STACK (LOGIC CORRECTED ONLY) -->
+      <!-- TEXT STACK -->
       <div class="leading-tight space-y-1">
 
-        <!-- LINE 1 -->
         <div class="text-sm font-semibold">
           Abrox Binary Bot – Private Lounge
         </div>
 
-        <!-- LINE 2 -->
         <div class="flex items-center gap-1 text-xs text-muted">
           <i data-lucide="lock" class="w-3.5 h-3.5"></i>
           <span>Private Group</span>
         </div>
 
-        <!-- LINE 3 -->
         <div class="text-xs text-muted">
           Members: 4,872 • Online: <span id="onlineCount">132</span>
         </div>
 
-        <!-- LINE 4 -->
         <div class="text-[11px] text-muted/80">
           Demo discussion · Verification required
         </div>
@@ -100,7 +96,8 @@ tailwind.config = {
 </section>
 
 <!-- MESSAGES -->
-<section class="flex-1 px-4 overflow-y-auto space-y-4 pb-6">
+<section id="chatMessages"
+         class="flex-1 px-4 overflow-y-auto space-y-4 pb-6">
 
   <div class="flex gap-3 items-start">
     <img src="https://i.pravatar.cc/40?img=32" class="w-9 h-9 rounded-full"/>
@@ -134,10 +131,12 @@ tailwind.config = {
 <!-- INPUT -->
 <footer class="bg-panel border-t border-border px-4 py-3">
   <div class="flex gap-3 items-center bg-bg rounded-xl px-4 py-2">
-    <input class="flex-1 bg-transparent outline-none text-sm placeholder-muted"
-           placeholder="Type a message"/>
+    <input
+      class="flex-1 bg-transparent outline-none text-sm placeholder-muted"
+      placeholder="Type a message"
+    />
     <i data-lucide="mic" class="w-5 h-5 text-muted"></i>
-    <i data-lucide="send" class="w-5 h-5 text-accent"></i>
+    <i data-lucide="send" class="w-5 h-5 text-accent cursor-pointer"></i>
   </div>
 </footer>
 
@@ -235,6 +234,49 @@ function fluctuate() {
 
 el.textContent = online.toLocaleString();
 setTimeout(fluctuate, 7000);
+
+/* ===== REAL CHAT LOGIC ===== */
+
+const chat = document.getElementById('chatMessages');
+const input = document.querySelector('input[placeholder="Type a message"]');
+const sendBtn = document.querySelector('[data-lucide="send"]');
+
+function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  const time = new Date().toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const bubble = document.createElement('div');
+  bubble.className = 'flex justify-end';
+
+  bubble.innerHTML = `
+    <div class="max-w-[70%] text-right">
+      <div class="text-xs text-muted mb-1">
+        You • ${time}
+      </div>
+      <div class="bg-accent/20 px-3 py-1.5 rounded-[14px_14px_4px_14px] text-sm">
+        ${text}
+      </div>
+    </div>
+  `;
+
+  chat.appendChild(bubble);
+  input.value = '';
+  chat.scrollTop = chat.scrollHeight;
+}
+
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+sendBtn.addEventListener('click', sendMessage);
 </script>
 
 </body>
