@@ -31,78 +31,284 @@ tailwind.config = {
 
 <div class="flex h-full">
 
-<!-- MAIN CHAT -->
+<!-- ================= MAIN CHAT ================= -->
 <main class="flex flex-col flex-1 border-r border-border">
 
+<!-- HEADER -->
 <header class="bg-panel border-b border-border px-4 py-3">
   <div class="flex justify-between items-start">
-    <div>
-      <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-      <div class="text-xs text-muted">Private Group</div>
+
+    <div class="flex gap-4">
+      <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
+
+      <!-- LOGO -->
+      <img
+        src="assets/logo.png"
+        alt="Abrox"
+        class="w-10 h-10 object-contain"
+      />
+
+      <!-- TEXT STACK -->
+      <div class="leading-tight space-y-1">
+        <div class="text-sm font-semibold">
+          Abrox Binary Bot – Private Lounge
+        </div>
+
+        <div class="flex items-center gap-1 text-xs text-muted">
+          <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+          <span>Private Group</span>
+        </div>
+
+        <div class="text-xs text-muted">
+          Members: 4,872 • Online: <span id="onlineCount">132</span>
+        </div>
+
+        <div class="text-[11px] text-muted/80">
+          Demo discussion · Verification required
+        </div>
+      </div>
     </div>
 
+    <!-- MOBILE MEMBERS TOGGLE -->
     <button class="md:hidden text-muted" onclick="openMembers()">
       <i data-lucide="users" class="w-5 h-5"></i>
     </button>
+
   </div>
 </header>
 
-<section id="chatMessages" class="flex-1 px-4 overflow-y-auto pb-6"></section>
+<!-- RULES -->
+<section class="p-4">
+  <div class="bg-panel/60 rounded-xl p-4">
+    <div class="flex items-center gap-2 mb-2">
+      <span>📌</span>
+      <span class="text-sm font-medium">Group Rules</span>
+    </div>
+    <ul class="text-sm text-muted list-disc list-inside space-y-1">
+      <li>New members are read-only until verified</li>
+      <li>Admins DM individually</li>
+      <li>No screenshots in chat</li>
+      <li>Ignore unsolicited messages</li>
+    </ul>
+  </div>
+</section>
 
-<footer class="bg-panel border-t border-border px-3 py-2">
-  <div class="flex items-center gap-2 bg-bg rounded-full px-3 py-2 min-h-[44px]">
-    <input id="chatInput" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message" />
-    <button id="micBtn"><i data-lucide="mic"></i></button>
-    <button id="sendBtn" class="hidden text-accent"><i data-lucide="send"></i></button>
+<!-- MESSAGES -->
+<section id="chatMessages"
+         class="flex-1 px-4 overflow-y-auto space-y-4 pb-6">
+
+  <div class="flex gap-3 items-start">
+    <img src="https://i.pravatar.cc/40?img=32" class="w-9 h-9 rounded-full"/>
+    <div>
+      <div class="text-xs text-muted mb-1">
+        <span class="text-accent font-medium">Mina_fx</span>
+        <span class="ml-2">07:28</span>
+      </div>
+      <div class="bg-bubble px-3 py-2 rounded-[14px_14px_14px_4px] text-sm">
+        <p>morning all</p>
+        <span class="block text-[10px] text-muted mt-1">07:28</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-3 items-start">
+    <img src="https://i.pravatar.cc/40?img=12" class="w-9 h-9 rounded-full"/>
+    <div>
+      <div class="text-xs text-muted mb-1">
+        <span class="text-admin font-medium">Sam_Admin</span>
+        <span class="ml-1">(Admin)</span>
+        <span class="ml-2">07:35</span>
+      </div>
+      <div class="bg-bubble px-3 py-2 rounded-[14px_14px_14px_4px] text-sm">
+        <p>Low activity today. Demo only.</p>
+        <span class="block text-[10px] text-muted mt-1">07:35</span>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- INPUT -->
+<footer class="bg-panel border-t border-border px-4 py-3">
+  <div class="flex items-center gap-3 bg-bg rounded-xl px-4 py-2">
+
+    <!-- EMOJI -->
+    <button class="text-muted hover:text-white">
+      <i data-lucide="smile" class="w-5 h-5"></i>
+    </button>
+
+    <!-- INPUT -->
+    <input
+      id="chatInput"
+      class="flex-1 bg-transparent outline-none text-sm placeholder-muted"
+      placeholder="Type a message"
+    />
+
+    <!-- CAMERA -->
+    <button class="text-muted hover:text-white">
+      <i data-lucide="camera" class="w-5 h-5"></i>
+    </button>
+
+    <!-- MIC -->
+    <button id="micBtn" class="text-muted hover:text-white">
+      <i data-lucide="mic" class="w-5 h-5"></i>
+    </button>
+
+    <!-- SEND -->
+    <button id="sendBtn" class="text-accent hover:opacity-80 hidden">
+      <i data-lucide="send" class="w-5 h-5"></i>
+    </button>
+
   </div>
 </footer>
 
 </main>
 
-<!-- DESKTOP SIDEBAR (FORCED VISIBLE) -->
-<aside
-  id="desktopSidebar"
-  class="block w-80 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
+<!-- DESKTOP SIDEBAR -->
+<aside id="desktopSidebar"
+       class="hidden md:block w-80 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
 </aside>
 
 </div>
 
 <!-- MOBILE SIDEBAR -->
 <div id="mobileMembers" class="fixed inset-0 bg-black/60 hidden z-50">
-  <aside class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5">
-    <button onclick="closeMembers()">Close</button>
-    <div id="mobileSidebar"></div>
+  <aside id="mobileSidebar"
+         class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5 overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <span class="text-sm font-semibold">Members</span>
+      <button onclick="closeMembers()">
+        <i data-lucide="x" class="w-5 h-5 text-muted"></i>
+      </button>
+    </div>
   </aside>
 </div>
 
+<!-- SIDEBAR TEMPLATE -->
 <template id="membersTemplate">
-  <div class="space-y-4">
-    <div class="text-xs text-muted">ADMINS</div>
-    <div>Sam_Admin</div>
-    <div class="text-xs text-muted">MEMBERS</div>
-    <div>Mina_fx</div>
+  <div class="space-y-6">
+    <div>
+      <div class="text-xs text-muted mb-2">ADMINS</div>
+      <div class="flex items-center gap-3">
+        <img src="https://i.pravatar.cc/32?img=12" class="w-8 h-8 rounded-full"/>
+        <span class="text-sm">Sam_Admin</span>
+        <span class="ml-auto w-2 h-2 bg-accent rounded-full"></span>
+      </div>
+    </div>
+
+    <div>
+      <div class="text-xs text-muted mb-2">MODERATORS</div>
+      <div class="flex items-center gap-3">
+        <img src="https://i.pravatar.cc/32?img=15" class="w-8 h-8 rounded-full"/>
+        <span class="text-sm">Sara_mod</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="text-xs text-muted mb-2">VERIFIED MEMBERS</div>
+      <div class="flex items-center gap-3">
+        <img src="https://i.pravatar.cc/32?img=32" class="w-8 h-8 rounded-full"/>
+        <span class="text-sm">Mina_fx</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="text-xs text-muted mb-2">PENDING</div>
+      <div class="text-sm text-muted">newbie_021</div>
+    </div>
   </div>
 </template>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  lucide.createIcons();
+lucide.createIcons();
 
-  const tpl = document.getElementById('membersTemplate').content;
-  desktopSidebar.appendChild(tpl.cloneNode(true));
-  mobileSidebar.appendChild(tpl.cloneNode(true));
+/* SIDEBAR SYNC */
+const tpl = document.getElementById('membersTemplate').content;
+document.getElementById('desktopSidebar').appendChild(tpl.cloneNode(true));
+document.getElementById('mobileSidebar').appendChild(tpl.cloneNode(true));
 
-  window.openMembers = () =>
-    mobileMembers.classList.remove('hidden');
-  window.closeMembers = () =>
-    mobileMembers.classList.add('hidden');
+/* MOBILE TOGGLE */
+function openMembers() {
+  document.getElementById('mobileMembers').classList.remove('hidden');
+}
+function closeMembers() {
+  document.getElementById('mobileMembers').classList.add('hidden');
+}
 
-  const input = chatInput;
-  input.addEventListener('input', () => {
-    micBtn.classList.toggle('hidden', input.value.trim());
-    sendBtn.classList.toggle('hidden', !input.value.trim());
+/* REALISTIC ONLINE COUNT */
+const members = 4872;
+const el = document.getElementById('onlineCount');
+let online = Math.floor(members * (Math.random()*0.035 + 0.02));
+
+function fluctuate() {
+  const drift = Math.floor(members * (Math.random()*0.003));
+  online += Math.random() > 0.55 ? drift : -drift;
+
+  const min = Math.floor(members * 0.02);
+  const max = Math.floor(members * 0.055);
+  online = Math.max(min, Math.min(max, online));
+
+  el.textContent = online.toLocaleString();
+  setTimeout(fluctuate, Math.random()*12000 + 9000);
+}
+
+el.textContent = online.toLocaleString();
+setTimeout(fluctuate, 7000);
+
+/* ===== CHAT + SEND BOX LOGIC ===== */
+
+const chat = document.getElementById('chatMessages');
+const input = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const micBtn = document.getElementById('micBtn');
+
+function updateSendState() {
+  const hasText = input.value.trim().length > 0;
+  micBtn.classList.toggle('hidden', hasText);
+  sendBtn.classList.toggle('hidden', !hasText);
+}
+
+function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  const time = new Date().toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit'
   });
+
+  const bubble = document.createElement('div');
+  bubble.className = 'flex justify-end';
+
+  bubble.innerHTML = `
+    <div class="max-w-[70%]">
+      <div class="bg-accent/20 px-3 py-2 rounded-[14px_14px_4px_14px] text-sm">
+        <p>${text}</p>
+        <span class="block text-[10px] text-muted mt-1 text-right">${time}</span>
+      </div>
+    </div>
+  `;
+
+  chat.appendChild(bubble);
+  chat.scrollTop = chat.scrollHeight;
+
+  input.value = '';
+  updateSendState();
+}
+
+input.addEventListener('input', updateSendState);
+
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    sendMessage();
+  }
 });
+
+sendBtn.addEventListener('click', sendMessage);
+
+/* INITIAL STATE */
+updateSendState();
 </script>
 
 </body>
