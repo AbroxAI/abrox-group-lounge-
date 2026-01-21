@@ -26,6 +26,7 @@ tailwind.config = {
 
 <style>
   .caret-accent { caret-color:#2ecc71 }
+  #chatMessages { scroll-behavior: smooth; }
 </style>
 
 <script src="https://unpkg.com/lucide@latest"></script>
@@ -35,30 +36,23 @@ tailwind.config = {
 
 <div class="flex h-full">
 
-<!-- ================= MAIN CHAT ================= -->
 <main class="flex flex-col flex-1 min-h-0 border-r border-border">
 
 <!-- HEADER -->
-<header class="bg-panel border-b border-border px-4 py-3">
+<header class="bg-panel border-b border-border px-5 py-3">
   <div class="flex justify-between items-start">
-    <div class="flex gap-4">
+    <div class="flex gap-5">
       <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
       <img src="assets/logo.png" class="w-10 h-10 object-contain"/>
-
       <div class="leading-tight space-y-1">
-        <div class="text-sm font-semibold">
-          Abrox Binary Bot – Private Lounge
-        </div>
-
+        <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
         <div class="flex items-center gap-1 text-xs text-muted">
           <i data-lucide="lock" class="w-3.5 h-3.5"></i>
           <span>Private Group</span>
         </div>
-
         <div class="text-xs text-muted">
           Members: 4,872 • Online: <span id="onlineCount">132</span>
         </div>
-
         <div class="text-[11px] text-muted/80">
           Demo discussion · Verification required
         </div>
@@ -71,7 +65,6 @@ tailwind.config = {
   </div>
 </header>
 
-<!-- RULES -->
 <section class="p-4">
   <div class="bg-panel/60 rounded-xl p-4">
     <div class="flex items-center gap-2 mb-2">
@@ -87,8 +80,15 @@ tailwind.config = {
   </div>
 </section>
 
-<!-- MESSAGES -->
-<section id="chatMessages" class="flex-1 min-h-0 px-4 overflow-y-auto space-y-4 pb-24"></section>
+<!-- CHAT -->
+<section id="chatMessages" class="relative flex-1 min-h-0 px-4 overflow-y-auto space-y-4 pb-28"></section>
+
+<!-- NEW MESSAGE INDICATOR -->
+<button id="newMsgBtn"
+  class="hidden fixed bottom-28 left-1/2 -translate-x-1/2 bg-accent text-white text-xs px-3 py-1 rounded-full shadow"
+  onclick="scrollToBottom(true)">
+  New messages
+</button>
 
 <!-- INPUT -->
 <footer class="bg-panel border-t border-border px-4 py-3">
@@ -104,22 +104,23 @@ tailwind.config = {
     />
 
     <button class="text-muted hover:text-white">
+      <i data-lucide="paperclip" class="w-5 h-5"></i>
+    </button>
+
+    <button class="text-muted hover:text-white">
       <i data-lucide="camera" class="w-5 h-5"></i>
     </button>
 
-    <!-- WhatsApp-style slot -->
-    <div class="relative w-10 h-10 flex items-center justify-center">
-
+    <div class="relative w-10 h-10">
       <button id="micBtn"
-        class="absolute inset-0 flex items-center justify-center rounded-full bg-panel text-white">
+        class="absolute inset-0 rounded-full bg-white text-bg flex items-center justify-center">
         <i data-lucide="mic" class="w-5 h-5"></i>
       </button>
 
       <button id="sendBtn"
-        class="absolute inset-0 hidden flex items-center justify-center rounded-full bg-accent text-white">
+        class="absolute inset-0 hidden rounded-full bg-accent text-white flex items-center justify-center">
         <i data-lucide="send" class="w-5 h-5"></i>
       </button>
-
     </div>
 
   </div>
@@ -147,7 +148,6 @@ tailwind.config = {
   </aside>
 </div>
 
-<!-- SIDEBAR TEMPLATE -->
 <template id="membersTemplate">
   <div class="space-y-6">
     <div>
@@ -164,32 +164,41 @@ tailwind.config = {
 <script>
 lucide.createIcons();
 
-/* ===== SIDEBAR ===== */
-const tpl = document.getElementById('membersTemplate').content;
-desktopSidebar.appendChild(tpl.cloneNode(true));
-mobileSidebar.appendChild(tpl.cloneNode(true));
-
+/* SIDEBAR */
+desktopSidebar.appendChild(membersTemplate.content.cloneNode(true));
+mobileSidebar.appendChild(membersTemplate.content.cloneNode(true));
 function openMembers(){ mobileMembers.classList.remove('hidden'); }
 function closeMembers(){ mobileMembers.classList.add('hidden'); }
 
-/* ===== ONLINE COUNT ===== */
-const members = 4872;
+/* ONLINE COUNT */
+let online = Math.floor(4872*(Math.random()*0.03+0.02));
 const el = document.getElementById('onlineCount');
-let online = Math.floor(members*(Math.random()*0.03+0.02));
-function fluctuate(){
+(function fluctuate(){
   online += Math.random()>.5?1:-1;
   el.textContent = online.toLocaleString();
   setTimeout(fluctuate,8000);
-}
-fluctuate();
+})();
 
-/* ===== CHAT LOGIC ===== */
+/* CHAT */
 const chat = document.getElementById('chatMessages');
 const input = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 const micBtn = document.getElementById('micBtn');
+const newMsgBtn = document.getElementById('newMsgBtn');
 
-let mediaRecorder, audioChunks=[], recording=false;
+let autoScroll = true;
+
+chat.addEventListener('scroll',()=>{
+  autoScroll = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 50;
+  newMsgBtn.classList.toggle('hidden', autoScroll);
+});
+
+function scrollToBottom(force=false){
+  if(autoScroll || force){
+    chat.scrollTo({ top: chat.scrollHeight, behavior:'smooth' });
+    newMsgBtn.classList.add('hidden');
+  }
+}
 
 function timeNow(){
   return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
@@ -206,31 +215,27 @@ function appendBubble(html){
   div.className='flex justify-end';
   div.innerHTML=html;
   chat.appendChild(div);
-  chat.scrollTop=chat.scrollHeight;
+  scrollToBottom();
 }
 
 function sendMessage(){
   const text=input.value.trim();
   if(!text)return;
-
   appendBubble(`
     <div class="max-w-[70%] bg-accent/20 px-3 py-2 rounded-[14px_14px_4px_14px] text-sm">
       ${text}
       <span class="ml-2 text-[10px] text-muted float-right">${timeNow()}</span>
     </div>
   `);
-
   input.value='';
   updateSendState();
 }
 
-/* EVENTS */
 input.addEventListener('input',updateSendState);
 input.addEventListener('keydown',e=>{
   if(e.key==='Enter'){ e.preventDefault(); sendMessage(); }
 });
 sendBtn.addEventListener('click',sendMessage);
-
 updateSendState();
 </script>
 
