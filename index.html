@@ -4,12 +4,14 @@
 <meta charset="UTF-8" />
 <title>Abrox – Private Lounge</title>
 
-<!-- ✅ PWA VIEWPORT -->
+<!-- ✅ MOBILE + PWA VIEWPORT -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 
 <!-- ✅ PWA META -->
-<meta name="theme-color" content="#1c1f26" />
-<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#1c1f26">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
@@ -91,10 +93,12 @@ html, body {
 </section>
 
 <!-- CHAT -->
-<section id="chatMessages"
+<section
+  id="chatMessages"
   class="relative flex-1 min-h-0 px-3 sm:px-4 overflow-y-auto space-y-4 pb-32 max-w-full">
 </section>
 
+<!-- NEW MESSAGE -->
 <button id="newMsgBtn"
   class="hidden fixed bottom-28 left-1/2 -translate-x-1/2 bg-accent text-white text-xs px-3 py-1 rounded-full shadow"
   onclick="scrollToBottom(true)">
@@ -132,13 +136,14 @@ html, body {
 
 </main>
 
+<!-- DESKTOP SIDEBAR -->
 <aside id="desktopSidebar"
   class="hidden md:block w-80 shrink-0 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
 </aside>
 
 </div>
 
-<!-- MOBILE MEMBERS -->
+<!-- MOBILE SIDEBAR -->
 <div id="mobileMembers" class="fixed inset-0 bg-black/60 hidden z-50">
   <aside id="mobileSidebar"
     class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5 overflow-y-auto">
@@ -182,7 +187,7 @@ const el = document.getElementById('onlineCount');
   setTimeout(fluctuate,8000);
 })();
 
-/* CHAT LOGIC (UNCHANGED) */
+/* CHAT LOGIC */
 const chat = document.getElementById('chatMessages');
 const input = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
@@ -240,21 +245,35 @@ input.addEventListener('keydown',e=>{
 sendBtn.addEventListener('click',sendMessage);
 updateSendState();
 
-/* ✅ KEYBOARD RESIZE FIX */
+/* ✅ KEYBOARD BALANCED (PWA + WEB) */
 (function () {
   const footer = document.querySelector('footer');
+  const chat = document.getElementById('chatMessages');
+  let last = 0;
+
   function adjust() {
     const vv = window.visualViewport;
     if (!vv) return;
-    const k = window.innerHeight - vv.height;
-    footer.style.transform = k > 0 ? `translateY(-${k}px)` : '';
+    const k = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    if (k > 50 && k !== last) {
+      footer.style.transform = `translateY(-${k}px)`;
+      chat.style.paddingBottom = `${k + 140}px`;
+      last = k;
+    }
+    if (k <= 50) {
+      footer.style.transform = '';
+      chat.style.paddingBottom = '';
+      last = 0;
+    }
   }
+
   if (window.visualViewport) {
     visualViewport.addEventListener('resize', adjust);
+    visualViewport.addEventListener('scroll', adjust);
   }
 })();
 
-/* ✅ SERVICE WORKER REGISTER */
+/* ✅ SERVICE WORKER */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js');
