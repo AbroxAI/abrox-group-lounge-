@@ -1,20 +1,16 @@
 {
-  "name": "Abrox Private Lounge",
+  "name": "Abrox – Private Lounge",
   "short_name": "Abrox",
-  "start_url": "./index.html",
-  "scope": "./",
+  "description": "Private lounge for Abrox Binary Bot",
+  "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#1c1f26",
   "theme_color": "#1c1f26",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "assets/logo.png",
       "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "assets/logo.png",
-      "sizes": "512x512",
       "type": "image/png"
     }
   ]
