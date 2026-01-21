@@ -17,8 +17,7 @@ tailwind.config = {
         muted:'#a0a6b5',
         accent:'#2ecc71',
         admin:'#f1c40f',
-        bubble:'#262b38',
-        system:'#3b4151'
+        bubble:'#262b38'
       }
     }
   }
@@ -26,7 +25,7 @@ tailwind.config = {
 </script>
 
 <style>
-  .caret-accent { caret-color: #2ecc71; }
+  .caret-accent { caret-color:#2ecc71 }
 </style>
 
 <script src="https://unpkg.com/lucide@latest"></script>
@@ -35,47 +34,79 @@ tailwind.config = {
 <body class="bg-bg text-white h-screen overflow-hidden">
 
 <div class="flex h-full">
+
+<!-- ================= MAIN CHAT ================= -->
 <main class="flex flex-col flex-1 border-r border-border">
 
 <!-- HEADER -->
 <header class="bg-panel border-b border-border px-4 py-3">
-  <div class="flex gap-4 items-start">
-    <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
-    <img src="assets/logo.png" class="w-10 h-10 object-contain"/>
-    <div class="leading-tight space-y-1">
-      <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-      <div class="flex items-center gap-1 text-xs text-muted">
-        <i data-lucide="lock" class="w-3.5 h-3.5"></i>
-        <span>Private Group</span>
-      </div>
-      <div class="text-xs text-muted">
-        Members: 4,872 • Online: <span id="onlineCount">132</span>
-      </div>
-      <div class="text-[11px] text-muted/80">
-        Demo discussion · Verification required
+  <div class="flex justify-between items-start">
+    <div class="flex gap-4">
+      <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
+      <img src="assets/logo.png" class="w-10 h-10 object-contain"/>
+
+      <div class="leading-tight space-y-1">
+        <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
+
+        <div class="flex items-center gap-1 text-xs text-muted">
+          <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+          <span>Private Group</span>
+        </div>
+
+        <div class="text-xs text-muted">
+          Members: 4,872 • Online: <span id="onlineCount">132</span>
+        </div>
+
+        <div class="text-[11px] text-muted/80">
+          Demo discussion · Verification required
+        </div>
       </div>
     </div>
+
+    <button class="md:hidden text-muted" onclick="openMembers()">
+      <i data-lucide="users" class="w-5 h-5"></i>
+    </button>
   </div>
 </header>
 
-<!-- CHAT -->
-<section id="chatMessages" class="flex-1 px-4 overflow-y-auto space-y-4 pb-6"></section>
+<!-- RULES -->
+<section class="p-4">
+  <div class="bg-panel/60 rounded-xl p-4">
+    <div class="flex items-center gap-2 mb-2">
+      <span>📌</span>
+      <span class="text-sm font-medium">Group Rules</span>
+    </div>
+    <ul class="text-sm text-muted list-disc list-inside space-y-1">
+      <li>New members are read-only until verified</li>
+      <li>Admins DM individually</li>
+      <li>No screenshots in chat</li>
+      <li>Ignore unsolicited messages</li>
+    </ul>
+  </div>
+</section>
+
+<!-- MESSAGES -->
+<section id="chatMessages" class="flex-1 px-4 overflow-y-auto space-y-4 pb-6">
+</section>
 
 <!-- INPUT -->
 <footer class="bg-panel border-t border-border px-4 py-3">
-  <div class="flex items-center gap-3 bg-bg rounded-2xl px-4 py-2">
+  <div class="flex items-center gap-3 bg-bg rounded-xl px-4 py-2">
 
-    <button class="text-muted"><i data-lucide="smile" class="w-5 h-5"></i></button>
+    <button class="text-muted hover:text-white">
+      <i data-lucide="smile" class="w-5 h-5"></i>
+    </button>
 
     <input id="chatInput"
       class="flex-1 bg-transparent outline-none text-sm placeholder-muted caret-accent"
       placeholder="Message"
     />
 
-    <button class="text-muted"><i data-lucide="paperclip" class="w-5 h-5"></i></button>
-    <button class="text-muted"><i data-lucide="camera" class="w-5 h-5"></i></button>
+    <button class="text-muted hover:text-white">
+      <i data-lucide="camera" class="w-5 h-5"></i>
+    </button>
 
-    <button id="micBtn" class="text-muted">
+    <button id="micBtn" class="text-muted hover:text-white">
       <i data-lucide="mic" class="w-5 h-5"></i>
     </button>
 
@@ -87,69 +118,106 @@ tailwind.config = {
 </footer>
 
 </main>
+
+<!-- DESKTOP SIDEBAR -->
+<aside id="desktopSidebar"
+  class="hidden md:block w-80 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
+</aside>
+
 </div>
+
+<!-- MOBILE SIDEBAR -->
+<div id="mobileMembers" class="fixed inset-0 bg-black/60 hidden z-50">
+  <aside id="mobileSidebar"
+    class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5 overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <span class="text-sm font-semibold">Members</span>
+      <button onclick="closeMembers()">
+        <i data-lucide="x" class="w-5 h-5 text-muted"></i>
+      </button>
+    </div>
+  </aside>
+</div>
+
+<!-- SIDEBAR TEMPLATE -->
+<template id="membersTemplate">
+  <div class="space-y-6">
+    <div>
+      <div class="text-xs text-muted mb-2">ADMINS</div>
+      <div class="flex items-center gap-3">
+        <img src="https://i.pravatar.cc/32?img=12" class="w-8 h-8 rounded-full"/>
+        <span class="text-sm">Sam_Admin</span>
+        <span class="ml-auto w-2 h-2 bg-accent rounded-full"></span>
+      </div>
+    </div>
+  </div>
+</template>
 
 <script>
 lucide.createIcons();
 
-/* ===== STATE ===== */
-const isVerified = false;
+/* ===== SIDEBAR ===== */
+const tpl = document.getElementById('membersTemplate').content;
+desktopSidebar.appendChild(tpl.cloneNode(true));
+mobileSidebar.appendChild(tpl.cloneNode(true));
+
+function openMembers(){ mobileMembers.classList.remove('hidden'); }
+function closeMembers(){ mobileMembers.classList.add('hidden'); }
+
+/* ===== ONLINE COUNT ===== */
+const members = 4872;
+const el = document.getElementById('onlineCount');
+let online = Math.floor(members*(Math.random()*0.03+0.02));
+function fluctuate(){
+  online += Math.random()>.5 ? 1 : -1;
+  el.textContent = online.toLocaleString();
+  setTimeout(fluctuate,8000);
+}
+fluctuate();
+
+/* ===== CHAT LOGIC ===== */
 const chat = document.getElementById('chatMessages');
 const input = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 const micBtn = document.getElementById('micBtn');
 
-let mediaRecorder;
-let audioChunks = [];
-let isRecording = false;
+let mediaRecorder, audioChunks=[], recording=false;
 
-/* ===== HELPERS ===== */
-function escapeHTML(str) {
-  return str.replace(/[&<>"']/g, m =>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])
-  );
+function timeNow(){
+  return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
 
-function timeNow() {
-  return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-}
-
+/* TELEGRAM SCROLL LOGIC */
 function isNearBottom() {
   return chat.scrollHeight - chat.scrollTop - chat.clientHeight < 120;
 }
 
-/* ===== RENDERERS ===== */
-function renderSystem(text) {
+function updateSendState(){
+  const hasText = input.value.trim().length > 0;
+  micBtn.classList.toggle('hidden', hasText);
+  sendBtn.classList.toggle('hidden', !hasText);
+}
+
+function appendBubble(html){
+  const shouldScroll = isNearBottom();
+
   const div = document.createElement('div');
-  div.className = 'text-center text-xs text-muted';
-  div.textContent = text;
+  div.className = 'flex justify-end';
+  div.innerHTML = html;
   chat.appendChild(div);
+
+  if (shouldScroll) {
+    chat.scrollTop = chat.scrollHeight;
+  }
 }
 
-function renderUserBubble(innerHTML) {
-  const atBottom = isNearBottom();
-  const wrap = document.createElement('div');
-  wrap.className = 'flex justify-end';
-  wrap.innerHTML = innerHTML;
-  chat.appendChild(wrap);
-  if (atBottom) chat.scrollTop = chat.scrollHeight;
-}
-
-/* ===== TEXT MESSAGE ===== */
-function sendMessage() {
+function sendMessage(){
   const text = input.value.trim();
   if (!text) return;
 
-  if (!isVerified) {
-    renderSystem('🔒 You must complete verification to send messages.');
-    input.value = '';
-    updateSendState();
-    return;
-  }
-
-  renderUserBubble(`
+  appendBubble(`
     <div class="max-w-[70%] bg-accent/20 px-3 py-2 rounded-[14px_14px_4px_14px] text-sm">
-      <span>${escapeHTML(text)}</span>
+      <span>${text}</span>
       <span class="ml-2 text-[10px] text-muted float-right">${timeNow()}</span>
     </div>
   `);
@@ -158,57 +226,45 @@ function sendMessage() {
   updateSendState();
 }
 
-/* ===== VOICE RECORDING (REAL) ===== */
-async function startRecording(e) {
+/* ===== VOICE (REAL) ===== */
+async function startRec(e){
   e.preventDefault();
-  if (isRecording) return;
+  if (recording) return;
 
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const stream = await navigator.mediaDevices.getUserMedia({audio:true});
   mediaRecorder = new MediaRecorder(stream);
   audioChunks = [];
 
   mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
   mediaRecorder.onstop = sendVoice;
-
   mediaRecorder.start();
-  isRecording = true;
+
+  recording = true;
   micBtn.classList.add('text-red-500');
 }
 
-function stopRecording() {
-  if (!isRecording) return;
+function stopRec(){
+  if (!recording) return;
   mediaRecorder.stop();
-  isRecording = false;
+  recording = false;
   micBtn.classList.remove('text-red-500');
 }
 
-function sendVoice() {
-  if (!isVerified) {
-    renderSystem('🔒 You must complete verification to send voice messages.');
-    return;
-  }
-
-  const blob = new Blob(audioChunks, { type: 'audio/webm' });
+function sendVoice(){
+  const blob = new Blob(audioChunks, {type:'audio/webm'});
   const url = URL.createObjectURL(blob);
 
-  renderUserBubble(`
+  appendBubble(`
     <div class="max-w-[70%] bg-accent/20 px-3 py-2 rounded-[14px_14px_4px_14px] text-sm">
       <audio controls class="w-full h-8">
-        <source src="${url}" type="audio/webm">
+        <source src="${url}">
       </audio>
       <span class="ml-2 text-[10px] text-muted float-right">${timeNow()}</span>
     </div>
   `);
 }
 
-/* ===== INPUT STATE ===== */
-function updateSendState() {
-  const hasText = input.value.trim().length > 0;
-  micBtn.classList.toggle('hidden', hasText);
-  sendBtn.classList.toggle('hidden', !hasText);
-}
-
-/* ===== EVENTS ===== */
+/* EVENTS */
 input.addEventListener('input', updateSendState);
 input.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
@@ -219,14 +275,12 @@ input.addEventListener('keydown', e => {
 
 sendBtn.addEventListener('click', sendMessage);
 
-micBtn.addEventListener('mousedown', startRecording);
-micBtn.addEventListener('mouseup', stopRecording);
-micBtn.addEventListener('mouseleave', stopRecording);
-micBtn.addEventListener('touchstart', startRecording);
-micBtn.addEventListener('touchend', stopRecording);
+micBtn.addEventListener('mousedown', startRec);
+micBtn.addEventListener('mouseup', stopRec);
+micBtn.addEventListener('mouseleave', stopRec);
+micBtn.addEventListener('touchstart', startRec);
+micBtn.addEventListener('touchend', stopRec);
 
-/* ===== INIT ===== */
-renderSystem('🔒 You are read-only until an admin verifies your account.');
 updateSendState();
 </script>
 
