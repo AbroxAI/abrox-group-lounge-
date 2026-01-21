@@ -88,9 +88,7 @@ tailwind.config = {
 </section>
 
 <!-- MESSAGES -->
-<section id="chatMessages" class="flex-1 min-h-0 px-4 overflow-y-auto space-y-4 pb-24">
-  <!-- existing messages kept -->
-</section>
+<section id="chatMessages" class="flex-1 min-h-0 px-4 overflow-y-auto space-y-4 pb-24"></section>
 
 <!-- INPUT -->
 <footer class="bg-panel border-t border-border px-4 py-3">
@@ -109,13 +107,20 @@ tailwind.config = {
       <i data-lucide="camera" class="w-5 h-5"></i>
     </button>
 
-    <button id="micBtn" class="text-muted hover:text-white">
-      <i data-lucide="mic" class="w-5 h-5"></i>
-    </button>
+    <!-- WhatsApp-style slot -->
+    <div class="relative w-10 h-10 flex items-center justify-center">
 
-    <button id="sendBtn" class="text-accent hidden">
-      <i data-lucide="send" class="w-5 h-5"></i>
-    </button>
+      <button id="micBtn"
+        class="absolute inset-0 flex items-center justify-center rounded-full bg-panel text-white">
+        <i data-lucide="mic" class="w-5 h-5"></i>
+      </button>
+
+      <button id="sendBtn"
+        class="absolute inset-0 hidden flex items-center justify-center rounded-full bg-accent text-white">
+        <i data-lucide="send" class="w-5 h-5"></i>
+      </button>
+
+    </div>
 
   </div>
 </footer>
@@ -210,7 +215,7 @@ function sendMessage(){
 
   appendBubble(`
     <div class="max-w-[70%] bg-accent/20 px-3 py-2 rounded-[14px_14px_4px_14px] text-sm">
-      <span>${text}</span>
+      ${text}
       <span class="ml-2 text-[10px] text-muted float-right">${timeNow()}</span>
     </div>
   `);
@@ -219,48 +224,12 @@ function sendMessage(){
   updateSendState();
 }
 
-/* ===== VOICE (REAL) ===== */
-async function startRec(e){
-  e.preventDefault();
-  if(recording)return;
-  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-  mediaRecorder=new MediaRecorder(stream);
-  audioChunks=[];
-  mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
-  mediaRecorder.onstop=sendVoice;
-  mediaRecorder.start();
-  recording=true;
-  micBtn.classList.add('text-red-500');
-}
-
-function stopRec(){
-  if(!recording)return;
-  mediaRecorder.stop();
-  recording=false;
-  micBtn.classList.remove('text-red-500');
-}
-
-function sendVoice(){
-  const blob=new Blob(audioChunks,{type:'audio/webm'});
-  const url=URL.createObjectURL(blob);
-  appendBubble(`
-    <div class="max-w-[70%] bg-accent/20 px-3 py-2 rounded-[14px_14px_4px_14px] text-sm">
-      <audio controls class="w-full h-8"><source src="${url}"></audio>
-      <span class="ml-2 text-[10px] text-muted float-right">${timeNow()}</span>
-    </div>
-  `);
-}
-
 /* EVENTS */
 input.addEventListener('input',updateSendState);
-input.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();sendMessage();}});
+input.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){ e.preventDefault(); sendMessage(); }
+});
 sendBtn.addEventListener('click',sendMessage);
-
-micBtn.addEventListener('mousedown',startRec);
-micBtn.addEventListener('mouseup',stopRec);
-micBtn.addEventListener('mouseleave',stopRec);
-micBtn.addEventListener('touchstart',startRec);
-micBtn.addEventListener('touchend',stopRec);
 
 updateSendState();
 </script>
