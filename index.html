@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <title>Abrox – Private Lounge</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- ✅ FIXED VIEWPORT -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
@@ -24,7 +26,13 @@ tailwind.config = {
 }
 </script>
 
+<!-- ✅ MOBILE SAFETY STYLES -->
 <style>
+  html, body {
+    width: 100%;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
   .caret-accent { caret-color:#2ecc71 }
   #chatMessages { scroll-behavior: smooth; }
 </style>
@@ -32,16 +40,17 @@ tailwind.config = {
 <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
-<body class="bg-bg text-white h-screen overflow-hidden">
+<!-- ✅ h-screen REMOVED -->
+<body class="bg-bg text-white min-h-[100dvh] overflow-hidden">
 
-<div class="flex h-full">
+<div class="flex h-full max-w-full overflow-x-hidden">
 
-<main class="flex flex-col flex-1 min-h-0 border-r border-border">
+<main class="flex flex-col flex-1 min-h-0 border-r border-border max-w-full">
 
 <!-- HEADER -->
-<header class="bg-panel border-b border-border px-5 py-3">
+<header class="bg-panel border-b border-border px-4 py-3">
   <div class="flex justify-between items-start">
-    <div class="flex gap-5">
+    <div class="flex gap-4">
       <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
       <img src="assets/logo.png" class="w-10 h-10 object-contain"/>
       <div class="leading-tight space-y-1">
@@ -58,7 +67,6 @@ tailwind.config = {
         </div>
       </div>
     </div>
-
     <button class="md:hidden text-muted" onclick="openMembers()">
       <i data-lucide="users" class="w-5 h-5"></i>
     </button>
@@ -81,7 +89,10 @@ tailwind.config = {
 </section>
 
 <!-- CHAT -->
-<section id="chatMessages" class="relative flex-1 min-h-0 px-4 overflow-y-auto space-y-4 pb-28"></section>
+<section
+  id="chatMessages"
+  class="relative flex-1 min-h-0 px-3 sm:px-4 overflow-y-auto space-y-4 pb-32 max-w-full">
+</section>
 
 <!-- NEW MESSAGE INDICATOR -->
 <button id="newMsgBtn"
@@ -91,38 +102,31 @@ tailwind.config = {
 </button>
 
 <!-- INPUT -->
-<footer class="bg-panel border-t border-border px-4 py-3">
+<footer class="bg-panel border-t border-border px-3 py-3 pb-[env(safe-area-inset-bottom)]">
   <div class="flex items-center gap-3 bg-bg rounded-xl px-4 py-2">
-
     <button class="text-muted hover:text-white">
       <i data-lucide="smile" class="w-5 h-5"></i>
     </button>
-
     <input id="chatInput"
       class="flex-1 bg-transparent outline-none text-sm placeholder-muted caret-accent"
       placeholder="Message"
     />
-
     <button class="text-muted hover:text-white">
       <i data-lucide="paperclip" class="w-5 h-5"></i>
     </button>
-
     <button class="text-muted hover:text-white">
       <i data-lucide="camera" class="w-5 h-5"></i>
     </button>
-
     <div class="relative w-10 h-10">
       <button id="micBtn"
         class="absolute inset-0 rounded-full bg-white text-bg flex items-center justify-center">
         <i data-lucide="mic" class="w-5 h-5"></i>
       </button>
-
       <button id="sendBtn"
         class="absolute inset-0 hidden rounded-full bg-accent text-white flex items-center justify-center">
         <i data-lucide="send" class="w-5 h-5"></i>
       </button>
     </div>
-
   </div>
 </footer>
 
@@ -130,7 +134,7 @@ tailwind.config = {
 
 <!-- DESKTOP SIDEBAR -->
 <aside id="desktopSidebar"
-  class="hidden md:block w-80 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
+  class="hidden md:block w-80 shrink-0 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
 </aside>
 
 </div>
@@ -185,7 +189,6 @@ const input = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 const micBtn = document.getElementById('micBtn');
 const newMsgBtn = document.getElementById('newMsgBtn');
-
 let autoScroll = true;
 
 chat.addEventListener('scroll',()=>{
@@ -222,7 +225,7 @@ function sendMessage(){
   const text=input.value.trim();
   if(!text)return;
   appendBubble(`
-    <div class="max-w-[70%] bg-accent/20 px-3 py-2 rounded-[14px_14px_4px_14px] text-sm">
+    <div class="max-w-[85%] sm:max-w-[70%] bg-accent/20 px-3 py-2 rounded-[14px_14px_4px_14px] text-sm">
       ${text}
       <span class="ml-2 text-[10px] text-muted float-right">${timeNow()}</span>
     </div>
