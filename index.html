@@ -50,6 +50,7 @@ tailwind.config = {
 
       <!-- TEXT STACK -->
       <div class="leading-tight space-y-1">
+
         <div class="text-sm font-semibold">
           Abrox Binary Bot – Private Lounge
         </div>
@@ -66,6 +67,7 @@ tailwind.config = {
         <div class="text-[11px] text-muted/80">
           Demo discussion · Verification required
         </div>
+
       </div>
     </div>
 
@@ -104,9 +106,8 @@ tailwind.config = {
         <span class="text-accent font-medium">Mina_fx</span>
         <span class="ml-2">07:28</span>
       </div>
-      <div class="bg-bubble px-3 py-2 rounded-[14px_14px_14px_4px] text-sm">
-        <p>morning all</p>
-        <span class="block text-[10px] text-muted mt-1">07:28</span>
+      <div class="bg-bubble px-3 py-1.5 rounded-[14px_14px_14px_4px] text-sm">
+        morning all
       </div>
     </div>
   </div>
@@ -119,9 +120,8 @@ tailwind.config = {
         <span class="ml-1">(Admin)</span>
         <span class="ml-2">07:35</span>
       </div>
-      <div class="bg-bubble px-3 py-2 rounded-[14px_14px_14px_4px] text-sm">
-        <p>Low activity today. Demo only.</p>
-        <span class="block text-[10px] text-muted mt-1">07:35</span>
+      <div class="bg-bubble px-3 py-1.5 rounded-[14px_14px_14px_4px] text-sm">
+        Low activity today. Demo only.
       </div>
     </div>
   </div>
@@ -130,35 +130,13 @@ tailwind.config = {
 
 <!-- INPUT -->
 <footer class="bg-panel border-t border-border px-4 py-3">
-  <div class="flex items-center gap-3 bg-bg rounded-xl px-4 py-2">
-
-    <!-- EMOJI -->
-    <button class="text-muted hover:text-white">
-      <i data-lucide="smile" class="w-5 h-5"></i>
-    </button>
-
-    <!-- INPUT -->
+  <div class="flex gap-3 items-center bg-bg rounded-xl px-4 py-2">
     <input
-      id="chatInput"
       class="flex-1 bg-transparent outline-none text-sm placeholder-muted"
       placeholder="Type a message"
     />
-
-    <!-- CAMERA -->
-    <button class="text-muted hover:text-white">
-      <i data-lucide="camera" class="w-5 h-5"></i>
-    </button>
-
-    <!-- MIC -->
-    <button id="micBtn" class="text-muted hover:text-white">
-      <i data-lucide="mic" class="w-5 h-5"></i>
-    </button>
-
-    <!-- SEND -->
-    <button id="sendBtn" class="text-accent hover:opacity-80 hidden">
-      <i data-lucide="send" class="w-5 h-5"></i>
-    </button>
-
+    <i data-lucide="mic" class="w-5 h-5 text-muted"></i>
+    <i data-lucide="send" class="w-5 h-5 text-accent cursor-pointer"></i>
   </div>
 </footer>
 
@@ -187,6 +165,7 @@ tailwind.config = {
 <!-- SIDEBAR TEMPLATE -->
 <template id="membersTemplate">
   <div class="space-y-6">
+
     <div>
       <div class="text-xs text-muted mb-2">ADMINS</div>
       <div class="flex items-center gap-3">
@@ -216,6 +195,7 @@ tailwind.config = {
       <div class="text-xs text-muted mb-2">PENDING</div>
       <div class="text-sm text-muted">newbie_021</div>
     </div>
+
   </div>
 </template>
 
@@ -255,18 +235,11 @@ function fluctuate() {
 el.textContent = online.toLocaleString();
 setTimeout(fluctuate, 7000);
 
-/* ===== CHAT + SEND BOX LOGIC ===== */
+/* ===== REAL CHAT LOGIC ===== */
 
 const chat = document.getElementById('chatMessages');
-const input = document.getElementById('chatInput');
-const sendBtn = document.getElementById('sendBtn');
-const micBtn = document.getElementById('micBtn');
-
-function updateSendState() {
-  const hasText = input.value.trim().length > 0;
-  micBtn.classList.toggle('hidden', hasText);
-  sendBtn.classList.toggle('hidden', !hasText);
-}
+const input = document.querySelector('input[placeholder="Type a message"]');
+const sendBtn = document.querySelector('[data-lucide="send"]');
 
 function sendMessage() {
   const text = input.value.trim();
@@ -281,22 +254,20 @@ function sendMessage() {
   bubble.className = 'flex justify-end';
 
   bubble.innerHTML = `
-    <div class="max-w-[70%]">
-      <div class="bg-accent/20 px-3 py-2 rounded-[14px_14px_4px_14px] text-sm">
-        <p>${text}</p>
-        <span class="block text-[10px] text-muted mt-1 text-right">${time}</span>
+    <div class="max-w-[70%] text-right">
+      <div class="text-xs text-muted mb-1">
+        You • ${time}
+      </div>
+      <div class="bg-accent/20 px-3 py-1.5 rounded-[14px_14px_4px_14px] text-sm">
+        ${text}
       </div>
     </div>
   `;
 
   chat.appendChild(bubble);
-  chat.scrollTop = chat.scrollHeight;
-
   input.value = '';
-  updateSendState();
+  chat.scrollTop = chat.scrollHeight;
 }
-
-input.addEventListener('input', updateSendState);
 
 input.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
@@ -306,9 +277,6 @@ input.addEventListener('keydown', e => {
 });
 
 sendBtn.addEventListener('click', sendMessage);
-
-/* INITIAL STATE */
-updateSendState();
 </script>
 
 </body>
