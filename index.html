@@ -4,8 +4,12 @@
 <meta charset="UTF-8" />
 <title>Abrox – Private Lounge</title>
 
-<!-- ✅ FIXED VIEWPORT -->
+<!-- ✅ PWA VIEWPORT -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+
+<!-- ✅ PWA META -->
+<meta name="theme-color" content="#1c1f26" />
+<link rel="manifest" href="manifest.json" />
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
@@ -26,21 +30,19 @@ tailwind.config = {
 }
 </script>
 
-<!-- ✅ MOBILE SAFETY STYLES -->
 <style>
-  html, body {
-    width: 100%;
-    overflow-x: hidden;
-    -webkit-text-size-adjust: 100%;
-  }
-  .caret-accent { caret-color:#2ecc71 }
-  #chatMessages { scroll-behavior: smooth; }
+html, body {
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+.caret-accent { caret-color:#2ecc71 }
+#chatMessages { scroll-behavior: smooth; }
 </style>
 
 <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
-<!-- ✅ h-screen REMOVED -->
 <body class="bg-bg text-white min-h-[100dvh] overflow-hidden">
 
 <div class="flex h-full max-w-full overflow-x-hidden">
@@ -89,12 +91,10 @@ tailwind.config = {
 </section>
 
 <!-- CHAT -->
-<section
-  id="chatMessages"
+<section id="chatMessages"
   class="relative flex-1 min-h-0 px-3 sm:px-4 overflow-y-auto space-y-4 pb-32 max-w-full">
 </section>
 
-<!-- NEW MESSAGE INDICATOR -->
 <button id="newMsgBtn"
   class="hidden fixed bottom-28 left-1/2 -translate-x-1/2 bg-accent text-white text-xs px-3 py-1 rounded-full shadow"
   onclick="scrollToBottom(true)">
@@ -102,8 +102,8 @@ tailwind.config = {
 </button>
 
 <!-- INPUT -->
-<footer class="bg-panel border-t border-border px-3 py-3 pb-[env(safe-area-inset-bottom)]">
-  <div class="flex items-center gap-3 bg-bg rounded-xl px-4 py-2">
+<footer class="bg-panel border-t border-border px-3 py-3 pb-[env(safe-area-inset-bottom)] shrink-0">
+  <div class="flex items-center gap-3 bg-bg rounded-xl px-4 py-2 min-h-[48px] overflow-visible">
     <button class="text-muted hover:text-white">
       <i data-lucide="smile" class="w-5 h-5"></i>
     </button>
@@ -117,7 +117,7 @@ tailwind.config = {
     <button class="text-muted hover:text-white">
       <i data-lucide="camera" class="w-5 h-5"></i>
     </button>
-    <div class="relative w-10 h-10">
+    <div class="relative w-10 h-10 shrink-0 flex items-center justify-center">
       <button id="micBtn"
         class="absolute inset-0 rounded-full bg-white text-bg flex items-center justify-center">
         <i data-lucide="mic" class="w-5 h-5"></i>
@@ -132,14 +132,13 @@ tailwind.config = {
 
 </main>
 
-<!-- DESKTOP SIDEBAR -->
 <aside id="desktopSidebar"
   class="hidden md:block w-80 shrink-0 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
 </aside>
 
 </div>
 
-<!-- MOBILE SIDEBAR -->
+<!-- MOBILE MEMBERS -->
 <div id="mobileMembers" class="fixed inset-0 bg-black/60 hidden z-50">
   <aside id="mobileSidebar"
     class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5 overflow-y-auto">
@@ -183,7 +182,7 @@ const el = document.getElementById('onlineCount');
   setTimeout(fluctuate,8000);
 })();
 
-/* CHAT */
+/* CHAT LOGIC (UNCHANGED) */
 const chat = document.getElementById('chatMessages');
 const input = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
@@ -240,6 +239,27 @@ input.addEventListener('keydown',e=>{
 });
 sendBtn.addEventListener('click',sendMessage);
 updateSendState();
+
+/* ✅ KEYBOARD RESIZE FIX */
+(function () {
+  const footer = document.querySelector('footer');
+  function adjust() {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const k = window.innerHeight - vv.height;
+    footer.style.transform = k > 0 ? `translateY(-${k}px)` : '';
+  }
+  if (window.visualViewport) {
+    visualViewport.addEventListener('resize', adjust);
+  }
+})();
+
+/* ✅ SERVICE WORKER REGISTER */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js');
+  });
+}
 </script>
 
 </body>
