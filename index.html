@@ -4,10 +4,8 @@
 <meta charset="UTF-8" />
 <title>Abrox – Private Lounge</title>
 
-<!-- ✅ MOBILE + PWA VIEWPORT -->
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-
-<!-- ✅ PWA META -->
+<!-- MOBILE + PWA -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#1c1f26">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -34,25 +32,25 @@ tailwind.config = {
 
 <style>
 html, body {
+  height: 100%;
   width: 100%;
-  overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
 }
-.caret-accent { caret-color:#2ecc71 }
 #chatMessages { scroll-behavior: smooth; }
+.caret-accent { caret-color:#2ecc71 }
 </style>
 
 <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
-<body class="bg-bg text-white min-h-[100dvh] overflow-hidden">
+<body class="bg-bg text-white min-h-[100dvh]">
 
-<div class="flex h-full max-w-full overflow-x-hidden">
+<div class="flex h-[100dvh] max-w-full">
 
-<main class="flex flex-col flex-1 min-h-0 border-r border-border max-w-full">
+<main class="flex flex-col flex-1 min-h-0 border-r border-border">
 
 <!-- HEADER -->
-<header class="bg-panel border-b border-border px-4 py-3">
+<header class="bg-panel border-b border-border px-4 py-3 shrink-0">
   <div class="flex justify-between items-start">
     <div class="flex gap-4">
       <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
@@ -77,11 +75,14 @@ html, body {
   </div>
 </header>
 
-<section class="p-4">
-  <div class="bg-panel/60 rounded-xl p-4">
-    <div class="flex items-center gap-2 mb-2">
+<!-- PINNED ADMIN RULES -->
+<section class="px-4 pt-4 shrink-0">
+  <div class="bg-panel/80 border border-border rounded-xl p-4">
+    <div class="flex items-center gap-2 mb-2 text-admin">
       <span>📌</span>
-      <span class="text-sm font-medium">Group Rules</span>
+      <span class="text-sm font-semibold uppercase tracking-wide">
+        Group Rules
+      </span>
     </div>
     <ul class="text-sm text-muted list-disc list-inside space-y-1">
       <li>New members are read-only until verified</li>
@@ -95,33 +96,41 @@ html, body {
 <!-- CHAT -->
 <section
   id="chatMessages"
-  class="relative flex-1 min-h-0 px-3 sm:px-4 overflow-y-auto space-y-4 pb-32 max-w-full">
+  class="flex-1 min-h-0 px-3 sm:px-4 overflow-y-auto space-y-4 pt-4 pb-32">
 </section>
 
-<!-- NEW MESSAGE -->
+<!-- NEW MESSAGE INDICATOR -->
 <button id="newMsgBtn"
-  class="hidden fixed bottom-28 left-1/2 -translate-x-1/2 bg-accent text-white text-xs px-3 py-1 rounded-full shadow"
+  class="hidden fixed bottom-24 left-1/2 -translate-x-1/2
+         bg-accent text-white text-xs px-3 py-1 rounded-full shadow z-40"
   onclick="scrollToBottom(true)">
   New messages
 </button>
 
-<!-- INPUT -->
-<footer class="bg-panel border-t border-border px-3 py-3 pb-[env(safe-area-inset-bottom)] shrink-0">
-  <div class="flex items-center gap-3 bg-bg rounded-xl px-4 py-2 min-h-[48px] overflow-visible">
-    <button class="text-muted hover:text-white">
+<!-- INPUT BAR -->
+<footer
+  class="bg-panel border-t border-border px-3 py-3
+         pb-[env(safe-area-inset-bottom)]
+         sticky bottom-0 z-50 shrink-0">
+  <div class="flex items-center gap-3 bg-bg rounded-xl px-4 py-2 min-h-[48px]">
+    <button class="text-muted">
       <i data-lucide="smile" class="w-5 h-5"></i>
     </button>
+
     <input id="chatInput"
       class="flex-1 bg-transparent outline-none text-sm placeholder-muted caret-accent"
       placeholder="Message"
     />
-    <button class="text-muted hover:text-white">
+
+    <button class="text-muted">
       <i data-lucide="paperclip" class="w-5 h-5"></i>
     </button>
-    <button class="text-muted hover:text-white">
+
+    <button class="text-muted">
       <i data-lucide="camera" class="w-5 h-5"></i>
     </button>
-    <div class="relative w-10 h-10 shrink-0 flex items-center justify-center">
+
+    <div class="relative w-10 h-10 shrink-0">
       <button id="micBtn"
         class="absolute inset-0 rounded-full bg-white text-bg flex items-center justify-center">
         <i data-lucide="mic" class="w-5 h-5"></i>
@@ -137,46 +146,22 @@ html, body {
 </main>
 
 <!-- DESKTOP SIDEBAR -->
-<aside id="desktopSidebar"
-  class="hidden md:block w-80 shrink-0 bg-panel px-4 py-5 overflow-y-auto border-l border-border">
+<aside class="hidden md:block w-80 bg-panel px-4 py-5 border-l border-border overflow-y-auto">
+  <div class="text-xs text-muted mb-2">ADMINS</div>
+  <div class="flex items-center gap-3">
+    <img src="https://i.pravatar.cc/32?img=12" class="w-8 h-8 rounded-full"/>
+    <span class="text-sm">Sam_Admin</span>
+    <span class="ml-auto w-2 h-2 bg-accent rounded-full"></span>
+  </div>
 </aside>
 
 </div>
 
-<!-- MOBILE SIDEBAR -->
-<div id="mobileMembers" class="fixed inset-0 bg-black/60 hidden z-50">
-  <aside id="mobileSidebar"
-    class="absolute right-0 top-0 h-full w-72 bg-panel px-4 py-5 overflow-y-auto">
-    <div class="flex justify-between items-center mb-4">
-      <span class="text-sm font-semibold">Members</span>
-      <button onclick="closeMembers()">
-        <i data-lucide="x" class="w-5 h-5 text-muted"></i>
-      </button>
-    </div>
-  </aside>
-</div>
-
-<template id="membersTemplate">
-  <div class="space-y-6">
-    <div>
-      <div class="text-xs text-muted mb-2">ADMINS</div>
-      <div class="flex items-center gap-3">
-        <img src="https://i.pravatar.cc/32?img=12" class="w-8 h-8 rounded-full"/>
-        <span class="text-sm">Sam_Admin</span>
-        <span class="ml-auto w-2 h-2 bg-accent rounded-full"></span>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script>
 lucide.createIcons();
 
-/* SIDEBAR */
-desktopSidebar.appendChild(membersTemplate.content.cloneNode(true));
-mobileSidebar.appendChild(membersTemplate.content.cloneNode(true));
-function openMembers(){ mobileMembers.classList.remove('hidden'); }
-function closeMembers(){ mobileMembers.classList.add('hidden'); }
+/* MEMBERS */
+function openMembers(){}
 
 /* ONLINE COUNT */
 let online = Math.floor(4872*(Math.random()*0.03+0.02));
@@ -212,68 +197,40 @@ function timeNow(){
 }
 
 function updateSendState(){
-  const hasText = input.value.trim().length>0;
-  micBtn.classList.toggle('hidden',hasText);
-  sendBtn.classList.toggle('hidden',!hasText);
+  const hasText = input.value.trim().length > 0;
+  micBtn.classList.toggle('hidden', hasText);
+  sendBtn.classList.toggle('hidden', !hasText);
 }
 
-function appendBubble(html){
-  const div=document.createElement('div');
-  div.className='flex justify-end';
-  div.innerHTML=html;
+function appendBubble(text){
+  const div = document.createElement('div');
+  div.className = 'flex justify-end';
+  div.innerHTML = `
+    <div class="max-w-[80%] bg-accent/20 px-3 py-2
+                rounded-[14px_14px_4px_14px] text-sm">
+      ${text}
+      <span class="ml-2 text-[10px] text-muted float-right">${timeNow()}</span>
+    </div>`;
   chat.appendChild(div);
   scrollToBottom();
 }
 
 function sendMessage(){
-  const text=input.value.trim();
-  if(!text)return;
-  appendBubble(`
-    <div class="max-w-[85%] sm:max-w-[70%] bg-accent/20 px-3 py-2 rounded-[14px_14px_4px_14px] text-sm">
-      ${text}
-      <span class="ml-2 text-[10px] text-muted float-right">${timeNow()}</span>
-    </div>
-  `);
+  const text = input.value.trim();
+  if(!text) return;
+  appendBubble(text);
   input.value='';
   updateSendState();
 }
 
-input.addEventListener('input',updateSendState);
-input.addEventListener('keydown',e=>{
+input.addEventListener('input', updateSendState);
+input.addEventListener('keydown', e=>{
   if(e.key==='Enter'){ e.preventDefault(); sendMessage(); }
 });
-sendBtn.addEventListener('click',sendMessage);
+sendBtn.addEventListener('click', sendMessage);
 updateSendState();
 
-/* ✅ KEYBOARD BALANCED (PWA + WEB) */
-(function () {
-  const footer = document.querySelector('footer');
-  const chat = document.getElementById('chatMessages');
-  let last = 0;
-
-  function adjust() {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const k = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-    if (k > 50 && k !== last) {
-      footer.style.transform = `translateY(-${k}px)`;
-      chat.style.paddingBottom = `${k + 140}px`;
-      last = k;
-    }
-    if (k <= 50) {
-      footer.style.transform = '';
-      chat.style.paddingBottom = '';
-      last = 0;
-    }
-  }
-
-  if (window.visualViewport) {
-    visualViewport.addEventListener('resize', adjust);
-    visualViewport.addEventListener('scroll', adjust);
-  }
-})();
-
-/* ✅ SERVICE WORKER */
+/* SERVICE WORKER */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js');
