@@ -36,7 +36,7 @@ tailwind.config = {
 <div class="flex h-full">
 
 <!-- ================= MAIN CHAT ================= -->
-<main class="flex flex-col flex-1 border-r border-border">
+<main class="flex flex-col flex-1 min-h-0 border-r border-border">
 
 <!-- HEADER -->
 <header class="bg-panel border-b border-border px-4 py-3">
@@ -46,7 +46,9 @@ tailwind.config = {
       <img src="assets/logo.png" class="w-10 h-10 object-contain"/>
 
       <div class="leading-tight space-y-1">
-        <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
+        <div class="text-sm font-semibold">
+          Abrox Binary Bot – Private Lounge
+        </div>
 
         <div class="flex items-center gap-1 text-xs text-muted">
           <i data-lucide="lock" class="w-3.5 h-3.5"></i>
@@ -86,7 +88,8 @@ tailwind.config = {
 </section>
 
 <!-- MESSAGES -->
-<section id="chatMessages" class="flex-1 px-4 overflow-y-auto space-y-4 pb-6">
+<section id="chatMessages" class="flex-1 min-h-0 px-4 overflow-y-auto space-y-4 pb-24">
+  <!-- existing messages kept -->
 </section>
 
 <!-- INPUT -->
@@ -169,7 +172,7 @@ const members = 4872;
 const el = document.getElementById('onlineCount');
 let online = Math.floor(members*(Math.random()*0.03+0.02));
 function fluctuate(){
-  online += Math.random()>.5 ? 1 : -1;
+  online += Math.random()>.5?1:-1;
   el.textContent = online.toLocaleString();
   setTimeout(fluctuate,8000);
 }
@@ -187,33 +190,23 @@ function timeNow(){
   return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
 
-/* TELEGRAM SCROLL LOGIC */
-function isNearBottom() {
-  return chat.scrollHeight - chat.scrollTop - chat.clientHeight < 120;
-}
-
 function updateSendState(){
-  const hasText = input.value.trim().length > 0;
-  micBtn.classList.toggle('hidden', hasText);
-  sendBtn.classList.toggle('hidden', !hasText);
+  const hasText = input.value.trim().length>0;
+  micBtn.classList.toggle('hidden',hasText);
+  sendBtn.classList.toggle('hidden',!hasText);
 }
 
 function appendBubble(html){
-  const shouldScroll = isNearBottom();
-
-  const div = document.createElement('div');
-  div.className = 'flex justify-end';
-  div.innerHTML = html;
+  const div=document.createElement('div');
+  div.className='flex justify-end';
+  div.innerHTML=html;
   chat.appendChild(div);
-
-  if (shouldScroll) {
-    chat.scrollTop = chat.scrollHeight;
-  }
+  chat.scrollTop=chat.scrollHeight;
 }
 
 function sendMessage(){
-  const text = input.value.trim();
-  if (!text) return;
+  const text=input.value.trim();
+  if(!text)return;
 
   appendBubble(`
     <div class="max-w-[70%] bg-accent/20 px-3 py-2 rounded-[14px_14px_4px_14px] text-sm">
@@ -222,64 +215,52 @@ function sendMessage(){
     </div>
   `);
 
-  input.value = '';
+  input.value='';
   updateSendState();
 }
 
 /* ===== VOICE (REAL) ===== */
 async function startRec(e){
   e.preventDefault();
-  if (recording) return;
-
-  const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-  mediaRecorder = new MediaRecorder(stream);
-  audioChunks = [];
-
-  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-  mediaRecorder.onstop = sendVoice;
+  if(recording)return;
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  mediaRecorder=new MediaRecorder(stream);
+  audioChunks=[];
+  mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
+  mediaRecorder.onstop=sendVoice;
   mediaRecorder.start();
-
-  recording = true;
+  recording=true;
   micBtn.classList.add('text-red-500');
 }
 
 function stopRec(){
-  if (!recording) return;
+  if(!recording)return;
   mediaRecorder.stop();
-  recording = false;
+  recording=false;
   micBtn.classList.remove('text-red-500');
 }
 
 function sendVoice(){
-  const blob = new Blob(audioChunks, {type:'audio/webm'});
-  const url = URL.createObjectURL(blob);
-
+  const blob=new Blob(audioChunks,{type:'audio/webm'});
+  const url=URL.createObjectURL(blob);
   appendBubble(`
     <div class="max-w-[70%] bg-accent/20 px-3 py-2 rounded-[14px_14px_4px_14px] text-sm">
-      <audio controls class="w-full h-8">
-        <source src="${url}">
-      </audio>
+      <audio controls class="w-full h-8"><source src="${url}"></audio>
       <span class="ml-2 text-[10px] text-muted float-right">${timeNow()}</span>
     </div>
   `);
 }
 
 /* EVENTS */
-input.addEventListener('input', updateSendState);
-input.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    sendMessage();
-  }
-});
+input.addEventListener('input',updateSendState);
+input.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();sendMessage();}});
+sendBtn.addEventListener('click',sendMessage);
 
-sendBtn.addEventListener('click', sendMessage);
-
-micBtn.addEventListener('mousedown', startRec);
-micBtn.addEventListener('mouseup', stopRec);
-micBtn.addEventListener('mouseleave', stopRec);
-micBtn.addEventListener('touchstart', startRec);
-micBtn.addEventListener('touchend', stopRec);
+micBtn.addEventListener('mousedown',startRec);
+micBtn.addEventListener('mouseup',stopRec);
+micBtn.addEventListener('mouseleave',stopRec);
+micBtn.addEventListener('touchstart',startRec);
+micBtn.addEventListener('touchend',stopRec);
 
 updateSendState();
 </script>
