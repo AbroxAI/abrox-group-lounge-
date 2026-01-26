@@ -45,6 +45,9 @@ tailwind.config = {
 .system{text-align:center;color:#a0a6b5;font-size:13px}
 .typing{font-size:11px;color:#a0a6b5;padding-left:6px;transition:opacity 0.3s}
 .online-icon{display:none;} /* Removed green dot */
+.transition-bg {transition: background-color 0.2s;}
+.bg-recording {background-color:#e74c3c !important;}
+.text-white-important {color:white !important;}
 </style>
 </head>
 
@@ -98,7 +101,7 @@ tailwind.config = {
     <input id="file" type="file" hidden>
 
     <div class="relative w-10 h-10">
-      <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center transition-colors duration-200">
+      <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center transition-bg">
         <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
       </button>
       <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
@@ -191,11 +194,12 @@ file.onchange=e=>{
   }
 };
 
-/* VOICE RECORDING TOGGLE WITH MIC COLOR */
+/* VOICE RECORDING - WHATSAPP STYLE */
 let rec, chunks=[], wave, recording=false;
 let streamRef;
 
 mic.addEventListener('click', async()=>{
+  const micIcon = mic.querySelector('i');
   if(!recording){
     // Show recording bubble
     const m=document.createElement('div');
@@ -213,8 +217,8 @@ mic.addEventListener('click', async()=>{
     },200);
 
     // Change mic color to red
-    mic.style.backgroundColor = 'theme(recording)'; // Tailwind class replacement
-    mic.querySelector('i').classList.add('text-white');
+    mic.classList.add('bg-recording');
+    micIcon.classList.add('text-white-important');
 
     try {
       if(!streamRef){
@@ -228,8 +232,8 @@ mic.addEventListener('click', async()=>{
     } catch(err){
       clearInterval(wave);
       if(m) m.remove();
-      mic.style.backgroundColor = ''; 
-      mic.querySelector('i').classList.remove('text-white');
+      mic.classList.remove('bg-recording');
+      micIcon.classList.remove('text-white-important');
       alert('Microphone access denied or unavailable.');
       recording=false;
     }
@@ -251,8 +255,8 @@ mic.addEventListener('click', async()=>{
     if(bubble) bubble.remove();
 
     // Reset mic color
-    mic.style.backgroundColor = 'white';
-    mic.querySelector('i').classList.remove('text-white');
+    mic.classList.remove('bg-recording');
+    micIcon.classList.remove('text-white-important');
   }
 });
 </script>
