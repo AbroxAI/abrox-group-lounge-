@@ -185,7 +185,7 @@ file.onchange=e=>{
   }
 };
 
-/* PRESS & HOLD VOICE RECORDING WITH CANCEL ON DRAG (CHROME/GITHUB READY) */
+/* PRESS & HOLD VOICE RECORDING WITH CANCEL ON DRAG (WORKS IN CHROME GITHUB PAGES) */
 let rec,chunks=[],recording=false,streamRef,waveInterval,canceled=false;
 const micWave=document.getElementById('micWave');
 const waveBars=micWave.querySelectorAll('.wave-bar');
@@ -195,7 +195,7 @@ mic.addEventListener('mousedown',async e=>{
   canceled=false;
   if(!recording){
     try{
-      // Get microphone access inside direct user gesture
+      // Access microphone directly in user gesture
       streamRef = await navigator.mediaDevices.getUserMedia({ audio: true });
       rec = new MediaRecorder(streamRef);
       chunks = [];
