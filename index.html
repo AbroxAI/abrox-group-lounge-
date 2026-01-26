@@ -18,7 +18,8 @@ tailwind.config = {
         border:'#343a4a',
         muted:'#a0a6b5',
         accent:'#2ecc71',
-        bubble:'#262b38'
+        bubble:'#262b38',
+        recording:'#e74c3c'
       }
     }
   }
@@ -52,7 +53,6 @@ tailwind.config = {
 <div class="flex h-full">
 <main class="flex flex-col flex-1 border-r border-border">
 
-<!-- HEADER -->
 <header class="bg-panel border-b border-border px-4 py-3">
   <div class="flex justify-between">
     <div class="flex gap-4">
@@ -75,9 +75,7 @@ tailwind.config = {
   </div>
 </header>
 
-<!-- CHAT -->
 <section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-
   <div class="system">
     📌 <strong>Group Rules</strong><br>
     New members are read-only until verified<br>
@@ -85,13 +83,10 @@ tailwind.config = {
     No screenshots in chat<br>
     Ignore unsolicited messages
   </div>
-
 </section>
 
-<!-- TYPING INDICATOR -->
 <div id="typing" class="typing opacity-0">Someone is typing…</div>
 
-<!-- INPUT -->
 <footer class="bg-panel border-t border-border px-4 py-3 pb-[env(safe-area-inset-bottom)]">
   <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2">
 
@@ -103,7 +98,7 @@ tailwind.config = {
     <input id="file" type="file" hidden>
 
     <div class="relative w-10 h-10">
-      <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center">
+      <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center transition-colors duration-200">
         <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
       </button>
       <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
@@ -112,7 +107,6 @@ tailwind.config = {
     </div>
   </div>
 
-  <!-- FULL EMOJI PICKER -->
   <div id="emojiPanel" class="hidden mt-2 bg-panel rounded-xl p-3 grid grid-cols-8 gap-2 text-lg max-h-40 overflow-y-auto">
 😀 😁 😂 🤣 😃 😄 😅 😆 😉 😊 😍 😘 😜 🤪 🤨 😎 😭 😡 😱 😴 🤯 🤗 🤔 👍 👎 🙏 👏 💪 🔥 ❤️ 💔 🎉 🎯 🚀 💰 📈 📉 📎 📄 📷 🎥 🔊 🔒 🔑 ⚠️ ❌ ✅ 😇 🥳 🤩 🥺 🤭 🤫 🤥 🫠 🫡 😏 😣 😖 😫 😤 😓 🥵 🥶 😶‍🌫️ 😱 🫣 😵 😵‍💫 🫠 😪 😮 😲 🥱 🫢
   </div>
@@ -174,7 +168,7 @@ function sendMsg(html){
 
 send.onclick=()=>{if(input.value.trim()){sendMsg(input.value);input.value='';toggle();}};
 
-/* EMOJI PICKER: SINGLE SELECTION */
+/* EMOJI PICKER */
 emojiBtn.onclick=()=>emojiPanel.classList.toggle('hidden');
 emojiPanel.addEventListener('click',e=>{
   if(e.target.textContent.trim()){
@@ -197,51 +191,68 @@ file.onchange=e=>{
   }
 };
 
-/* VOICE RECORDING TOGGLE */
+/* VOICE RECORDING TOGGLE WITH MIC COLOR */
 let rec, chunks=[], wave, recording=false;
 let streamRef;
 
 mic.addEventListener('click', async()=>{
   if(!recording){
-    // START RECORDING
+    // Show recording bubble
+    const m=document.createElement('div');
+    m.className='msg out';
+    m.id='recordingBubble';
+    m.innerHTML=`<div class="bubble">Recording<div class="wave">${'<span></span>'.repeat(8)}</div></div>`;
+    chat.appendChild(m);
+    chat.scrollTop = chat.scrollHeight;
+
+    // Animate wave
+    wave = setInterval(()=>{
+      m.querySelectorAll('span').forEach(b=>{
+        b.style.height=(Math.random()*12+4)+'px';
+      });
+    },200);
+
+    // Change mic color to red
+    mic.style.backgroundColor = 'theme(recording)'; // Tailwind class replacement
+    mic.querySelector('i').classList.add('text-white');
+
     try {
       if(!streamRef){
         streamRef = await navigator.mediaDevices.getUserMedia({audio:true});
       }
       rec = new MediaRecorder(streamRef);
-      chunks = [];
+      chunks=[];
       rec.ondataavailable = e => chunks.push(e.data);
       rec.start();
       recording=true;
-
-      const m=document.createElement('div');
-      m.className='msg out';
-      m.id='recordingBubble';
-      m.innerHTML=`<div class="bubble">Recording<div class="wave">${'<span></span>'.repeat(8)}</div></div>`;
-      chat.appendChild(m);
-      chat.scrollTop = chat.scrollHeight;
-
-      wave = setInterval(()=>{
-        m.querySelectorAll('span').forEach(b=>{
-          b.style.height=(Math.random()*12+4)+'px';
-        });
-      },200);
-
-    } catch(err) {
+    } catch(err){
+      clearInterval(wave);
+      if(m) m.remove();
+      mic.style.backgroundColor = ''; 
+      mic.querySelector('i').classList.remove('text-white');
       alert('Microphone access denied or unavailable.');
       recording=false;
     }
+
   } else {
-    // STOP RECORDING
+    // Stop recording
     clearInterval(wave);
-    if (rec && rec.state !== 'inactive') rec.stop();
-    rec.onstop = () => {
-      const url = URL.createObjectURL(new Blob(chunks));
-      sendMsg(`<audio controls class="w-full"><source src="${url}"></audio>`);
-    };
+    if(rec && rec.state !== 'inactive'){
+      rec.onstop = () => {
+        const url = URL.createObjectURL(new Blob(chunks));
+        sendMsg(`<audio controls class="w-full"><source src="${url}"></audio>`);
+      };
+      rec.stop();
+    }
     recording=false;
+
+    // Remove recording bubble
     const bubble = document.getElementById('recordingBubble');
     if(bubble) bubble.remove();
+
+    // Reset mic color
+    mic.style.backgroundColor = 'white';
+    mic.querySelector('i').classList.remove('text-white');
   }
 });
 </script>
