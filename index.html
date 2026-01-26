@@ -43,6 +43,7 @@ tailwind.config = {
 .wave span{display:inline-block;width:3px;background:#2ecc71;margin-right:2px;border-radius:2px}
 .system{text-align:center;color:#a0a6b5;font-size:13px}
 .typing{font-size:11px;color:#a0a6b5;padding-left:6px}
+.online-icon{width:8px;height:8px;fill:#2ecc71;margin-left:2px;}
 </style>
 </head>
 
@@ -62,8 +63,8 @@ tailwind.config = {
         <div class="text-xs text-muted flex items-center gap-1">
           <i data-lucide="lock" class="w-3.5 h-3.5"></i> Private Group
         </div>
-        <div class="text-xs text-muted">
-          Members: 4,872 • Online: <span id="onlineCount">132</span>
+        <div class="text-xs text-muted flex items-center">
+          Members: 4,872 • Online: <i data-lucide="circle" class="online-icon"></i> <span id="onlineCount">132</span>
         </div>
         <div class="text-[11px] text-muted/80">
           Demo discussion · Verification required
@@ -113,7 +114,12 @@ tailwind.config = {
 
   <!-- FULL EMOJI PICKER -->
   <div id="emojiPanel" class="hidden mt-2 bg-panel rounded-xl p-3 grid grid-cols-8 gap-2 text-lg max-h-40 overflow-y-auto">
-😀😁😂🤣😃😄😅😆😉😊😍😘😜🤪🤨😎😭😡😱😴🤯🤗🤔👍👎🙏👏💪🔥❤️💔🎉🎯🚀💰📈📉📎📄📷🎥🔊🔒🔑⚠️❌✅
+😀 😁 😂 🤣 😃 😄 😅 😆 😉 😊 😍 😘 😜 🤪 🤨 😎 😭 😡 😱 😴 🤯 🤗 🤔 👍 👎 🙏 👏 💪 🔥 ❤️ 💔 🎉 🎯 🚀 💰 📈 📉 📎 📄 📷 🎥 🔊 🔒 🔑 ⚠️ ❌ ✅ 😇 🥳 🤩 🥺 🤭 🤫 🤥 🫠 🫡 😏 😣 😖 😫 😤 😓 🥵 🥶 😶‍🌫️ 😱 🫣 😵 😵‍💫 🫠 😪 😮 😲 🥱 🫢
+😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😗 😙 😚 😋 😛 😝 😜 🤪 🤨 🧐 🤓 😎 🥸 🤩 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🤭 🤫 🤥 🫠 🫡 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 😵‍💫 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👹 👺 🤡 💩 👻 💀 ☠️ 👽 👾 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾
+💋 💌 💘 💝 💖 💗 💓 💞 💕 💟 ❣️ 💔 ❤️ 🧡 💛 💚 💙 💜 🤎 🖤 🤍 💯 💢 💥 💫 💦 💨 🕳️ 💣 💬 🗨️ 🗯️ 💭 💤 ✨ ⭐ 🌟 💫 🌈 ☀️ 🌤️ ⛅ 🌥️ 🌦️ 🌧️ ⛈️ 🌩️ 🌨️ ❄️ ☃️ ⛄ 🌬️ 💨 🌪️ 🌫️ 🌊 💧 💦
+🍏 🍎 🍐 🍊 🍋 🍌 🍉 🍇 🍓 🫐 🍈 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🍆 🥑 🥦 🥬 🥒 🌶️ 🌽 🥕 🥔 🍠 🥐 🍞 🥖 🫓 🥨 🥯 🥞 🧇 🥩 🥓 🍗 🍖 🦴 🥚 🧈 🧄 🧅 🥜 🌰
+🏃‍♂️ 🏃‍♀️ 🏃 💃 🕺 🏋️‍♂️ 🏋️‍♀️ 🏋️ 🚴‍♂️ 🚴‍♀️ 🚴 🚵‍♂️ 🚵‍♀️ 🚵 🏇 🏂 ⛷️ 🏌️‍♂️ 🏌️‍♀️ 🏌️ 🏄‍♂️ 🏄‍♀️ 🏄 🏊‍♂️ 🏊‍♀️ 🏊 🤽‍♂️ 🤽‍♀️ 🏋️‍♂️ 🏋️‍♀️ 🤸‍♂️ 🤸‍♀️ 🤹‍♂️ 🤹‍♀️ 🤾‍♂️ 🤾‍♀️ 🏌️‍♂️ 🏌️‍♀️
+🛑 ⚡ 🔥 💥 💦 🌊 🎵 🎶 🎤 🎧 🎹 🥁 🎷 🎺 🎸 🎻 🎬 🎮 🕹️ 🎲 🧩 🏆 🏅 🎯 🎳 🎰
   </div>
 </footer>
 
@@ -126,7 +132,10 @@ lucide.createIcons();
 /* ONLINE */
 const el=document.getElementById('onlineCount');
 let online=132;
-setInterval(()=>{online+=Math.random()>.5?1:-1;el.textContent=online},8000);
+setInterval(()=>{
+  online+=Math.random()>.5?1:-1;
+  el.textContent=online;
+},8000);
 
 /* ELEMENTS */
 const input=document.getElementById('input');
