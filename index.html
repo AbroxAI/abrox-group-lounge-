@@ -6,8 +6,6 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
@@ -31,63 +29,59 @@ tailwind.config = {
 
 <style>
 .msg{display:flex;gap:8px;align-items:flex-end}
+.msg.out{justify-content:flex-end}
 .msg .bubble{
   background:#262b38;
   padding:10px 12px;
   font-size:13px;
   border-radius:14px 14px 14px 4px;
-  max-width:80%;
+  max-width:78%;
+  position:relative;
 }
-.system-wrap{display:flex;justify-content:center;padding:12px 0}
-.system{text-align:center;color:#a0a6b5;font-size:13px;max-width:92%}
-.system div{margin-top:2px}
+.msg.out .bubble{border-radius:14px 14px 4px 14px}
+.time{font-size:10px;color:#a0a6b5;margin-top:4px;text-align:right}
+.wave span{display:inline-block;width:3px;background:#2ecc71;margin-right:2px;border-radius:2px}
+.system{text-align:center;color:#a0a6b5;font-size:13px}
 </style>
 </head>
 
 <body class="bg-bg text-white h-[100dvh] overflow-hidden">
 
 <div class="flex h-full">
-
 <main class="flex flex-col flex-1 border-r border-border">
 
 <!-- HEADER -->
 <header class="bg-panel border-b border-border px-4 py-3">
-  <div class="flex justify-between items-start">
+  <div class="flex justify-between">
     <div class="flex gap-4">
       <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
       <img src="assets/logo.png" class="w-10 h-10 object-contain"/>
       <div class="leading-tight">
         <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-        <div class="flex items-center gap-1 text-xs text-muted mt-0.5">
-          <i data-lucide="lock" class="w-3.5 h-3.5"></i>
-          <span>Private Group</span>
+        <div class="text-xs text-muted flex items-center gap-1">
+          <i data-lucide="lock" class="w-3.5 h-3.5"></i> Private Group
         </div>
-        <div class="text-xs text-muted mt-0.5">
-          Members: 4,872 • Online: <span id="onlineCount">147</span>
+        <div class="text-xs text-muted">
+          Members: 4,872 • Online: <span id="onlineCount">132</span>
         </div>
-        <div class="text-[11px] text-muted/80 mt-0.5">
+        <div class="text-[11px] text-muted/80">
           Demo discussion · Verification required
         </div>
       </div>
     </div>
-
-    <button class="text-muted">
-      <i data-lucide="users" class="w-5 h-5"></i>
-    </button>
+    <i data-lucide="users" class="w-5 h-5 text-muted"></i>
   </div>
 </header>
 
 <!-- CHAT -->
 <section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
 
-  <div class="system-wrap">
-    <div class="system">
-      <div>📌 <strong>Group Rules</strong></div>
-      <div>New members are read-only until verified</div>
-      <div>Admins DM individually</div>
-      <div>No screenshots in chat</div>
-      <div>Ignore unsolicited messages</div>
-    </div>
+  <div class="system">
+    📌 <strong>Group Rules</strong><br>
+    New members are read-only until verified<br>
+    Admins DM individually<br>
+    No screenshots in chat<br>
+    Ignore unsolicited messages
   </div>
 
 </section>
@@ -96,39 +90,26 @@ tailwind.config = {
 <footer class="bg-panel border-t border-border px-4 py-3 pb-[env(safe-area-inset-bottom)]">
   <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2">
 
-    <!-- Emoji -->
-    <button class="text-muted">
-      <i data-lucide="smile" class="w-5 h-5"></i>
-    </button>
+    <button id="emojiBtn"><i data-lucide="smile" class="w-5 h-5 text-muted"></i></button>
 
-    <!-- Input -->
-    <input
-      id="chatInput"
-      class="flex-1 bg-transparent outline-none text-sm"
-      placeholder="Message"
-    />
+    <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
 
-    <!-- Attach -->
-    <button class="text-muted">
-      <i data-lucide="paperclip" class="w-5 h-5"></i>
-    </button>
+    <button onclick="file.click()"><i data-lucide="paperclip" class="w-5 h-5 text-muted"></i></button>
+    <input id="file" type="file" hidden>
 
-    <!-- Camera -->
-    <button class="text-muted">
-      <i data-lucide="camera" class="w-5 h-5"></i>
-    </button>
-
-    <!-- Mic / Send -->
     <div class="relative w-10 h-10">
-      <button id="micBtn" class="absolute inset-0 bg-white rounded-full flex items-center justify-center">
+      <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center">
         <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
       </button>
-
-      <button id="sendBtn" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
-        <i data-lucide="send" class="w-5 h-5 text-white"></i>
+      <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
+        <i data-lucide="send" class="w-5 h-5"></i>
       </button>
     </div>
+  </div>
 
+  <!-- Emoji Picker -->
+  <div id="emojiPanel" class="hidden mt-2 bg-panel rounded-xl p-2 grid grid-cols-8 gap-2 text-lg">
+    😀😁😂🤣😊😍😎😭😡👍🙏🔥❤️🎉
   </div>
 </footer>
 
@@ -138,54 +119,80 @@ tailwind.config = {
 <script>
 lucide.createIcons();
 
-/* ONLINE COUNT */
-const members=4872;
+/* ONLINE */
 const el=document.getElementById('onlineCount');
-let online=Math.floor(members*(Math.random()*0.03+0.02));
-el.textContent=online.toLocaleString();
-setInterval(()=>{
-  online+=Math.random()>0.5?1:-1;
-  el.textContent=online.toLocaleString();
-},8000);
+let online=132;
+setInterval(()=>{online+=Math.random()>.5?1:-1;el.textContent=online},8000);
 
-/* INPUT BEHAVIOR */
-const input = document.getElementById('chatInput');
-const micBtn = document.getElementById('micBtn');
-const sendBtn = document.getElementById('sendBtn');
-const chat = document.getElementById('chat');
+/* ELEMENTS */
+const input=document.getElementById('input');
+const chat=document.getElementById('chat');
+const send=document.getElementById('send');
+const mic=document.getElementById('mic');
+const emojiBtn=document.getElementById('emojiBtn');
+const emojiPanel=document.getElementById('emojiPanel');
+const file=document.getElementById('file');
 
-function toggleButtons() {
-  const hasText = input.value.trim().length > 0;
-  micBtn.classList.toggle('hidden', hasText);
-  sendBtn.classList.toggle('hidden', !hasText);
+/* TOGGLE */
+function toggle(){
+  const has=input.value.trim();
+  send.classList.toggle('hidden',!has);
+  mic.classList.toggle('hidden',has);
+}
+input.addEventListener('input',toggle);
+
+/* SEND TEXT */
+function sendMsg(html){
+  const t=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const m=document.createElement('div');
+  m.className='msg out';
+  m.innerHTML=`<div class="bubble">${html}<div class="time">✓ ${t}</div></div>`;
+  chat.appendChild(m);
+  chat.scrollTop=chat.scrollHeight;
+  setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ '+t,800);
+  setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ 👀 '+t,2200);
 }
 
-input.addEventListener('input', toggleButtons);
+send.onclick=()=>{if(input.value.trim()){sendMsg(input.value);input.value='';toggle();}};
 
-input.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter'){
-    e.preventDefault();
-    if(input.value.trim()) sendMessage();
+/* EMOJI */
+emojiBtn.onclick=()=>emojiPanel.classList.toggle('hidden');
+emojiPanel.onclick=e=>{if(e.target.textContent.trim()){input.value+=e.target.textContent;toggle();}};
+
+/* FILES */
+file.onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  if(f.type.startsWith('image/')){
+    const r=new FileReader();
+    r.onload=()=>sendMsg(`<img src="${r.result}" class="rounded-lg max-w-full">`);
+    r.readAsDataURL(f);
+  } else {
+    sendMsg(`<div class="flex items-center gap-2"><i data-lucide="file"></i>${f.name}</div>`);
+    lucide.createIcons();
   }
-});
+};
 
-sendBtn.addEventListener('click', sendMessage);
-
-function sendMessage(){
-  const text = input.value.trim();
-  if(!text) return;
-
-  const msg = document.createElement('div');
-  msg.className = 'msg';
-  msg.innerHTML = `
-    <div class="bubble">${text}</div>
-  `;
-  chat.appendChild(msg);
-
-  input.value = '';
-  toggleButtons();
-  chat.scrollTop = chat.scrollHeight;
-}
+/* VOICE + WAVEFORM */
+let rec,chunks=[],wave;
+mic.onmousedown=async()=>{
+  const s=await navigator.mediaDevices.getUserMedia({audio:true});
+  rec=new MediaRecorder(s); chunks=[];
+  rec.ondataavailable=e=>chunks.push(e.data);
+  rec.start();
+  const m=document.createElement('div');
+  m.className='msg out';
+  m.innerHTML=`<div class="bubble">Recording<div class="wave">${'<span></span>'.repeat(6)}</div></div>`;
+  chat.appendChild(m);
+  wave=setInterval(()=>m.querySelectorAll('span').forEach(b=>b.style.height=(Math.random()*12+4)+'px'),200);
+};
+mic.onmouseup=()=>{
+  clearInterval(wave);
+  rec.stop();
+  rec.onstop=()=>{
+    const url=URL.createObjectURL(new Blob(chunks));
+    sendMsg(`<audio controls src="${url}" class="w-full"></audio>`);
+  };
+};
 </script>
 
 </body>
