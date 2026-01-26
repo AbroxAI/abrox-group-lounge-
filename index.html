@@ -1,17 +1,259 @@
- <!DOCTYPE html>
-<html>
-<body>
-<button id="testMic">Test Mic</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Abrox – Private Lounge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c1f26">
+
+<script src="https://cdn.tailwindcss.com"></script>
 <script>
-document.getElementById('testMic').onclick = async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-    alert('Microphone access granted!');
-    stream.getTracks().forEach(t => t.stop());
-  } catch(err) {
-    alert('Access denied: ' + err.message);
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        bg:'#1c1f26',
+        panel:'#232833',
+        border:'#343a4a',
+        muted:'#a0a6b5',
+        accent:'#2ecc71',
+        bubble:'#262b38',
+        recording:'#e74c3c'
+      }
+    }
+  }
+}
+</script>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+.msg{display:flex;gap:8px;align-items:flex-end}
+.msg.out{justify-content:flex-end}
+.msg .bubble{
+  background:#262b38;
+  padding:10px 12px;
+  font-size:13px;
+  border-radius:14px 14px 14px 4px;
+  max-width:78%;
+  position:relative;
+}
+.msg.out .bubble{border-radius:14px 14px 4px 14}
+.time{font-size:10px;color:#a0a6b5;margin-top:4px;text-align:right}
+.system{text-align:center;color:#a0a6b5;font-size:13px}
+.typing{font-size:11px;color:#a0a6b5;padding-left:6px;transition:opacity 0.3s}
+.online-icon{display:none;} 
+.transition-bg {transition: background-color 0.2s;}
+.bg-recording {background-color:#e74c3c !important;}
+.text-white-important {color:white !important;}
+.wave-bar {display:inline-block;width:2px;margin:0 1px;background:#fff;vertical-align:bottom;transition: height 0.05s;}
+#send i{transition: transform 0.2s ease;}
+#send.send-active i{transform: translateX(4px) rotate(20deg);}
+</style>
+</head>
+
+<body class="bg-bg text-white h-[100dvh] overflow-hidden">
+
+<div class="flex h-full">
+<main class="flex flex-col flex-1 border-r border-border">
+
+<header class="bg-panel border-b border-border px-4 py-3">
+  <div class="flex justify-between">
+    <div class="flex gap-4">
+      <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
+      <img src="assets/logo.png" class="w-10 h-10 object-contain"/>
+      <div class="leading-tight">
+        <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
+        <div class="text-xs text-muted flex items-center gap-1">
+          <i data-lucide="lock" class="w-3.5 h-3.5"></i> Private Group
+        </div>
+        <div class="text-xs text-muted flex items-center">
+          Members: 4,872 • Online: <span id="onlineCount">132</span>
+        </div>
+        <div class="text-[11px] text-muted/80">
+          Demo discussion · Verification required
+        </div>
+      </div>
+    </div>
+    <i data-lucide="users" class="w-5 h-5 text-muted"></i>
+  </div>
+</header>
+
+<section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+  <div class="system">
+    📌 <strong>Group Rules</strong><br>
+    New members are read-only until verified<br>
+    Admins DM individually<br>
+    No screenshots in chat<br>
+    Ignore unsolicited messages
+  </div>
+</section>
+
+<div id="typing" class="typing opacity-0">Someone is typing…</div>
+
+<footer class="bg-panel border-t border-border px-4 py-3 pb-[env(safe-area-inset-bottom)]">
+  <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2">
+
+    <button id="emojiBtn"><i data-lucide="smile" class="w-5 h-5 text-muted"></i></button>
+
+    <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
+
+    <button onclick="file.click()"><i data-lucide="paperclip" class="w-5 h-5 text-muted"></i></button>
+    <input id="file" type="file" hidden>
+
+    <div class="relative w-10 h-10">
+      <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center transition-bg overflow-hidden">
+        <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
+        <div id="micWave" class="absolute flex bottom-1 left-1/2 transform -translate-x-1/2 h-6 space-x-1 hidden">
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+        </div>
+      </button>
+      <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
+        <i data-lucide="send" class="w-5 h-5"></i>
+      </button>
+    </div>
+  </div>
+
+  <div id="emojiPanel" class="hidden mt-2 bg-panel rounded-xl p-3 grid grid-cols-8 gap-2 text-lg max-h-40 overflow-y-auto">
+😀 😁 😂 🤣 😃 😄 😅 😆 😉 😊 😍 😘 😜 🤪 🤨 😎 😭 😡 😱 😴 🤯 🤗 🤔 👍 👎 🙏 👏 💪 🔥 ❤️ 💔 🎉 🎯 🚀 💰 📈 📉 📎 📄 📷 🎥 🔊 🔒 🔑 ⚠️ ❌ ✅ 😇 🥳 🤩 🥺 🤭 🤫 🤥 🫠 🫡 😏 😣 😖 😫 😤 😓 🥵 🥶 😶‍🌫️ 😱 🫣 😵 😵‍💫 🫠 😪 😮 😲 🥱 🫢
+  </div>
+</footer>
+
+</main>
+</div>
+
+<script>
+lucide.createIcons();
+
+/* ONLINE COUNT */
+const el=document.getElementById('onlineCount');
+let online=132;
+setInterval(()=>{online+=Math.random()>.5?1:-1;el.textContent=online;},8000);
+
+/* ELEMENTS */
+const input=document.getElementById('input');
+const chat=document.getElementById('chat');
+const send=document.getElementById('send');
+const mic=document.getElementById('mic');
+const emojiBtn=document.getElementById('emojiBtn');
+const emojiPanel=document.getElementById('emojiPanel');
+const file=document.getElementById('file');
+const typing=document.getElementById('typing');
+
+/* TOGGLE SEND/MIC AUTOMATICALLY */
+function toggle(){
+  const has=input.value.trim();
+  send.classList.toggle('hidden',!has);
+  mic.classList.toggle('hidden',has);
+  send.classList.toggle('send-active',!!has);
+}
+input.addEventListener('input',toggle);
+
+/* SEND TEXT */
+function sendMsg(html){
+  typing.style.opacity=0;
+  const t=new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  const m=document.createElement('div');
+  m.className='msg out';
+  m.innerHTML=`<div class="bubble">${html}<div class="time">✓ ${t}</div></div>`;
+  chat.appendChild(m);
+  chat.scrollTop=chat.scrollHeight;
+  setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ '+t,800);
+  setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ 👀 '+t,2200);
+}
+send.onclick=()=>{if(input.value.trim()){sendMsg(input.value);input.value='';toggle();}};
+
+/* EMOJI PICKER */
+emojiBtn.onclick=()=>emojiPanel.classList.toggle('hidden');
+emojiPanel.addEventListener('click',e=>{if(e.target.textContent.trim()){input.value=e.target.textContent;toggle();emojiPanel.classList.add('hidden');}});
+
+/* FILES */
+file.onchange=e=>{
+  const f=e.target.files[0];
+  if(!f) return;
+  if(f.type.startsWith('image/')){
+    const r=new FileReader();
+    r.onload=()=>sendMsg(`<img src="${r.result}" class="rounded-lg max-w-full">`);
+    r.readAsDataURL(f);
+  } else {
+    sendMsg(`<div class="flex items-center gap-2"><i data-lucide="file"></i>${f.name}</div>`);
+    lucide.createIcons();
   }
 };
+
+/* PRESS & HOLD VOICE RECORDING WITH CANCEL ON DRAG */
+let rec,chunks=[],recording=false,streamRef,waveInterval,canceled=false;
+const micWave=document.getElementById('micWave');
+const waveBars=micWave.querySelectorAll('.wave-bar');
+
+mic.addEventListener('mousedown',e=>{
+  const micIcon=mic.querySelector('i');
+  canceled=false;
+  if(!recording){
+    navigator.mediaDevices.getUserMedia({audio:true})
+      .then(stream=>{
+        streamRef=stream;
+        rec=new MediaRecorder(streamRef);
+        chunks=[];
+        rec.ondataavailable=e=>chunks.push(e.data);
+        rec.start();
+        recording=true;
+
+        mic.classList.add('bg-recording');
+        micIcon.classList.add('text-white-important');
+        micWave.classList.remove('hidden');
+
+        waveInterval=setInterval(()=>{
+          waveBars.forEach((bar,i)=>{
+            const offset=Math.sin(Date.now()/100+i)*6+6;
+            bar.style.height=`${offset}px`;
+          });
+        },50);
+      })
+      .catch(err=>{
+        alert('Microphone access denied or unavailable.');
+      });
+  }
+});
+
+mic.addEventListener('mousemove',e=>{
+  if(recording){
+    const rect=mic.getBoundingClientRect();
+    canceled=e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom;
+  }
+});
+
+mic.addEventListener('mouseup',()=>stopRecording(!canceled));
+mic.addEventListener('mouseleave',()=>{if(recording) stopRecording(!canceled);});
+
+function stopRecording(sendAudio=true){
+  if(rec && rec.state!=='inactive'){
+    rec.onstop=()=>{
+      if(sendAudio && chunks.length>0){
+        const blob=new Blob(chunks,{type:'audio/webm'});
+        const url=URL.createObjectURL(blob);
+        const m=document.createElement('div');
+        m.className='msg out';
+        m.innerHTML=`<div class="bubble"><audio controls class="w-full"><source src="${url}"></audio></div>`;
+        chat.appendChild(m);
+        chat.scrollTop=chat.scrollHeight;
+      }
+    };
+    rec.stop();
+  }
+  recording=false;
+  canceled=false;
+  const micIcon=mic.querySelector('i');
+  mic.classList.remove('bg-recording');
+  micIcon.classList.remove('text-white-important');
+  micWave.classList.add('hidden');
+  clearInterval(waveInterval);
+}
 </script>
+
 </body>
 </html>
