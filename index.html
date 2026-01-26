@@ -9,8 +9,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-<link rel="manifest" href="manifest.json">
-
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config = {
@@ -33,7 +31,13 @@ tailwind.config = {
 
 <style>
 .msg{display:flex;gap:8px;align-items:flex-end}
-.msg .bubble{background:#262b38;padding:10px 12px;font-size:13px;border-radius:14px 14px 14px 4px;max-width:80%}
+.msg .bubble{
+  background:#262b38;
+  padding:10px 12px;
+  font-size:13px;
+  border-radius:14px 14px 14px 4px;
+  max-width:80%;
+}
 .system-wrap{display:flex;justify-content:center;padding:12px 0}
 .system{text-align:center;color:#a0a6b5;font-size:13px;max-width:92%}
 .system div{margin-top:2px}
@@ -44,50 +48,38 @@ tailwind.config = {
 
 <div class="flex h-full">
 
-<!-- MAIN CHAT -->
 <main class="flex flex-col flex-1 border-r border-border">
 
 <!-- HEADER -->
 <header class="bg-panel border-b border-border px-4 py-3">
   <div class="flex justify-between items-start">
-
     <div class="flex gap-4">
       <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
-
       <img src="assets/logo.png" class="w-10 h-10 object-contain"/>
-
       <div class="leading-tight">
-        <div class="text-sm font-semibold">
-          Abrox Binary Bot – Private Lounge
-        </div>
-
+        <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
         <div class="flex items-center gap-1 text-xs text-muted mt-0.5">
           <i data-lucide="lock" class="w-3.5 h-3.5"></i>
           <span>Private Group</span>
         </div>
-
         <div class="text-xs text-muted mt-0.5">
           Members: 4,872 • Online: <span id="onlineCount">147</span>
         </div>
-
         <div class="text-[11px] text-muted/80 mt-0.5">
           Demo discussion · Verification required
         </div>
       </div>
     </div>
 
-    <!-- MEMBERS ICON (RESTORED) -->
     <button class="text-muted">
       <i data-lucide="users" class="w-5 h-5"></i>
     </button>
-
   </div>
 </header>
 
 <!-- CHAT -->
 <section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
 
-  <!-- GROUP RULES (TELEGRAM STYLE) -->
   <div class="system-wrap">
     <div class="system">
       <div>📌 <strong>Group Rules</strong></div>
@@ -98,22 +90,45 @@ tailwind.config = {
     </div>
   </div>
 
-  <div class="msg">
-    <img src="https://i.pravatar.cc/40?img=32" class="w-9 h-9 rounded-full">
-    <div class="bubble">morning all</div>
-  </div>
-
 </section>
 
 <!-- INPUT -->
 <footer class="bg-panel border-t border-border px-4 py-3 pb-[env(safe-area-inset-bottom)]">
-  <div class="flex items-center gap-3 bg-bg rounded-xl px-4 py-2">
-    <input class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-    <i data-lucide="paperclip" class="w-5 h-5 text-muted"></i>
-    <i data-lucide="camera" class="w-5 h-5 text-muted"></i>
-    <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-      <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
+  <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2">
+
+    <!-- Emoji -->
+    <button class="text-muted">
+      <i data-lucide="smile" class="w-5 h-5"></i>
+    </button>
+
+    <!-- Input -->
+    <input
+      id="chatInput"
+      class="flex-1 bg-transparent outline-none text-sm"
+      placeholder="Message"
+    />
+
+    <!-- Attach -->
+    <button class="text-muted">
+      <i data-lucide="paperclip" class="w-5 h-5"></i>
+    </button>
+
+    <!-- Camera -->
+    <button class="text-muted">
+      <i data-lucide="camera" class="w-5 h-5"></i>
+    </button>
+
+    <!-- Mic / Send -->
+    <div class="relative w-10 h-10">
+      <button id="micBtn" class="absolute inset-0 bg-white rounded-full flex items-center justify-center">
+        <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
+      </button>
+
+      <button id="sendBtn" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
+        <i data-lucide="send" class="w-5 h-5 text-white"></i>
+      </button>
     </div>
+
   </div>
 </footer>
 
@@ -123,7 +138,7 @@ tailwind.config = {
 <script>
 lucide.createIcons();
 
-/* REALISTIC ONLINE COUNT */
+/* ONLINE COUNT */
 const members=4872;
 const el=document.getElementById('onlineCount');
 let online=Math.floor(members*(Math.random()*0.03+0.02));
@@ -133,9 +148,43 @@ setInterval(()=>{
   el.textContent=online.toLocaleString();
 },8000);
 
-/* SERVICE WORKER */
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+/* INPUT BEHAVIOR */
+const input = document.getElementById('chatInput');
+const micBtn = document.getElementById('micBtn');
+const sendBtn = document.getElementById('sendBtn');
+const chat = document.getElementById('chat');
+
+function toggleButtons() {
+  const hasText = input.value.trim().length > 0;
+  micBtn.classList.toggle('hidden', hasText);
+  sendBtn.classList.toggle('hidden', !hasText);
+}
+
+input.addEventListener('input', toggleButtons);
+
+input.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    if(input.value.trim()) sendMessage();
+  }
+});
+
+sendBtn.addEventListener('click', sendMessage);
+
+function sendMessage(){
+  const text = input.value.trim();
+  if(!text) return;
+
+  const msg = document.createElement('div');
+  msg.className = 'msg';
+  msg.innerHTML = `
+    <div class="bubble">${text}</div>
+  `;
+  chat.appendChild(msg);
+
+  input.value = '';
+  toggleButtons();
+  chat.scrollTop = chat.scrollHeight;
 }
 </script>
 
