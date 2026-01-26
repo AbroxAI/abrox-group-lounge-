@@ -30,14 +30,7 @@ tailwind.config = {
 <style>
 .msg{display:flex;gap:8px;align-items:flex-end}
 .msg.out{justify-content:flex-end}
-.msg .bubble{
-  background:#262b38;
-  padding:10px 12px;
-  font-size:13px;
-  border-radius:14px 14px 14px 4px;
-  max-width:78%;
-  position:relative;
-}
+.msg .bubble{background:#262b38;padding:10px 12px;font-size:13px;border-radius:14px 14px 14px 4px;max-width:78%}
 .msg.out .bubble{border-radius:14px 14px 4px 14}
 .time{font-size:10px;color:#a0a6b5;margin-top:4px;text-align:right}
 .system{text-align:center;color:#a0a6b5;font-size:13px}
@@ -45,7 +38,8 @@ tailwind.config = {
 .transition-bg{transition:background-color .2s}
 .bg-recording{background:#e74c3c!important}
 .text-white-important{color:#fff!important}
-.wave-bar{display:inline-block;width:2px;background:#fff;border-radius:2px}
+.wave-bar{width:2px;background:#fff;border-radius:2px}
+.transcript{font-size:11px;color:#a0a6b5;margin-top:4px}
 #send i{transition:transform .2s}
 #send.send-active i{transform:translateX(4px) rotate(20deg)}
 #mic{touch-action:none}
@@ -70,9 +64,7 @@ tailwind.config = {
         <div class="text-xs text-muted">
           Members: 4,872 • Online: <span id="onlineCount">132</span>
         </div>
-        <div class="text-[11px] text-muted/80">
-          Demo discussion · Verification required
-        </div>
+        <div class="text-[11px] text-muted/80">Demo discussion · Verification required</div>
       </div>
     </div>
     <i data-lucide="users" class="w-5 h-5 text-muted"></i>
@@ -89,33 +81,24 @@ tailwind.config = {
   </div>
 </section>
 
-<div id="typing" class="typing opacity-0">Someone is typing…</div>
-
 <footer class="bg-panel border-t border-border px-4 py-3 pb-[env(safe-area-inset-bottom)]">
   <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2">
 
     <button id="emojiBtn"><i data-lucide="smile" class="w-5 h-5 text-muted"></i></button>
     <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-    <button onclick="file.click()"><i data-lucide="paperclip" class="w-5 h-5 text-muted"></i></button>
-    <input id="file" type="file" hidden>
 
     <div class="relative w-10 h-10">
       <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center transition-bg overflow-hidden">
         <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
         <div id="micWave" class="absolute flex bottom-1 left-1/2 -translate-x-1/2 h-6 gap-1 hidden">
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
+          <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
         </div>
       </button>
-      <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
-        <i data-lucide="send" class="w-5 h-5"></i>
-      </button>
     </div>
+
   </div>
 
+  <!-- FULL EMOJI PACK -->
   <div id="emojiPanel" class="hidden mt-2 bg-panel rounded-xl p-3 grid grid-cols-8 gap-2 text-lg max-h-40 overflow-y-auto">
 😀 😁 😂 🤣 😃 😄 😅 😆 😉 😊 😍 😘 😜 🤪 🤨 😎 😭 😡 😱 😴 🤯 🤗 🤔 👍 👎 🙏 👏 💪 🔥 ❤️ 💔 🎉 🎯 🚀 💰 📈 📉
   </div>
@@ -127,7 +110,7 @@ tailwind.config = {
 <script>
 lucide.createIcons();
 
-/* ONLINE COUNT */
+/* ONLINE */
 const el=document.getElementById('onlineCount');
 let online=132;
 setInterval(()=>{online+=Math.random()>.5?1:-1;el.textContent=online},8000);
@@ -135,34 +118,51 @@ setInterval(()=>{online+=Math.random()>.5?1:-1;el.textContent=online},8000);
 /* ELEMENTS */
 const input=document.getElementById('input');
 const chat=document.getElementById('chat');
-const send=document.getElementById('send');
 const mic=document.getElementById('mic');
 const micWave=document.getElementById('micWave');
+const emojiBtn=document.getElementById('emojiBtn');
+const emojiPanel=document.getElementById('emojiPanel');
 const bars=[...micWave.children];
 
-/* TOGGLE SEND/MIC */
-input.addEventListener('input',()=>{
-  const has=input.value.trim();
-  send.classList.toggle('hidden',!has);
-  mic.classList.toggle('hidden',has);
+/* EMOJI PICKER (RESTORED) */
+emojiBtn.onclick=()=>emojiPanel.classList.toggle('hidden');
+emojiPanel.addEventListener('click',e=>{
+  if(!e.target.textContent.trim()) return;
+  input.value+=e.target.textContent;
+  input.dispatchEvent(new Event('input'));
+  emojiPanel.classList.add('hidden');
 });
 
-/* VOICE RECORDING */
-let recorder, stream, chunks=[], recording=false, canceled=false, locked=false;
-let audioCtx, analyser, data;
+/* SPEECH TO TEXT */
+const SpeechAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
+let speech=null, transcript='';
+if(SpeechAPI){
+  speech=new SpeechAPI();
+  speech.continuous=true;
+  speech.interimResults=true;
+  speech.onresult=e=>{
+    transcript=[...e.results].map(r=>r[0].transcript).join('');
+  };
+}
+
+/* VOICE CORE */
+let recorder=null,stream=null,chunks=[];
+let audioCtx=null,analyser=null,data=null;
+let recording=false,canceled=false,locked=false;
+let holdTimer=null,raf=null;
 
 const vibrate=ms=>navigator.vibrate&&navigator.vibrate(ms);
 
-async function startRec(e){
-  e.preventDefault();
+async function beginRecording(){
   if(recording) return;
-  vibrate(30);
-
   stream=await navigator.mediaDevices.getUserMedia({audio:true});
-  recorder=new MediaRecorder(stream);
+  const mime=MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':'audio/webm';
+  recorder=new MediaRecorder(stream,{mimeType:mime});
   chunks=[];
   recorder.ondataavailable=e=>chunks.push(e.data);
   recorder.start();
+
+  speech&&speech.start();
 
   audioCtx=new AudioContext();
   analyser=audioCtx.createAnalyser();
@@ -173,17 +173,17 @@ async function startRec(e){
   mic.classList.add('bg-recording');
   mic.querySelector('i').classList.add('text-white-important');
   micWave.classList.remove('hidden');
-  animateWave();
+  animate();
 }
 
-function animateWave(){
+function animate(){
   if(!recording) return;
   analyser.getByteFrequencyData(data);
-  bars.forEach((b,i)=>b.style.height=(data[i]*0.06+4)+'px');
-  requestAnimationFrame(animateWave);
+  bars.forEach((b,i)=>b.style.height=(data[i]*0.05+4)+'px');
+  raf=requestAnimationFrame(animate);
 }
 
-function moveRec(e){
+function move(e){
   if(!recording||locked) return;
   const p=e.touches?e.touches[0]:e;
   const r=mic.getBoundingClientRect();
@@ -191,9 +191,13 @@ function moveRec(e){
   if(p.clientX<r.left-40) canceled=true;
 }
 
-function stopRec(){
+function stop(){
+  clearTimeout(holdTimer);
   if(!recording) return;
   recording=false;
+
+  speech&&speech.stop();
+  cancelAnimationFrame(raf);
 
   mic.classList.remove('bg-recording');
   mic.querySelector('i').classList.remove('text-white-important');
@@ -204,25 +208,31 @@ function stopRec(){
 
   recorder.onstop=()=>{
     if(!canceled){
-      const url=URL.createObjectURL(new Blob(chunks,{type:'audio/webm'}));
+      const url=URL.createObjectURL(new Blob(chunks,{type:recorder.mimeType}));
       chat.innerHTML+=`
-        <div class="msg out">
-          <div class="bubble">
-            <audio controls src="${url}" class="w-full"></audio>
-          </div>
-        </div>`;
+      <div class="msg out">
+        <div class="bubble">
+          <audio controls src="${url}" class="w-full"></audio>
+          ${transcript?`<div class="transcript">${transcript}</div>`:''}
+        </div>
+      </div>`;
       chat.scrollTop=chat.scrollHeight;
     }
+    transcript='';
     canceled=false;
     locked=false;
   };
 }
 
 /* POINTER EVENTS */
-mic.addEventListener('pointerdown',startRec);
-mic.addEventListener('pointermove',moveRec);
-mic.addEventListener('pointerup',stopRec);
-mic.addEventListener('pointercancel',()=>{canceled=true;stopRec()});
+mic.addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  vibrate(20);
+  holdTimer=setTimeout(beginRecording,150);
+});
+mic.addEventListener('pointermove',move);
+mic.addEventListener('pointerup',stop);
+mic.addEventListener('pointercancel',()=>{canceled=true;stop()});
 </script>
 
 </body>
