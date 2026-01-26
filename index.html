@@ -185,38 +185,39 @@ file.onchange=e=>{
   }
 };
 
-/* PRESS & HOLD VOICE RECORDING WITH CANCEL ON DRAG */
+/* PRESS & HOLD VOICE RECORDING WITH CANCEL ON DRAG (CHROME/GITHUB READY) */
 let rec,chunks=[],recording=false,streamRef,waveInterval,canceled=false;
 const micWave=document.getElementById('micWave');
 const waveBars=micWave.querySelectorAll('.wave-bar');
 
-mic.addEventListener('mousedown',e=>{
+mic.addEventListener('mousedown',async e=>{
   const micIcon=mic.querySelector('i');
   canceled=false;
   if(!recording){
-    navigator.mediaDevices.getUserMedia({audio:true})
-      .then(stream=>{
-        streamRef=stream;
-        rec=new MediaRecorder(streamRef);
-        chunks=[];
-        rec.ondataavailable=e=>chunks.push(e.data);
-        rec.start();
-        recording=true;
+    try{
+      // Get microphone access inside direct user gesture
+      streamRef = await navigator.mediaDevices.getUserMedia({ audio: true });
+      rec = new MediaRecorder(streamRef);
+      chunks = [];
+      rec.ondataavailable = e => chunks.push(e.data);
+      rec.start();
+      recording = true;
 
-        mic.classList.add('bg-recording');
-        micIcon.classList.add('text-white-important');
-        micWave.classList.remove('hidden');
+      mic.classList.add('bg-recording');
+      micIcon.classList.add('text-white-important');
+      micWave.classList.remove('hidden');
 
-        waveInterval=setInterval(()=>{
-          waveBars.forEach((bar,i)=>{
-            const offset=Math.sin(Date.now()/100+i)*6+6;
-            bar.style.height=`${offset}px`;
-          });
-        },50);
-      })
-      .catch(err=>{
-        alert('Microphone access denied or unavailable.');
-      });
+      waveInterval = setInterval(()=>{
+        waveBars.forEach((bar,i)=>{
+          const offset = Math.sin(Date.now()/100+i)*6+6;
+          bar.style.height=`${offset}px`;
+        });
+      },50);
+
+    } catch(err){
+      console.error('Microphone access failed:', err);
+      alert('Microphone access denied or unavailable.');
+    }
   }
 });
 
@@ -234,19 +235,19 @@ function stopRecording(sendAudio=true){
   if(rec && rec.state!=='inactive'){
     rec.onstop=()=>{
       if(sendAudio && chunks.length>0){
-        const blob=new Blob(chunks,{type:'audio/webm'});
-        const url=URL.createObjectURL(blob);
-        const m=document.createElement('div');
+        const blob = new Blob(chunks,{type:'audio/webm'});
+        const url = URL.createObjectURL(blob);
+        const m = document.createElement('div');
         m.className='msg out';
         m.innerHTML=`<div class="bubble"><audio controls class="w-full"><source src="${url}"></audio></div>`;
         chat.appendChild(m);
-        chat.scrollTop=chat.scrollHeight;
+        chat.scrollTop = chat.scrollHeight;
       }
     };
     rec.stop();
   }
-  recording=false;
-  canceled=false;
+  recording = false;
+  canceled = false;
   const micIcon=mic.querySelector('i');
   mic.classList.remove('bg-recording');
   micIcon.classList.remove('text-white-important');
