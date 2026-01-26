@@ -105,7 +105,7 @@ tailwind.config = {
         <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
       </button>
       <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
-        <i data-lucide="send" class="w-5 h-5"></i>
+        <i class="w-5 h-5"></i>
       </button>
     </div>
   </div>
@@ -194,67 +194,54 @@ file.onchange=e=>{
   }
 };
 
-/* VOICE RECORDING - WHATSAPP STYLE */
-let rec, chunks=[], wave, recording=false;
+/* WHATSAPP-STYLE VOICE RECORDING */
+let rec, chunks=[], recording=false;
 let streamRef;
 
 mic.addEventListener('click', async()=>{
   const micIcon = mic.querySelector('i');
+
   if(!recording){
-    // Show recording bubble
-    const m=document.createElement('div');
-    m.className='msg out';
-    m.id='recordingBubble';
-    m.innerHTML=`<div class="bubble">Recording<div class="wave">${'<span></span>'.repeat(8)}</div></div>`;
-    chat.appendChild(m);
-    chat.scrollTop = chat.scrollHeight;
-
-    // Animate wave
-    wave = setInterval(()=>{
-      m.querySelectorAll('span').forEach(b=>{
-        b.style.height=(Math.random()*12+4)+'px';
-      });
-    },200);
-
-    // Change mic color to red
-    mic.classList.add('bg-recording');
-    micIcon.classList.add('text-white-important');
-
-    try {
+    // START RECORDING
+    try{
       if(!streamRef){
-        streamRef = await navigator.mediaDevices.getUserMedia({audio:true});
+        streamRef = await navigator.mediaDevices.getUserMedia({ audio:true });
       }
+
       rec = new MediaRecorder(streamRef);
       chunks=[];
       rec.ondataavailable = e => chunks.push(e.data);
       rec.start();
       recording=true;
-    } catch(err){
-      clearInterval(wave);
-      if(m) m.remove();
-      mic.classList.remove('bg-recording');
-      micIcon.classList.remove('text-white-important');
+
+      // Mic red while recording
+      mic.classList.add('bg-recording');
+      micIcon.classList.add('text-white-important');
+
+    }catch(err){
       alert('Microphone access denied or unavailable.');
       recording=false;
+      return;
     }
 
   } else {
-    // Stop recording
-    clearInterval(wave);
+    // STOP RECORDING
     if(rec && rec.state !== 'inactive'){
       rec.onstop = () => {
-        const url = URL.createObjectURL(new Blob(chunks));
-        sendMsg(`<audio controls class="w-full"><source src="${url}"></audio>`);
+        const blob = new Blob(chunks,{type:'audio/webm'});
+        const url = URL.createObjectURL(blob);
+
+        // Insert audio as chat message
+        const m = document.createElement('div');
+        m.className = 'msg out';
+        m.innerHTML = `<div class="bubble"><audio controls class="w-full"><source src="${url}"></audio></div>`;
+        chat.appendChild(m);
+        chat.scrollTop = chat.scrollHeight;
       };
       rec.stop();
     }
+
     recording=false;
-
-    // Remove recording bubble
-    const bubble = document.getElementById('recordingBubble');
-    if(bubble) bubble.remove();
-
-    // Reset mic color
     mic.classList.remove('bg-recording');
     micIcon.classList.remove('text-white-important');
   }
