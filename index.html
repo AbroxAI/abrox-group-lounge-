@@ -197,41 +197,52 @@ file.onchange=e=>{
   }
 };
 
-/* VOICE RECORDING FIX */
-let rec, chunks=[], wave;
-mic.addEventListener('mousedown', async()=>{
-  const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-  rec = new MediaRecorder(stream);
-  chunks = [];
-  rec.ondataavailable = e => chunks.push(e.data);
-  rec.start();
+/* VOICE RECORDING TOGGLE */
+let rec, chunks=[], wave, recording=false;
+let streamRef;
 
-  const m=document.createElement('div');
-  m.className='msg out';
-  m.innerHTML=`<div class="bubble">Recording<div class="wave">${'<span></span>'.repeat(8)}</div></div>`;
-  chat.appendChild(m);
-  chat.scrollTop = chat.scrollHeight;
+mic.addEventListener('click', async()=>{
+  if(!recording){
+    // START RECORDING
+    try {
+      if(!streamRef){
+        streamRef = await navigator.mediaDevices.getUserMedia({audio:true});
+      }
+      rec = new MediaRecorder(streamRef);
+      chunks = [];
+      rec.ondataavailable = e => chunks.push(e.data);
+      rec.start();
+      recording=true;
 
-  wave = setInterval(()=>{
-    m.querySelectorAll('span').forEach(b=>{
-      b.style.height=(Math.random()*12+4)+'px';
-    });
-  },200);
+      const m=document.createElement('div');
+      m.className='msg out';
+      m.id='recordingBubble';
+      m.innerHTML=`<div class="bubble">Recording<div class="wave">${'<span></span>'.repeat(8)}</div></div>`;
+      chat.appendChild(m);
+      chat.scrollTop = chat.scrollHeight;
 
-  function stopRecording(){
+      wave = setInterval(()=>{
+        m.querySelectorAll('span').forEach(b=>{
+          b.style.height=(Math.random()*12+4)+'px';
+        });
+      },200);
+
+    } catch(err) {
+      alert('Microphone access denied or unavailable.');
+      recording=false;
+    }
+  } else {
+    // STOP RECORDING
     clearInterval(wave);
-    rec.stop();
-    rec.onstop=()=>{
-      const url=URL.createObjectURL(new Blob(chunks));
+    if (rec && rec.state !== 'inactive') rec.stop();
+    rec.onstop = () => {
+      const url = URL.createObjectURL(new Blob(chunks));
       sendMsg(`<audio controls class="w-full"><source src="${url}"></audio>`);
-      stream.getTracks().forEach(track=>track.stop());
     };
-    mic.removeEventListener('mouseup', stopRecording);
-    mic.removeEventListener('mouseleave', stopRecording);
+    recording=false;
+    const bubble = document.getElementById('recordingBubble');
+    if(bubble) bubble.remove();
   }
-
-  mic.addEventListener('mouseup', stopRecording);
-  mic.addEventListener('mouseleave', stopRecording);
 });
 </script>
 
