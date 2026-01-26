@@ -42,6 +42,7 @@ tailwind.config = {
 .time{font-size:10px;color:#a0a6b5;margin-top:4px;text-align:right}
 .wave span{display:inline-block;width:3px;background:#2ecc71;margin-right:2px;border-radius:2px}
 .system{text-align:center;color:#a0a6b5;font-size:13px}
+.typing{font-size:11px;color:#a0a6b5;padding-left:6px}
 </style>
 </head>
 
@@ -86,6 +87,9 @@ tailwind.config = {
 
 </section>
 
+<!-- TYPING INDICATOR -->
+<div id="typing" class="typing hidden">Someone is typing…</div>
+
 <!-- INPUT -->
 <footer class="bg-panel border-t border-border px-4 py-3 pb-[env(safe-area-inset-bottom)]">
   <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2">
@@ -107,9 +111,9 @@ tailwind.config = {
     </div>
   </div>
 
-  <!-- Emoji Picker -->
-  <div id="emojiPanel" class="hidden mt-2 bg-panel rounded-xl p-2 grid grid-cols-8 gap-2 text-lg">
-    😀😁😂🤣😊😍😎😭😡👍🙏🔥❤️🎉
+  <!-- FULL EMOJI PICKER -->
+  <div id="emojiPanel" class="hidden mt-2 bg-panel rounded-xl p-3 grid grid-cols-8 gap-2 text-lg max-h-40 overflow-y-auto">
+😀😁😂🤣😃😄😅😆😉😊😍😘😜🤪🤨😎😭😡😱😴🤯🤗🤔👍👎🙏👏💪🔥❤️💔🎉🎯🚀💰📈📉📎📄📷🎥🔊🔒🔑⚠️❌✅
   </div>
 </footer>
 
@@ -132,6 +136,7 @@ const mic=document.getElementById('mic');
 const emojiBtn=document.getElementById('emojiBtn');
 const emojiPanel=document.getElementById('emojiPanel');
 const file=document.getElementById('file');
+const typing=document.getElementById('typing');
 
 /* TOGGLE */
 function toggle(){
@@ -139,10 +144,16 @@ function toggle(){
   send.classList.toggle('hidden',!has);
   mic.classList.toggle('hidden',has);
 }
-input.addEventListener('input',toggle);
+input.addEventListener('input',()=>{
+  toggle();
+  typing.classList.remove('hidden');
+  clearTimeout(window.typingTimeout);
+  window.typingTimeout=setTimeout(()=>typing.classList.add('hidden'),1500);
+});
 
 /* SEND TEXT */
 function sendMsg(html){
+  typing.classList.add('hidden');
   const t=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
   const m=document.createElement('div');
   m.className='msg out';
@@ -172,7 +183,7 @@ file.onchange=e=>{
   }
 };
 
-/* VOICE + WAVEFORM */
+/* VOICE + WAVEFORM SCRUBBER */
 let rec,chunks=[],wave;
 mic.onmousedown=async()=>{
   const s=await navigator.mediaDevices.getUserMedia({audio:true});
@@ -181,7 +192,7 @@ mic.onmousedown=async()=>{
   rec.start();
   const m=document.createElement('div');
   m.className='msg out';
-  m.innerHTML=`<div class="bubble">Recording<div class="wave">${'<span></span>'.repeat(6)}</div></div>`;
+  m.innerHTML=`<div class="bubble">Recording<div class="wave">${'<span></span>'.repeat(8)}</div></div>`;
   chat.appendChild(m);
   wave=setInterval(()=>m.querySelectorAll('span').forEach(b=>b.style.height=(Math.random()*12+4)+'px'),200);
 };
@@ -190,7 +201,11 @@ mic.onmouseup=()=>{
   rec.stop();
   rec.onstop=()=>{
     const url=URL.createObjectURL(new Blob(chunks));
-    sendMsg(`<audio controls src="${url}" class="w-full"></audio>`);
+    sendMsg(`
+      <audio controls class="w-full">
+        <source src="${url}">
+      </audio>
+    `);
   };
 };
 </script>
