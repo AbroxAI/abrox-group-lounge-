@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/lucide@latest"></script>
 <script>
 tailwind.config = {
   theme: {
@@ -24,6 +23,7 @@ tailwind.config = {
   }
 }
 </script>
+<script src="https://unpkg.com/lucide@latest"></script>
 <style>
 /* Chat Styles */
 .msg{display:flex;gap:8px;align-items:flex-end}
@@ -38,49 +38,44 @@ tailwind.config = {
 .transition-bg{transition:background-color .2s}
 .bg-recording{background:#e74c3c!important}
 .text-white-important{color:#fff!important}
+.wave-bar{display:inline-block;width:2px;background:#fff;border-radius:2px}
 #send i{transition:transform .2s}
 #send.send-active i{transform:translateX(4px) rotate(20deg)}
-#mic{touch-action:none;position:relative;}
-#lockIcon{position:absolute;left:50%;transform:translateX(-50%) translateY(0) scale(0);transition:transform 0.3s cubic-bezier(.4,0,.2,1);pointer-events:none;}
-#lockIcon.show{scale:1;}
+#mic{touch-action:none}
 .sender-name{font-size:11px;color:#a0a6b5;margin-bottom:2px}
 .avatar{w-6 h-6 rounded-full object-cover}
 #topLoader{text-align:center;color:#a0a6b5;padding:8px;font-size:12px}
-/* Sidebar Overlay */
-#sidebarOverlay{position:fixed;inset:0;background:black/50;opacity:0;pointer-events:none;transition:opacity .2s;z-index:40;}
-#sidebarOverlay.active{opacity:1;pointer-events:auto;}
-/* Sidebar */
-#memberSidebar{position:fixed;top:0;right:0;height:100%;transform:translateX(100%);transition:transform .3s;z-index:50;display:flex;flex-direction:column;}
-#memberSidebar.active{transform:translateX(0);}
 </style>
 </head>
 <body class="bg-bg text-white h-[100dvh] overflow-hidden">
-
 <div class="flex h-full">
 <main class="flex flex-col flex-1 border-r border-border">
 
 <!-- Header -->
-<header class="bg-panel border-b border-border px-4 py-3 flex justify-between items-center">
-  <div class="flex items-center gap-4">
-    <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
-    <img src="{{ asset('assets/logo.png') }}" class="w-10 h-10 object-contain"/>
-    <div class="leading-tight">
-      <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-      <div class="text-xs text-muted flex items-center gap-1">
-        <i data-lucide="lock" class="w-3.5 h-3.5"></i> Private Group
+<header class="bg-panel border-b border-border px-4 py-3">
+  <div class="flex justify-between">
+    <div class="flex gap-4">
+      <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
+      <img src="{{ asset('assets/logo.png') }}" class="w-10 h-10 object-contain"/>
+      <div class="leading-tight">
+        <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
+        <div class="text-xs text-muted flex items-center gap-1">
+          <i data-lucide="lock" class="w-3.5 h-3.5"></i> Private Group
+        </div>
+        <div class="text-xs text-muted">
+          Members: {{ $membersCount }} • Online: <span id="onlineCount">{{ $onlineCount }}</span>
+        </div>
+        <div class="text-[11px] text-muted/80">Demo discussion · Verification required</div>
       </div>
-      <div class="text-xs text-muted">
-        Members: <span id="membersCount">{{ $membersCount ?? 0 }}</span> • Online: <span id="onlineCount">{{ $onlineCount ?? 0 }}</span>
-      </div>
-      <div class="text-[11px] text-muted/80">Demo discussion · Verification required</div>
     </div>
+    <i data-lucide="users" class="w-5 h-5 text-muted"></i>
   </div>
-  <i id="memberIcon" data-lucide="users" class="w-5 h-5 text-muted cursor-pointer"></i>
 </header>
 
 <!-- Chat Section -->
 <section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-1" data-page="1">
   <div id="topLoader" class="hidden">Loading older messages…</div>
+  {{-- Messages injected via JS simulation or backend --}}
 </section>
 
 <!-- Typing Indicator -->
@@ -88,190 +83,204 @@ tailwind.config = {
 
 <!-- Footer -->
 <footer class="bg-panel border-t border-border px-4 py-3 pb-[env(safe-area-inset-bottom)]">
-  <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2 relative">
+  <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2">
       <button id="emojiBtn"><i data-lucide="smile" class="w-5 h-5 text-muted"></i></button>
       <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-      <button onclick="fileInput.click()"><i data-lucide="paperclip" class="w-5 h-5 text-muted"></i></button>
+      <button onclick="file.click()"><i data-lucide="paperclip" class="w-5 h-5 text-muted"></i></button>
       <input id="file" type="file" hidden>
-
       <div class="relative w-10 h-10">
-        <!-- Mic button -->
-        <button id="mic" class="absolute inset-0 bg-bg rounded-full flex items-center justify-center transition-bg overflow-hidden">
-            <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
-            <canvas id="micWaveCanvas" class="absolute inset-0 pointer-events-none hidden"></canvas>
-            <i id="lockIcon" data-lucide="lock"></i>
-        </button>
-
-        <!-- Send button -->
-        <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
-            <i data-lucide="send" class="w-5 h-5 text-white"></i>
-        </button>
+          <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center transition-bg overflow-hidden">
+              <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
+              <div id="micWave" class="absolute flex bottom-1 left-1/2 -translate-x-1/2 h-6 gap-1 hidden">
+                  <span class="wave-bar"></span><span class="wave-bar"></span>
+                  <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
+              </div>
+          </button>
+          <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
+              <i data-lucide="send" class="w-5 h-5"></i>
+          </button>
       </div>
   </div>
+
   @include('components.emoji-panel')
 </footer>
 </main>
 </div>
 
-<!-- Sidebar Overlay -->
-<div id="sidebarOverlay"></div>
-
-<!-- Member Sidebar -->
-<div id="memberSidebar" class="sm:w-64 md:w-80" tabindex="-1" aria-label="Member Sidebar">
-  <div class="px-4 py-3 border-b border-border flex justify-between items-center">
-    <span class="font-semibold text-sm">Members & Admins</span>
-    <button id="closeSidebar"><i data-lucide="x" class="w-5 h-5 text-muted"></i></button>
-  </div>
-  <div class="flex-1 overflow-y-auto p-4 space-y-4">
-    <div>
-      <div class="text-xs text-muted uppercase mb-2">Admins</div>
-      <ul id="adminsList" class="space-y-2"></ul>
-    </div>
-    <div>
-      <div class="text-xs text-muted uppercase mb-2">Moderators</div>
-      <ul id="moderatorsList" class="space-y-2"></ul>
-    </div>
-    <div>
-      <div class="text-xs text-muted uppercase mb-2">Verified Members</div>
-      <ul id="verifiedList" class="space-y-2"></ul>
-    </div>
-  </div>
-</div>
-
 <script>
 lucide.createIcons();
 
-// Sidebar toggle + focus trap
-const memberIcon = document.getElementById('memberIcon');
-const sidebar = document.getElementById('memberSidebar');
-const overlay = document.getElementById('sidebarOverlay');
-const closeBtn = document.getElementById('closeSidebar');
-const focusableSelectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-function trapFocus(element){
-    const focusableEls = element.querySelectorAll(focusableSelectors);
-    if(!focusableEls.length) return;
-    const firstEl = focusableEls[0], lastEl = focusableEls[focusableEls.length-1];
-    element.addEventListener('keydown', e=>{
-        if(e.key==='Tab'){
-            if(e.shiftKey && document.activeElement===firstEl){ e.preventDefault(); lastEl.focus(); }
-            else if(!e.shiftKey && document.activeElement===lastEl){ e.preventDefault(); firstEl.focus(); }
-        } else if(e.key==='Escape'){ closeSidebarFunc(); }
-    });
-    firstEl.focus();
-}
-function openSidebar(){ sidebar.classList.add('active'); overlay.classList.add('active'); trapFocus(sidebar); }
-function closeSidebarFunc(){ sidebar.classList.remove('active'); overlay.classList.remove('active'); }
-memberIcon.addEventListener('click', openSidebar);
-closeBtn.addEventListener('click', closeSidebarFunc);
-overlay.addEventListener('click', closeSidebarFunc);
-
-// Chat input
-const input = document.getElementById('input');
-const send = document.getElementById('send');
-const mic = document.getElementById('mic');
-const fileInput = document.getElementById('file');
-const chat = document.getElementById('chat');
-input.addEventListener('input', ()=>{
-    const hasText = input.value.trim();
-    send.classList.toggle('hidden', !hasText);
-    mic.classList.toggle('hidden', hasText);
-});
-
-// Scroll helper
-function scrollChatToBottom(){ chat.scrollTo({top: chat.scrollHeight, behavior:'smooth'}); }
-
-// Current user
-const currentUserId = {{ auth()->id() }};
-let lastMessageId = null;
-
-// Fetch messages
-async function fetchMessages(){
-    try{
-        const url = lastMessageId ? `/api/messages?after=${lastMessageId}` : '/api/messages';
-        const res = await fetch(url);
-        const messages = await res.json();
-        if(messages.length===0) return;
-        messages.forEach(msg=>{
-            const content = msg.text ? `<div>${msg.text}</div>` : `<audio controls src="${msg.audio_url}" class="w-full"></audio>`;
-            const div = document.createElement('div');
-            div.className = `msg ${msg.user_id===currentUserId?'out':'in'}`;
-            div.innerHTML = `<div class="bubble">${content}<div class="time">${new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div></div>`;
-            chat.appendChild(div);
-        });
-        lastMessageId = messages[messages.length-1].id;
-        scrollChatToBottom();
-    }catch(e){console.error(e);}
-}
-
-// Send text
-send.addEventListener('click', async()=>{
-    const text = input.value.trim();
-    if(!text) return;
-    await fetch('/api/messages',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) });
-    input.value='';
-    fetchMessages();
-});
-
-// Send audio
-fileInput.addEventListener('change', async e=>{
-    const file = e.target.files[0]; if(!file) return;
-    const fd = new FormData(); fd.append('audio', file);
-    await fetch('/api/messages',{ method:'POST', body:fd });
-    fetchMessages();
-});
-
-// Users & Online
-async function fetchUsers(endpoint, containerId){
-    try{ const res = await fetch(endpoint); const users = await res.json();
-        document.getElementById(containerId).innerHTML = users.map(u=>`<li class="flex items-center gap-2"><img src="${u.avatar}" class="w-6 h-6 rounded-full"><span class="text-sm">${u.name}</span></li>`).join('');
-    }catch(e){console.error(e);}
-}
-fetchUsers('/api/users/admins','adminsList');
-fetchUsers('/api/users/moderators','moderatorsList');
-fetchUsers('/api/users/verified','verifiedList');
-
+// Online count dynamic fetch
 async function updateOnlineCount(){
-    try{
+    try {
         const res = await fetch('/api/online-count');
         const data = await res.json();
         document.getElementById('onlineCount').textContent = data.onlineCount;
-        document.getElementById('membersCount').textContent = data.totalMembers??'0';
-    }catch(e){console.error(e);}
+    } catch(e){console.error(e);}
 }
 setInterval(updateOnlineCount,5000);
-updateOnlineCount();
 
-// Voice recording + waveform + lock
-const micWaveCanvas = document.getElementById('micWaveCanvas');
-const lockIcon = document.getElementById('lockIcon');
-const ctx = micWaveCanvas.getContext('2d');
-function resizeCanvas(){ micWaveCanvas.width=micWaveCanvas.clientWidth; micWaveCanvas.height=micWaveCanvas.clientHeight; }
-resizeCanvas(); window.addEventListener('resize',resizeCanvas);
+// Smooth scroll
+const chat=document.getElementById('chat');
+function scrollToBottom(){chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });}
+scrollToBottom();
+const observer=new MutationObserver(scrollToBottom);
+observer.observe(chat,{ childList:true });
 
+// Chat Elements
+const input=document.getElementById('input');
+const send=document.getElementById('send');
+const mic=document.getElementById('mic');
+const micWave=document.getElementById('micWave');
+const bars=[...micWave.children];
+
+input.addEventListener('input',()=>{
+  const has=input.value.trim();
+  send.classList.toggle('hidden',!has);
+  mic.classList.toggle('hidden',has);
+});
+
+// ==========================
+// Voice Recording (Improved)
+// ==========================
 let recorder, stream, chunks=[], recording=false, canceled=false, locked=false;
-let audioCtx, analyser, dataArray, source;
+let audioCtx, analyser, data;
+const vibrate=ms=>navigator.vibrate&&navigator.vibrate(ms);
 
 async function startRec(e){
-    e.preventDefault(); if(recording) return;
-    navigator.vibrate && navigator.vibrate(30);
-    try{ stream=await navigator.mediaDevices.getUserMedia({audio:true}); }catch(err){alert('Microphone access denied');return;}
-    recorder=new MediaRecorder(stream); chunks=[];
-    recorder.ondataavailable=e=>chunks.push(e.data); recorder.start();
-    audioCtx=new AudioContext(); analyser=audioCtx.createAnalyser(); analyser.fftSize=2048;
-    source=audioCtx.createMediaStreamSource(stream); source.connect(analyser);
-    dataArray=new Uint8Array(analyser.fftSize);
-    recording=true; mic.classList.add('bg-recording'); mic.querySelector('i').classList.add('text-white-important');
-    micWaveCanvas.classList.remove('hidden'); animateWaveSine();
-}
-function animateWaveSine(){ if(!recording) return; analyser.getByteTimeDomainData(dataArray); const width=micWaveCanvas.width,height=micWaveCanvas.height; ctx.clearRect(0,0,width,height); ctx.beginPath(); ctx.moveTo(0,height/2); let x=0; const sliceWidth=width/dataArray.length; for(let i=0;i<dataArray.length;i++){const v=dataArray[i]/128.0; const y=v*height/2; ctx.lineTo(x,y); x+=sliceWidth;} ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke(); requestAnimationFrame(animateWaveSine);}
-function animateLockSlide(){lockIcon.style.transition='transform 0.4s cubic-bezier(.4,0,.2,1)'; lockIcon.style.transform='translateX(-50%) translateY(-60px) scale(1)';}
-function moveRec(e){ if(!recording) return; const p=e.touches?e.touches[0]:e; const r=mic.getBoundingClientRect(); if(p.clientY<r.top-50 && !locked){locked=true; animateLockSlide();} if(p.clientX<r.left-40){canceled=true; finishRec();}}
-function stopRec(){ if(!recording) return; if(locked) return; finishRec(); }
-function finishRec(){ if(!recording) return; recording=false; mic.classList.remove('bg-recording'); mic.querySelector('i').classList.remove('text-white-important'); micWaveCanvas.classList.add('hidden'); lockIcon.style.transform='translateX(-50%) translateY(0) scale(0)'; if(recorder && recorder.state!=="inactive") recorder.stop(); if(stream) stream.getTracks().forEach(t=>t.stop()); recorder.onstop=async()=>{if(!canceled){ const blob=new Blob(chunks,{type:'audio/webm'}); const fd=new FormData(); fd.append('audio',blob,'recording.webm'); await fetch('/api/messages',{method:'POST',body:fd}); fetchMessages(); } canceled=false; locked=false;};
+    e.preventDefault();
+    if(recording) return;
+    vibrate(30);
+    stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    recorder = new MediaRecorder(stream);
+    chunks = [];
+    recorder.ondataavailable = e => chunks.push(e.data);
+    recorder.start();
 
-// Periodic fetch
-setInterval(fetchMessages,5000);
-fetchMessages();
+    audioCtx = new AudioContext();
+    analyser = audioCtx.createAnalyser();
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+    data = new Uint8Array(analyser.frequencyBinCount);
+
+    recording = true;
+    mic.classList.add('bg-recording');
+    mic.querySelector('i').classList.add('text-white-important');
+    micWave.classList.remove('hidden');
+
+    animateWave();
+}
+
+function animateWave(){
+    if(!recording) return;
+    analyser.getByteFrequencyData(data);
+    bars.forEach((b,i)=>{
+        const height = Math.min(50, data[i]*0.06+4);
+        b.style.height = height + 'px';
+    });
+    requestAnimationFrame(animateWave);
+}
+
+function moveRec(e){
+    if(!recording || locked) return;
+    const p = e.touches ? e.touches[0] : e;
+    const r = mic.getBoundingClientRect();
+    if(p.clientY < r.top-40) locked = true;
+    if(p.clientX < r.left-40) canceled = true;
+}
+
+async function stopRec(){
+    if(!recording) return;
+    recording=false;
+    mic.classList.remove('bg-recording');
+    mic.querySelector('i').classList.remove('text-white-important');
+    micWave.classList.add('hidden');
+
+    recorder.stop();
+    stream.getTracks().forEach(t=>t.stop());
+
+    recorder.onstop = async () => {
+        if(canceled){ canceled=false; locked=false; return; }
+        const blob = new Blob(chunks, {type:'audio/webm'});
+        const url = URL.createObjectURL(blob);
+
+        const msgEl = document.createElement('div');
+        msgEl.className = 'msg out';
+        msgEl.innerHTML = `<div class="bubble">
+            <audio controls src="${url}" class="w-full"></audio>
+            <div class="time">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+        </div>`;
+        chat.appendChild(msgEl);
+        scrollToBottom();
+
+        chunks = [];
+        canceled=false; locked=false;
+    }
+}
+
+mic.addEventListener('pointerdown', startRec);
+mic.addEventListener('pointermove', moveRec);
+mic.addEventListener('pointerup', stopRec);
+mic.addEventListener('pointercancel',()=>{canceled=true; stopRec()});
+
+// ==========================
+// Simulated Real Chat (Improved Typing)
+// ==========================
+let demoUsers = [];
+fetch('/data/demo-users.json')
+    .then(r=>r.json())
+    .then(data=>{ demoUsers=data; simulateChat();});
+
+async function simulateChat(){
+    for(const msg of demoUsers){
+        const typingEl = document.getElementById('typing');
+        typingEl.classList.remove('opacity-0');
+        const typingTime = Math.min(2000, Math.max(500, msg.text.length * 50));
+        await new Promise(r=>setTimeout(r, typingTime));
+        typingEl.classList.add('opacity-0');
+
+        const msgEl = document.createElement('div');
+        msgEl.className = `msg ${msg.self?'out':''} first-of-group`;
+        msgEl.innerHTML = `
+            <img src="${msg.avatar}" class="avatar">
+            <div class="sender-name">${msg.name}</div>
+            <div class="bubble">${msg.text}
+                <div class="time">${new Date(msg.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+            </div>`;
+        chat.appendChild(msgEl);
+        scrollToBottom();
+        await new Promise(r=>setTimeout(r, Math.random()*800+200));
+    }
+}
+
+// ==========================
+// Infinite Scroll (Optimized)
+// ==========================
+let loading=false;
+chat.addEventListener('scroll', async () => {
+    if(chat.scrollTop <= 50 && !loading){
+        loading=true;
+        const topLoader = document.getElementById('topLoader');
+        topLoader.classList.remove('hidden');
+
+        const page = parseInt(chat.dataset.page) + 1;
+        try{
+            const res = await fetch(`/messages?page=${page}`);
+            if(res.ok){
+                const html = await res.text();
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+
+                const firstMsg = chat.querySelector('.msg');
+                Array.from(tempDiv.children).forEach(child => chat.insertBefore(child, firstMsg));
+
+                if(firstMsg) chat.scrollTop = firstMsg.offsetTop - topLoader.offsetHeight;
+                chat.dataset.page = page;
+            }
+        }catch(e){console.error(e);}
+        topLoader.classList.add('hidden');
+        loading=false;
+    }
+});
 </script>
 </body>
 </html>
