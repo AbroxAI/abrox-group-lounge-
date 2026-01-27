@@ -58,25 +58,24 @@ tailwind.config = {
 
 <div class="flex h-full">
 <main class="flex flex-col flex-1 border-r border-border">
+
 <!-- Header -->
-<header class="bg-panel border-b border-border px-4 py-3">
-  <div class="flex justify-between">
-    <div class="flex gap-4">
-      <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
-      <img src="{{ asset('assets/logo.png') }}" class="w-10 h-10 object-contain"/>
-      <div class="leading-tight">
-        <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-        <div class="text-xs text-muted flex items-center gap-1">
-          <i data-lucide="lock" class="w-3.5 h-3.5"></i> Private Group
-        </div>
-        <div class="text-xs text-muted">
-          Members: <span id="membersCount">0</span> • Online: <span id="onlineCount">0</span>
-        </div>
-        <div class="text-[11px] text-muted/80">Demo discussion · Verification required</div>
+<header class="bg-panel border-b border-border px-4 py-3 flex justify-between items-center">
+  <div class="flex items-center gap-4">
+    <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
+    <img src="{{ asset('assets/logo.png') }}" class="w-10 h-10 object-contain"/>
+    <div class="leading-tight">
+      <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
+      <div class="text-xs text-muted flex items-center gap-1">
+        <i data-lucide="lock" class="w-3.5 h-3.5"></i> Private Group
       </div>
+      <div class="text-xs text-muted">
+        Members: <span id="membersCount">{{ $membersCount ?? 0 }}</span> • Online: <span id="onlineCount">{{ $onlineCount ?? 0 }}</span>
+      </div>
+      <div class="text-[11px] text-muted/80">Demo discussion · Verification required</div>
     </div>
-    <i id="memberIcon" data-lucide="users" class="w-5 h-5 text-muted cursor-pointer"></i>
   </div>
+  <i id="memberIcon" data-lucide="users" class="w-5 h-5 text-muted cursor-pointer"></i>
 </header>
 
 <!-- Chat Section -->
@@ -166,13 +165,12 @@ memberIcon.addEventListener('click', openSidebar);
 closeBtn.addEventListener('click', closeSidebarFunc);
 overlay.addEventListener('click', closeSidebarFunc);
 
-// Input & chat
+// Chat input
 const input = document.getElementById('input');
 const send = document.getElementById('send');
 const mic = document.getElementById('mic');
 const fileInput = document.getElementById('file');
 const chat = document.getElementById('chat');
-
 input.addEventListener('input', ()=>{
     const hasText = input.value.trim();
     send.classList.toggle('hidden', !hasText);
@@ -180,7 +178,7 @@ input.addEventListener('input', ()=>{
 });
 
 // Scroll helper
-function scrollChatToBottom(){ chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' }); }
+function scrollChatToBottom(){ chat.scrollTo({top: chat.scrollHeight, behavior:'smooth'}); }
 
 // Current user
 const currentUserId = {{ auth()->id() }};
