@@ -5,8 +5,15 @@
 <title>Abrox – Private Lounge</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
+
+{{-- Tailwind & Icons --}}
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
+
+{{-- Laravel Echo --}}
+<script src="https://js.pusher.com/8.2/pusher.min.js"></script>
+<script src="{{ mix('/js/app.js') }}"></script>
+
 <script>
 tailwind.config = {
   theme: {
@@ -24,332 +31,183 @@ tailwind.config = {
   }
 }
 </script>
+
 <style>
-/* Chat Styles */
+/* ================= CORE STYLES ================= */
 .msg{display:flex;gap:8px;align-items:flex-end}
 .msg.out{justify-content:flex-end}
-.msg .bubble{background:#262b38;padding:10px 12px;font-size:13px;border-radius:14px 14px 14px 4px;max-width:78%;position:relative}
+.msg .bubble{background:#262b38;padding:10px 12px;font-size:13px;border-radius:14px 14px 14px 4px;max-width:78%}
 .msg.out .bubble{border-radius:14px 14px 4px 14}
-.msg.first-of-group .bubble{border-top-left-radius:14px;border-top-right-radius:14px}
-.msg.continuation .bubble{border-radius:4px 14px 4px 14;margin-top:2px}
 .time{font-size:10px;color:#a0a6b5;margin-top:4px;text-align:right}
-.system{text-align:center;color:#a0a6b5;font-size:13px;margin:12px 0}
+.sender-name{font-size:11px;color:#a0a6b5;margin-bottom:2px}
 .typing{font-size:11px;color:#a0a6b5;padding-left:6px;transition:opacity .3s}
-.transition-bg{transition:background-color .2s}
+.avatar{width:24px;height:24px;border-radius:9999px;object-fit:cover}
 .bg-recording{background:#e74c3c!important}
 .text-white-important{color:#fff!important}
-#send i{transition:transform .2s}
-#send.send-active i{transform:translateX(4px) rotate(20deg)}
-#mic{touch-action:none;position:relative;}
-#lockIcon{position:absolute;top:-40px;left:50%;transform:translateX(-50%) scale(0);transition:transform .2s ease-in-out;pointer-events:none;}
-#lockIcon.show{transform:translateX(-50%) scale(1);}
-.sender-name{font-size:11px;color:#a0a6b5;margin-bottom:2px}
-.avatar{w-6 h-6 rounded-full object-cover}
-#topLoader{text-align:center;color:#a0a6b5;padding:8px;font-size:12px}
-
-/* Sidebar Overlay */
-#sidebarOverlay{position:fixed;inset:0;background:black/50;opacity:0;pointer-events:none;transition:opacity .2s;z-index:40;}
-#sidebarOverlay.active{opacity:1;pointer-events:auto;}
 
 /* Sidebar */
-#memberSidebar{position:fixed;top:0;right:0;height:100%;transform:translateX(100%);transition:transform .3s;z-index:50;display:flex;flex-direction:column;}
-#memberSidebar.active{transform:translateX(0);}
+#sidebarOverlay{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.2s;z-index:40}
+#sidebarOverlay.active{opacity:1;pointer-events:auto}
+#memberSidebar{position:fixed;top:0;right:0;height:100%;transform:translateX(100%);transition:.3s;z-index:50;display:flex;flex-direction:column}
+#memberSidebar.active{transform:translateX(0)}
 </style>
 </head>
+
 <body class="bg-bg text-white h-[100dvh] overflow-hidden">
 <div class="flex h-full">
 <main class="flex flex-col flex-1 border-r border-border">
 
-<!-- Header -->
+<!-- ================= HEADER ================= -->
 <header class="bg-panel border-b border-border px-4 py-3">
   <div class="flex justify-between">
     <div class="flex gap-4">
       <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
-      <img src="{{ asset('assets/logo.png') }}" class="w-10 h-10 object-contain"/>
+
+      <img
+        src="{{ asset('assets/logo.png') }}"
+        onerror="this.src='{{ asset('assets/default-avatar.png') }}'"
+        class="w-10 h-10 object-contain"
+      />
+
       <div class="leading-tight">
         <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
         <div class="text-xs text-muted flex items-center gap-1">
           <i data-lucide="lock" class="w-3.5 h-3.5"></i> Private Group
         </div>
         <div class="text-xs text-muted">
-          Members: {{ $membersCount }} • Online: <span id="onlineCount">{{ $onlineCount }}</span>
+          Members: {{ $membersCount }} • Online:
+          <span id="onlineCount">{{ $onlineCount }}</span>
         </div>
         <div class="text-[11px] text-muted/80">Demo discussion · Verification required</div>
       </div>
     </div>
+
     <i id="memberIcon" data-lucide="users" class="w-5 h-5 text-muted cursor-pointer"></i>
   </div>
 </header>
 
-<!-- Chat Section -->
-<section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-1" data-page="1">
-  <div id="topLoader" class="hidden">Loading older messages…</div>
+<!-- ================= CHAT ================= -->
+<section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-1">
+  <div id="topLoader" class="hidden text-center text-muted text-xs py-2">
+    Loading older messages…
+  </div>
 </section>
 
-<!-- Typing Indicator -->
 <div id="typing" class="typing opacity-0">Someone is typing…</div>
 
-<!-- Footer -->
+<!-- ================= FOOTER ================= -->
 <footer class="bg-panel border-t border-border px-4 py-3 pb-[env(safe-area-inset-bottom)]">
   <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2 relative">
-      <button id="emojiBtn"><i data-lucide="smile" class="w-5 h-5 text-muted"></i></button>
-      <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-      <button onclick="file.click()"><i data-lucide="paperclip" class="w-5 h-5 text-muted"></i></button>
-      <input id="file" type="file" hidden>
-
-      <div class="relative w-10 h-10">
-          <!-- Mic button -->
-          <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center transition-bg overflow-hidden">
-              <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
-              <canvas id="micWaveCanvas" class="absolute inset-0 pointer-events-none hidden"></canvas>
-              <i id="lockIcon" data-lucide="lock"></i>
-          </button>
-
-          <!-- Send button -->
-          <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
-              <i data-lucide="send" class="w-5 h-5 text-white"></i>
-          </button>
-      </div>
+    <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
+    <button id="send" class="bg-accent px-4 py-2 rounded-full">
+      <i data-lucide="send" class="w-4 h-4"></i>
+    </button>
   </div>
 
   @include('components.emoji-panel')
 </footer>
+
 </main>
 </div>
 
-<!-- Sidebar Overlay -->
+<!-- ================= SIDEBAR OVERLAY ================= -->
 <div id="sidebarOverlay"></div>
 
-<!-- Member Sidebar -->
-<div id="memberSidebar" class="sm:w-64 md:w-80" tabindex="-1" aria-label="Member Sidebar">
+<!-- ================= MEMBER SIDEBAR ================= -->
+<div id="memberSidebar" class="sm:w-64 md:w-80 bg-panel">
   <div class="px-4 py-3 border-b border-border flex justify-between items-center">
     <span class="font-semibold text-sm">Members & Admins</span>
-    <button id="closeSidebar"><i data-lucide="x" class="w-5 h-5 text-muted"></i></button>
+    <button id="closeSidebar">
+      <i data-lucide="x" class="w-5 h-5 text-muted"></i>
+    </button>
   </div>
+
   <div class="flex-1 overflow-y-auto p-4 space-y-4">
+
     {{-- Admins --}}
     <div>
       <div class="text-xs text-muted uppercase mb-2">Admins</div>
-      <ul class="space-y-2">
-        @foreach($admins as $admin)
-        <li class="flex items-center gap-2">
-          <img src="{{ $admin->avatar }}" class="w-6 h-6 rounded-full">
-          <span class="text-sm">{{ $admin->name }}</span>
-        </li>
-        @endforeach
-      </ul>
+      @foreach($admins as $admin)
+      <div class="flex items-center gap-2 mb-2">
+        <img src="{{ $admin->avatar }}" onerror="this.src='{{ asset('assets/default-avatar.png') }}'" class="avatar">
+        <span class="text-sm">{{ $admin->name }}</span>
+      </div>
+      @endforeach
     </div>
 
     {{-- Moderators --}}
     <div>
       <div class="text-xs text-muted uppercase mb-2">Moderators</div>
-      <ul class="space-y-2">
-        @foreach($moderators as $moderator)
-        <li class="flex items-center gap-2">
-          <img src="{{ $moderator->avatar }}" class="w-6 h-6 rounded-full">
-          <span class="text-sm">{{ $moderator->name }}</span>
-        </li>
-        @endforeach
-      </ul>
+      @foreach($moderators as $moderator)
+      <div class="flex items-center gap-2 mb-2">
+        <img src="{{ $moderator->avatar }}" onerror="this.src='{{ asset('assets/default-avatar.png') }}'" class="avatar">
+        <span class="text-sm">{{ $moderator->name }}</span>
+      </div>
+      @endforeach
     </div>
 
-    {{-- Verified Members --}}
-    <div>
-      <div class="text-xs text-muted uppercase mb-2">Verified Members</div>
-      <ul class="space-y-2">
-        @foreach($verifiedUsers as $user)
-        <li class="flex items-center gap-2">
-          <img src="{{ $user->avatar }}" class="w-6 h-6 rounded-full">
-          <span class="text-sm">{{ $user->name }}</span>
-        </li>
-        @endforeach
-      </ul>
-    </div>
   </div>
 </div>
 
 <script>
 lucide.createIcons();
 
-// Sidebar toggle + focus trap
-const memberIcon = document.getElementById('memberIcon');
-const sidebar = document.getElementById('memberSidebar');
-const overlay = document.getElementById('sidebarOverlay');
-const closeBtn = document.getElementById('closeSidebar');
-const focusableSelectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-function trapFocus(element){
-    const focusableEls = element.querySelectorAll(focusableSelectors);
-    if(!focusableEls.length) return;
-    const firstEl = focusableEls[0];
-    const lastEl = focusableEls[focusableEls.length-1];
-    element.addEventListener('keydown', e=>{
-        if(e.key === 'Tab'){
-            if(e.shiftKey){
-                if(document.activeElement===firstEl){e.preventDefault(); lastEl.focus();}
-            } else {
-                if(document.activeElement===lastEl){e.preventDefault(); firstEl.focus();}
-            }
-        } else if(e.key==='Escape'){closeSidebarFunc();}
-    });
-    firstEl.focus();
-}
-function openSidebar(){sidebar.classList.add('active'); overlay.classList.add('active'); trapFocus(sidebar);}
-function closeSidebarFunc(){sidebar.classList.remove('active'); overlay.classList.remove('active');}
-memberIcon.addEventListener('click', openSidebar);
-closeBtn.addEventListener('click', closeSidebarFunc);
-overlay.addEventListener('click', closeSidebarFunc);
-
-// Input send button toggle
+/* ================= CORE REFERENCES ================= */
+const chat = document.getElementById('chat');
 const input = document.getElementById('input');
 const send = document.getElementById('send');
-const mic = document.getElementById('mic');
-input.addEventListener('input', ()=>{
-    const hasText = input.value.trim();
-    send.classList.toggle('hidden', !hasText);
-    mic.classList.toggle('hidden', hasText);
+const sidebar = document.getElementById('memberSidebar');
+const overlay = document.getElementById('sidebarOverlay');
+const memberIcon = document.getElementById('memberIcon');
+const closeBtn = document.getElementById('closeSidebar');
+
+/* ================= SIDEBAR ================= */
+memberIcon.onclick = () => {
+  sidebar.classList.add('active');
+  overlay.classList.add('active');
+};
+closeBtn.onclick = overlay.onclick = () => {
+  sidebar.classList.remove('active');
+  overlay.classList.remove('active');
+};
+
+/* ================= SEND MESSAGE ================= */
+send.onclick = () => {
+  const msg = input.value.trim();
+  if(!msg) return;
+  axios.post('/messages', { message: msg });
+  input.value = '';
+};
+
+/* ================= REAL-TIME MESSAGES ================= */
+Echo.private('lounge')
+.listen('MessageSent', (e) => {
+  chat.innerHTML += `
+    <div class="msg">
+      <img src="${e.user.avatar}" class="avatar">
+      <div>
+        <div class="sender-name">${e.user.name}</div>
+        <div class="bubble">
+          ${e.message}
+          <div class="time">${e.time}</div>
+        </div>
+      </div>
+    </div>`;
+  chat.scrollTop = chat.scrollHeight;
 });
 
-// Send green arrow
-send.addEventListener('click', ()=>{
-    const msg = input.value.trim();
-    if(!msg) return;
-    chat.innerHTML += `<div class="msg out"><div class="bubble">${msg}<div class="time">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div></div></div>`;
-    input.value=''; send.classList.add('hidden'); mic.classList.remove('hidden');
-    chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
+/* ================= PRESENCE (ONLINE COUNT) ================= */
+Echo.join('lounge-presence')
+.here(users => {
+  document.getElementById('onlineCount').textContent = users.length;
+})
+.joining(() => {
+  document.getElementById('onlineCount').textContent++;
+})
+.leaving(() => {
+  document.getElementById('onlineCount').textContent--;
 });
-
-// Online count
-async function updateOnlineCount(){
-    try{
-        const res = await fetch('/api/online-count');
-        const data = await res.json();
-        document.getElementById('onlineCount').textContent = data.onlineCount;
-    }catch(e){console.error(e);}
-}
-setInterval(updateOnlineCount,5000);
-
-// ==========================
-// Voice Recording + Waveform + Swipe-to-Lock Animation
-const micWaveCanvas = document.getElementById('micWaveCanvas');
-const lockIcon = document.getElementById('lockIcon');
-const ctx = micWaveCanvas.getContext('2d');
-
-function resizeCanvas(){
-    micWaveCanvas.width = micWaveCanvas.clientWidth;
-    micWaveCanvas.height = micWaveCanvas.clientHeight;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-
-let recorder, stream, chunks=[], recording=false, canceled=false, locked=false;
-let audioCtx, analyser, dataArray, source;
-
-async function startRec(e){
-    e.preventDefault();
-    if(recording) return;
-    navigator.vibrate && navigator.vibrate(30);
-
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({audio:true});
-    } catch(err) {
-        alert("Microphone access denied");
-        return;
-    }
-
-    recorder = new MediaRecorder(stream);
-    chunks=[];
-    recorder.ondataavailable = e=>chunks.push(e.data);
-    recorder.start();
-
-    // Setup audio visualization
-    audioCtx = new AudioContext();
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 2048;
-    source = audioCtx.createMediaStreamSource(stream);
-    source.connect(analyser);
-    dataArray = new Uint8Array(analyser.fftSize);
-
-    recording=true;
-    mic.classList.add('bg-recording');
-    mic.querySelector('i').classList.add('text-white-important');
-    micWaveCanvas.classList.remove('hidden');
-    animateWaveSine();
-}
-
-function animateWaveSine(){
-    if(!recording) return;
-    analyser.getByteTimeDomainData(dataArray);
-    const width = micWaveCanvas.width;
-    const height = micWaveCanvas.height;
-    ctx.clearRect(0,0,width,height);
-    ctx.beginPath();
-    ctx.moveTo(0,height/2);
-    const sliceWidth = width / dataArray.length;
-    let x = 0;
-    for(let i=0;i<dataArray.length;i++){
-        const v = dataArray[i]/128.0;
-        const y = v * height/2;
-        ctx.lineTo(x, y);
-        x += sliceWidth;
-    }
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    requestAnimationFrame(animateWaveSine);
-}
-
-function moveRec(e){
-    if(!recording) return;
-    const p = e.touches?e.touches[0]:e;
-    const r = mic.getBoundingClientRect();
-
-    // Swipe up to lock
-    if(p.clientY < r.top - 50 && !locked){
-        locked = true;
-        lockIcon.classList.add('show');
-    }
-
-    // Swipe left to cancel
-    if(p.clientX < r.left - 40){
-        canceled = true;
-        finishRec();
-    }
-}
-
-function stopRec(){
-    if(!recording) return;
-    if(locked) return; // keep recording if locked
-    finishRec();
-}
-
-function finishRec(){
-    if(!recording) return;
-    recording=false;
-    mic.classList.remove('bg-recording');
-    mic.querySelector('i').classList.remove('text-white-important');
-    micWaveCanvas.classList.add('hidden');
-    lockIcon.classList.remove('show');
-
-    if(recorder && recorder.state !== "inactive") recorder.stop();
-    if(stream) stream.getTracks().forEach(t=>t.stop());
-
-    recorder.onstop=()=>{
-        if(!canceled){
-            const url = URL.createObjectURL(new Blob(chunks,{type:'audio/webm'}));
-            chat.innerHTML += `<div class="msg out"><div class="bubble"><audio controls src="${url}" class="w-full"></audio></div></div>`;
-            chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
-        }
-        canceled=false;
-        locked=false;
-    };
-}
-
-// Event listeners
-mic.addEventListener('pointerdown', startRec);
-mic.addEventListener('pointermove', moveRec);
-mic.addEventListener('pointerup', stopRec);
-mic.addEventListener('pointercancel', ()=>{canceled=true;finishRec();});
-mic.addEventListener('click', ()=>{ if(locked) finishRec(); });
 </script>
+
 </body>
 </html>
