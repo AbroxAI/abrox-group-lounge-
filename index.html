@@ -46,20 +46,18 @@ tailwind.config = {
 .sender-name{font-size:11px;color:#a0a6b5;margin-bottom:2px}
 .avatar{w-6 h-6 rounded-full object-cover}
 #topLoader{text-align:center;color:#a0a6b5;padding:8px;font-size:12px}
-
 /* Sidebar Overlay */
 #sidebarOverlay{position:fixed;inset:0;background:black/50;opacity:0;pointer-events:none;transition:opacity .2s;z-index:40;}
 #sidebarOverlay.active{opacity:1;pointer-events:auto;}
-
 /* Sidebar */
 #memberSidebar{position:fixed;top:0;right:0;height:100%;transform:translateX(100%);transition:transform .3s;z-index:50;display:flex;flex-direction:column;}
 #memberSidebar.active{transform:translateX(0);}
 </style>
 </head>
 <body class="bg-bg text-white h-[100dvh] overflow-hidden">
+
 <div class="flex h-full">
 <main class="flex flex-col flex-1 border-r border-border">
-
 <!-- Header -->
 <header class="bg-panel border-b border-border px-4 py-3">
   <div class="flex justify-between">
@@ -72,7 +70,7 @@ tailwind.config = {
           <i data-lucide="lock" class="w-3.5 h-3.5"></i> Private Group
         </div>
         <div class="text-xs text-muted">
-          Members: {{ $membersCount }} • Online: <span id="onlineCount">{{ $onlineCount }}</span>
+          Members: <span id="membersCount">0</span> • Online: <span id="onlineCount">0</span>
         </div>
         <div class="text-[11px] text-muted/80">Demo discussion · Verification required</div>
       </div>
@@ -94,24 +92,23 @@ tailwind.config = {
   <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2 relative">
       <button id="emojiBtn"><i data-lucide="smile" class="w-5 h-5 text-muted"></i></button>
       <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-      <button onclick="file.click()"><i data-lucide="paperclip" class="w-5 h-5 text-muted"></i></button>
+      <button onclick="fileInput.click()"><i data-lucide="paperclip" class="w-5 h-5 text-muted"></i></button>
       <input id="file" type="file" hidden>
 
       <div class="relative w-10 h-10">
-          <!-- Mic button -->
-          <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center transition-bg overflow-hidden">
-              <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
-              <canvas id="micWaveCanvas" class="absolute inset-0 pointer-events-none hidden"></canvas>
-              <i id="lockIcon" data-lucide="lock"></i>
-          </button>
+        <!-- Mic button -->
+        <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center transition-bg overflow-hidden">
+            <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
+            <canvas id="micWaveCanvas" class="absolute inset-0 pointer-events-none hidden"></canvas>
+            <i id="lockIcon" data-lucide="lock"></i>
+        </button>
 
-          <!-- Send button -->
-          <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
-              <i data-lucide="send" class="w-5 h-5 text-white"></i>
-          </button>
+        <!-- Send button -->
+        <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
+            <i data-lucide="send" class="w-5 h-5 text-white"></i>
+        </button>
       </div>
   </div>
-
   @include('components.emoji-panel')
 </footer>
 </main>
@@ -127,43 +124,17 @@ tailwind.config = {
     <button id="closeSidebar"><i data-lucide="x" class="w-5 h-5 text-muted"></i></button>
   </div>
   <div class="flex-1 overflow-y-auto p-4 space-y-4">
-    {{-- Admins --}}
     <div>
       <div class="text-xs text-muted uppercase mb-2">Admins</div>
-      <ul class="space-y-2">
-        @foreach($admins as $admin)
-        <li class="flex items-center gap-2">
-          <img src="{{ $admin->avatar }}" class="w-6 h-6 rounded-full">
-          <span class="text-sm">{{ $admin->name }}</span>
-        </li>
-        @endforeach
-      </ul>
+      <ul id="adminsList" class="space-y-2"></ul>
     </div>
-
-    {{-- Moderators --}}
     <div>
       <div class="text-xs text-muted uppercase mb-2">Moderators</div>
-      <ul class="space-y-2">
-        @foreach($moderators as $moderator)
-        <li class="flex items-center gap-2">
-          <img src="{{ $moderator->avatar }}" class="w-6 h-6 rounded-full">
-          <span class="text-sm">{{ $moderator->name }}</span>
-        </li>
-        @endforeach
-      </ul>
+      <ul id="moderatorsList" class="space-y-2"></ul>
     </div>
-
-    {{-- Verified Members --}}
     <div>
       <div class="text-xs text-muted uppercase mb-2">Verified Members</div>
-      <ul class="space-y-2">
-        @foreach($verifiedUsers as $user)
-        <li class="flex items-center gap-2">
-          <img src="{{ $user->avatar }}" class="w-6 h-6 rounded-full">
-          <span class="text-sm">{{ $user->name }}</span>
-        </li>
-        @endforeach
-      </ul>
+      <ul id="verifiedList" class="space-y-2"></ul>
     </div>
   </div>
 </div>
@@ -203,20 +174,90 @@ overlay.addEventListener('click', closeSidebarFunc);
 const input = document.getElementById('input');
 const send = document.getElementById('send');
 const mic = document.getElementById('mic');
+const fileInput = document.getElementById('file');
+const chat = document.getElementById('chat');
 input.addEventListener('input', ()=>{
     const hasText = input.value.trim();
     send.classList.toggle('hidden', !hasText);
     mic.classList.toggle('hidden', hasText);
 });
 
-// Send green arrow
-send.addEventListener('click', ()=>{
-    const msg = input.value.trim();
-    if(!msg) return;
-    chat.innerHTML += `<div class="msg out"><div class="bubble">${msg}<div class="time">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div></div></div>`;
-    input.value=''; send.classList.add('hidden'); mic.classList.remove('hidden');
-    chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
+// Scroll helper
+function scrollChatToBottom() {
+    chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });
+}
+
+// Current user
+const currentUserId = {{ auth()->id() }};
+
+// Incremental message fetch
+let lastMessageId = null;
+
+async function fetchMessages() {
+    try {
+        const url = lastMessageId ? `/api/messages?after=${lastMessageId}` : '/api/messages';
+        const res = await fetch(url);
+        const messages = await res.json();
+        if(messages.length === 0) return;
+
+        messages.forEach(msg => {
+            let content = msg.text ? `<div>${msg.text}</div>` : '';
+            if(msg.audio_url) content = `<audio controls src="${msg.audio_url}" class="w-full"></audio>`;
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `msg ${msg.user_id === currentUserId ? 'out' : 'in'}`;
+            msgDiv.innerHTML = `<div class="bubble">${content}
+                                    <div class="time">${new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                                </div>`;
+            chat.appendChild(msgDiv);
+        });
+
+        lastMessageId = messages[messages.length-1].id;
+        scrollChatToBottom();
+    } catch(err) {
+        console.error('Failed to fetch messages:', err);
+    }
+}
+
+// Send text
+send.addEventListener('click', async ()=>{
+    const text = input.value.trim();
+    if(!text) return;
+    await fetch('/api/messages', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ text })
+    });
+    input.value='';
+    fetchMessages();
 });
+
+// Send audio
+fileInput.addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const formData = new FormData();
+    formData.append('audio', file);
+    await fetch('/api/messages', { method:'POST', body:formData });
+    fetchMessages();
+});
+
+// Fetch users via API
+async function fetchUsers(endpoint, containerId) {
+    try {
+        const res = await fetch(endpoint);
+        const users = await res.json();
+        document.getElementById(containerId).innerHTML = users.map(u=>`
+            <li class="flex items-center gap-2">
+                <img src="${u.avatar}" class="w-6 h-6 rounded-full">
+                <span class="text-sm">${u.name}</span>
+            </li>
+        `).join('');
+    } catch(err){ console.error(`Error fetching ${containerId}:`, err); }
+}
+fetchUsers('/api/users/admins', 'adminsList');
+fetchUsers('/api/users/moderators', 'moderatorsList');
+fetchUsers('/api/users/verified', 'verifiedList');
 
 // Online count
 async function updateOnlineCount(){
@@ -224,20 +265,18 @@ async function updateOnlineCount(){
         const res = await fetch('/api/online-count');
         const data = await res.json();
         document.getElementById('onlineCount').textContent = data.onlineCount;
+        document.getElementById('membersCount').textContent = data.totalMembers ?? '0';
     }catch(e){console.error(e);}
 }
-setInterval(updateOnlineCount,5000);
+setInterval(updateOnlineCount, 5000);
+updateOnlineCount();
 
-// ==========================
-// Voice Recording + Waveform + WhatsApp-style lock animation
+// Voice Recording + Waveform + Lock
 const micWaveCanvas = document.getElementById('micWaveCanvas');
 const lockIcon = document.getElementById('lockIcon');
 const ctx = micWaveCanvas.getContext('2d');
 
-function resizeCanvas(){
-    micWaveCanvas.width = micWaveCanvas.clientWidth;
-    micWaveCanvas.height = micWaveCanvas.clientHeight;
-}
+function resizeCanvas(){ micWaveCanvas.width=micWaveCanvas.clientWidth; micWaveCanvas.height=micWaveCanvas.clientHeight; }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
@@ -248,104 +287,68 @@ async function startRec(e){
     e.preventDefault();
     if(recording) return;
     navigator.vibrate && navigator.vibrate(30);
+    try { stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+    catch(err){ alert("Microphone access denied"); return; }
 
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({audio:true});
-    } catch(err) {
-        alert("Microphone access denied");
-        return;
-    }
-
-    recorder = new MediaRecorder(stream);
-    chunks=[];
+    recorder = new MediaRecorder(stream); chunks=[];
     recorder.ondataavailable = e=>chunks.push(e.data);
     recorder.start();
 
     audioCtx = new AudioContext();
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 2048;
-    source = audioCtx.createMediaStreamSource(stream);
-    source.connect(analyser);
+    analyser = audioCtx.createAnalyser(); analyser.fftSize=2048;
+    source = audioCtx.createMediaStreamSource(stream); source.connect(analyser);
     dataArray = new Uint8Array(analyser.fftSize);
 
     recording=true;
-    mic.classList.add('bg-recording');
-    mic.querySelector('i').classList.add('text-white-important');
-    micWaveCanvas.classList.remove('hidden');
-    animateWaveSine();
+    mic.classList.add('bg-recording'); mic.querySelector('i').classList.add('text-white-important');
+    micWaveCanvas.classList.remove('hidden'); animateWaveSine();
 }
 
 function animateWaveSine(){
     if(!recording) return;
     analyser.getByteTimeDomainData(dataArray);
-    const width = micWaveCanvas.width;
-    const height = micWaveCanvas.height;
+    const width=micWaveCanvas.width, height=micWaveCanvas.height;
     ctx.clearRect(0,0,width,height);
-    ctx.beginPath();
-    ctx.moveTo(0,height/2);
-    const sliceWidth = width / dataArray.length;
-    let x = 0;
+    ctx.beginPath(); ctx.moveTo(0,height/2);
+    const sliceWidth = width/dataArray.length; let x=0;
     for(let i=0;i<dataArray.length;i++){
         const v = dataArray[i]/128.0;
-        const y = v * height/2;
-        ctx.lineTo(x, y);
-        x += sliceWidth;
+        const y = v*height/2;
+        ctx.lineTo(x,y); x+=sliceWidth;
     }
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
     requestAnimationFrame(animateWaveSine);
 }
 
-// Animate lock along a smooth curve
 function animateLockSlide(){
-    lockIcon.style.transition = 'transform 0.4s cubic-bezier(.4,0,.2,1)';
-    lockIcon.style.transform = `translateX(-50%) translateY(-60px) scale(1)`;
+    lockIcon.style.transition='transform 0.4s cubic-bezier(.4,0,.2,1)';
+    lockIcon.style.transform='translateX(-50%) translateY(-60px) scale(1)';
 }
 
 function moveRec(e){
     if(!recording) return;
     const p = e.touches?e.touches[0]:e;
     const r = mic.getBoundingClientRect();
-
-    // Swipe up to lock
-    if(p.clientY < r.top - 50 && !locked){
-        locked = true;
-        animateLockSlide();
-    }
-
-    // Swipe left to cancel
-    if(p.clientX < r.left - 40){
-        canceled = true;
-        finishRec();
-    }
+    if(p.clientY < r.top - 50 && !locked){ locked=true; animateLockSlide(); }
+    if(p.clientX < r.left - 40){ canceled=true; finishRec(); }
 }
 
-function stopRec(){
-    if(!recording) return;
-    if(locked) return;
-    finishRec();
-}
+function stopRec(){ if(!recording) return; if(locked) return; finishRec(); }
 
 function finishRec(){
     if(!recording) return;
-    recording=false;
-    mic.classList.remove('bg-recording');
-    mic.querySelector('i').classList.remove('text-white-important');
-    micWaveCanvas.classList.add('hidden');
-    lockIcon.style.transform = 'translateX(-50%) translateY(0) scale(0)';
-
-    if(recorder && recorder.state !== "inactive") recorder.stop();
+    recording=false; mic.classList.remove('bg-recording'); mic.querySelector('i').classList.remove('text-white-important');
+    micWaveCanvas.classList.add('hidden'); lockIcon.style.transform='translateX(-50%) translateY(0) scale(0)';
+    if(recorder && recorder.state!=="inactive") recorder.stop();
     if(stream) stream.getTracks().forEach(t=>t.stop());
-
-    recorder.onstop=()=>{
+    recorder.onstop=async ()=>{
         if(!canceled){
-            const url = URL.createObjectURL(new Blob(chunks,{type:'audio/webm'}));
-            chat.innerHTML += `<div class="msg out"><div class="bubble"><audio controls src="${url}" class="w-full"></audio></div></div>`;
-            chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
+            const blob = new Blob(chunks,{type:'audio/webm'});
+            const formData = new FormData(); formData.append('audio', blob, 'recording.webm');
+            await fetch('/api/messages', { method:'POST', body: formData });
+            fetchMessages();
         }
-        canceled=false;
-        locked=false;
+        canceled=false; locked=false;
     };
 }
 
@@ -353,7 +356,7 @@ function finishRec(){
 mic.addEventListener('pointerdown', startRec);
 mic.addEventListener('pointermove', moveRec);
 mic.addEventListener('pointerup', stopRec);
-mic.addEventListener('pointercancel', ()=>{canceled=true;finishRec();});
+mic.addEventListener('pointercancel', ()=>{ canceled=true; finishRec(); });
 mic.addEventListener('click', ()=>{ if(locked) finishRec(); });
 </script>
 </body>
