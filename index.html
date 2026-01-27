@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
 <script>
 tailwind.config = {
   theme: {
@@ -23,7 +24,6 @@ tailwind.config = {
   }
 }
 </script>
-<script src="https://unpkg.com/lucide@latest"></script>
 <style>
 /* Chat Styles */
 .msg{display:flex;gap:8px;align-items:flex-end}
@@ -38,10 +38,11 @@ tailwind.config = {
 .transition-bg{transition:background-color .2s}
 .bg-recording{background:#e74c3c!important}
 .text-white-important{color:#fff!important}
-.wave-bar{display:inline-block;width:2px;background:#fff;border-radius:2px}
 #send i{transition:transform .2s}
 #send.send-active i{transform:translateX(4px) rotate(20deg)}
-#mic{touch-action:none}
+#mic{touch-action:none;position:relative;}
+#lockIcon{position:absolute;top:-40px;left:50%;transform:translateX(-50%) scale(0);transition:transform .2s ease-in-out;pointer-events:none;}
+#lockIcon.show{transform:translateX(-50%) scale(1);}
 .sender-name{font-size:11px;color:#a0a6b5;margin-bottom:2px}
 .avatar{w-6 h-6 rounded-full object-cover}
 #topLoader{text-align:center;color:#a0a6b5;padding:8px;font-size:12px}
@@ -90,21 +91,23 @@ tailwind.config = {
 
 <!-- Footer -->
 <footer class="bg-panel border-t border-border px-4 py-3 pb-[env(safe-area-inset-bottom)]">
-  <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2">
+  <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2 relative">
       <button id="emojiBtn"><i data-lucide="smile" class="w-5 h-5 text-muted"></i></button>
       <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
       <button onclick="file.click()"><i data-lucide="paperclip" class="w-5 h-5 text-muted"></i></button>
       <input id="file" type="file" hidden>
+
       <div class="relative w-10 h-10">
+          <!-- Mic button -->
           <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center transition-bg overflow-hidden">
               <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
-              <div id="micWave" class="absolute flex bottom-1 left-1/2 -translate-x-1/2 h-6 gap-1 hidden">
-                  <span class="wave-bar"></span><span class="wave-bar"></span>
-                  <span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span>
-              </div>
+              <canvas id="micWaveCanvas" class="absolute inset-0 pointer-events-none hidden"></canvas>
+              <i id="lockIcon" data-lucide="lock"></i>
           </button>
+
+          <!-- Send button -->
           <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
-              <i data-lucide="send" class="w-5 h-5"></i>
+              <i data-lucide="send" class="w-5 h-5 text-white"></i>
           </button>
       </div>
   </div>
@@ -124,7 +127,6 @@ tailwind.config = {
     <button id="closeSidebar"><i data-lucide="x" class="w-5 h-5 text-muted"></i></button>
   </div>
   <div class="flex-1 overflow-y-auto p-4 space-y-4">
-
     {{-- Admins --}}
     <div>
       <div class="text-xs text-muted uppercase mb-2">Admins</div>
@@ -163,78 +165,183 @@ tailwind.config = {
         @endforeach
       </ul>
     </div>
-
   </div>
 </div>
 
 <script>
 lucide.createIcons();
 
-// Sidebar toggle with focus trap
+// Sidebar toggle + focus trap
 const memberIcon = document.getElementById('memberIcon');
 const sidebar = document.getElementById('memberSidebar');
 const overlay = document.getElementById('sidebarOverlay');
 const closeBtn = document.getElementById('closeSidebar');
-
 const focusableSelectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
-function trapFocus(element) {
-  const focusableEls = element.querySelectorAll(focusableSelectors);
-  if (!focusableEls.length) return;
-
-  const firstEl = focusableEls[0];
-  const lastEl = focusableEls[focusableEls.length - 1];
-
-  element.addEventListener('keydown', function(e) {
-    if (e.key === 'Tab') {
-      if (e.shiftKey) { // shift+tab
-        if (document.activeElement === firstEl) {
-          e.preventDefault();
-          lastEl.focus();
-        }
-      } else { // tab
-        if (document.activeElement === lastEl) {
-          e.preventDefault();
-          firstEl.focus();
-        }
-      }
-    } else if (e.key === 'Escape') {
-      closeSidebarFunc();
-    }
-  });
-
-  firstEl.focus();
+function trapFocus(element){
+    const focusableEls = element.querySelectorAll(focusableSelectors);
+    if(!focusableEls.length) return;
+    const firstEl = focusableEls[0];
+    const lastEl = focusableEls[focusableEls.length-1];
+    element.addEventListener('keydown', e=>{
+        if(e.key === 'Tab'){
+            if(e.shiftKey){
+                if(document.activeElement===firstEl){e.preventDefault(); lastEl.focus();}
+            } else {
+                if(document.activeElement===lastEl){e.preventDefault(); firstEl.focus();}
+            }
+        } else if(e.key==='Escape'){closeSidebarFunc();}
+    });
+    firstEl.focus();
 }
-
-function openSidebar() {
-  sidebar.classList.add('active');
-  overlay.classList.add('active');
-  trapFocus(sidebar);
-}
-
-function closeSidebarFunc() {
-  sidebar.classList.remove('active');
-  overlay.classList.remove('active');
-}
-
+function openSidebar(){sidebar.classList.add('active'); overlay.classList.add('active'); trapFocus(sidebar);}
+function closeSidebarFunc(){sidebar.classList.remove('active'); overlay.classList.remove('active');}
 memberIcon.addEventListener('click', openSidebar);
 closeBtn.addEventListener('click', closeSidebarFunc);
 overlay.addEventListener('click', closeSidebarFunc);
 
-// ==========================
-// Online count dynamic fetch
-// ==========================
+// Input send button toggle
+const input = document.getElementById('input');
+const send = document.getElementById('send');
+const mic = document.getElementById('mic');
+input.addEventListener('input', ()=>{
+    const hasText = input.value.trim();
+    send.classList.toggle('hidden', !hasText);
+    mic.classList.toggle('hidden', hasText);
+});
+
+// Send green arrow
+send.addEventListener('click', ()=>{
+    const msg = input.value.trim();
+    if(!msg) return;
+    chat.innerHTML += `<div class="msg out"><div class="bubble">${msg}<div class="time">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div></div></div>`;
+    input.value=''; send.classList.add('hidden'); mic.classList.remove('hidden');
+    chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
+});
+
+// Online count
 async function updateOnlineCount(){
-    try {
+    try{
         const res = await fetch('/api/online-count');
         const data = await res.json();
         document.getElementById('onlineCount').textContent = data.onlineCount;
-    } catch(e){console.error(e);}
+    }catch(e){console.error(e);}
 }
 setInterval(updateOnlineCount,5000);
 
-// Smooth scroll, chat elements, voice recording, and simulation remain unchanged
-// Your previous JS can remain intact below this point
+// ==========================
+// Voice Recording + Sine Wave + Swipe-to-Lock Animation
+const micWaveCanvas = document.getElementById('micWaveCanvas');
+const lockIcon = document.getElementById('lockIcon');
+const ctx = micWaveCanvas.getContext('2d');
+
+function resizeCanvas(){
+    micWaveCanvas.width = micWaveCanvas.clientWidth;
+    micWaveCanvas.height = micWaveCanvas.clientHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+let recorder, stream, chunks=[], recording=false, canceled=false, locked=false;
+let audioCtx, analyser, dataArray, source;
+
+async function startRec(e){
+    e.preventDefault();
+    if(recording) return;
+    navigator.vibrate && navigator.vibrate(30);
+
+    stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    recorder = new MediaRecorder(stream);
+    chunks=[];
+    recorder.ondataavailable = e=>chunks.push(e.data);
+    recorder.start();
+
+    audioCtx = new AudioContext();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    source = audioCtx.createMediaStreamSource(stream);
+    source.connect(analyser);
+    dataArray = new Uint8Array(analyser.fftSize);
+
+    recording=true;
+    mic.classList.add('bg-recording');
+    mic.querySelector('i').classList.add('text-white-important');
+    micWaveCanvas.classList.remove('hidden');
+    animateWaveSine();
+}
+
+function animateWaveSine(){
+    if(!recording) return;
+    analyser.getByteTimeDomainData(dataArray);
+    const width = micWaveCanvas.width;
+    const height = micWaveCanvas.height;
+    ctx.clearRect(0,0,width,height);
+    ctx.beginPath();
+    ctx.moveTo(0,height/2);
+    const sliceWidth = width / dataArray.length;
+    let x = 0;
+    for(let i=0;i<dataArray.length;i++){
+        const v = dataArray[i]/128.0;
+        const y = v * height/2;
+        ctx.lineTo(x, y);
+        x += sliceWidth;
+    }
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    requestAnimationFrame(animateWaveSine);
+}
+
+function moveRec(e){
+    if(!recording) return;
+    const p = e.touches?e.touches[0]:e;
+    const r = mic.getBoundingClientRect();
+
+    // Swipe up to lock
+    if(p.clientY < r.top - 50 && !locked){
+        locked = true;
+        lockIcon.classList.add('show');
+    }
+
+    // Swipe left to cancel
+    if(p.clientX < r.left - 40){
+        canceled = true;
+        finishRec();
+    }
+}
+
+function stopRec(){
+    if(!recording) return;
+    if(locked) return; // Don't stop on pointerup if locked
+    finishRec();
+}
+
+function finishRec(){
+    recording=false;
+    mic.classList.remove('bg-recording');
+    mic.querySelector('i').classList.remove('text-white-important');
+    micWaveCanvas.classList.add('hidden');
+    lockIcon.classList.remove('show');
+
+    recorder.stop();
+    stream.getTracks().forEach(t=>t.stop());
+
+    recorder.onstop=()=>{
+        if(!canceled){
+            const url = URL.createObjectURL(new Blob(chunks,{type:'audio/webm'}));
+            chat.innerHTML += `<div class="msg out"><div class="bubble"><audio controls src="${url}" class="w-full"></audio></div></div>`;
+            chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
+        }
+        canceled=false;
+        locked=false;
+    };
+}
+
+// If locked, clicking mic finishes recording
+mic.addEventListener('pointerdown', startRec);
+mic.addEventListener('pointermove', moveRec);
+mic.addEventListener('pointerup', stopRec);
+mic.addEventListener('pointercancel', ()=>{canceled=true;finishRec();});
+mic.addEventListener('click', ()=>{ if(locked) finishRec(); });
 </script>
 </body>
 </html>
