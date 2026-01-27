@@ -41,8 +41,8 @@ tailwind.config = {
 #send i{transition:transform .2s}
 #send.send-active i{transform:translateX(4px) rotate(20deg)}
 #mic{touch-action:none;position:relative;}
-#lockIcon{position:absolute;top:-40px;left:50%;transform:translateX(-50%) scale(0);transition:transform .2s ease-in-out;pointer-events:none;}
-#lockIcon.show{transform:translateX(-50%) scale(1);}
+#lockIcon{position:absolute;left:50%;transform:translateX(-50%) translateY(0) scale(0);transition:transform 0.3s cubic-bezier(.4,0,.2,1);pointer-events:none;}
+#lockIcon.show{scale:1;}
 .sender-name{font-size:11px;color:#a0a6b5;margin-bottom:2px}
 .avatar{w-6 h-6 rounded-full object-cover}
 #topLoader{text-align:center;color:#a0a6b5;padding:8px;font-size:12px}
@@ -229,7 +229,7 @@ async function updateOnlineCount(){
 setInterval(updateOnlineCount,5000);
 
 // ==========================
-// Voice Recording + Sine Wave + Swipe-to-Lock Animation
+// Voice Recording + Waveform + WhatsApp-style lock animation
 const micWaveCanvas = document.getElementById('micWaveCanvas');
 const lockIcon = document.getElementById('lockIcon');
 const ctx = micWaveCanvas.getContext('2d');
@@ -249,7 +249,13 @@ async function startRec(e){
     if(recording) return;
     navigator.vibrate && navigator.vibrate(30);
 
-    stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    } catch(err) {
+        alert("Microphone access denied");
+        return;
+    }
+
     recorder = new MediaRecorder(stream);
     chunks=[];
     recorder.ondataavailable = e=>chunks.push(e.data);
@@ -291,6 +297,12 @@ function animateWaveSine(){
     requestAnimationFrame(animateWaveSine);
 }
 
+// Animate lock along a smooth curve
+function animateLockSlide(){
+    lockIcon.style.transition = 'transform 0.4s cubic-bezier(.4,0,.2,1)';
+    lockIcon.style.transform = `translateX(-50%) translateY(-60px) scale(1)`;
+}
+
 function moveRec(e){
     if(!recording) return;
     const p = e.touches?e.touches[0]:e;
@@ -299,7 +311,7 @@ function moveRec(e){
     // Swipe up to lock
     if(p.clientY < r.top - 50 && !locked){
         locked = true;
-        lockIcon.classList.add('show');
+        animateLockSlide();
     }
 
     // Swipe left to cancel
@@ -311,19 +323,20 @@ function moveRec(e){
 
 function stopRec(){
     if(!recording) return;
-    if(locked) return; // Don't stop on pointerup if locked
+    if(locked) return;
     finishRec();
 }
 
 function finishRec(){
+    if(!recording) return;
     recording=false;
     mic.classList.remove('bg-recording');
     mic.querySelector('i').classList.remove('text-white-important');
     micWaveCanvas.classList.add('hidden');
-    lockIcon.classList.remove('show');
+    lockIcon.style.transform = 'translateX(-50%) translateY(0) scale(0)';
 
-    recorder.stop();
-    stream.getTracks().forEach(t=>t.stop());
+    if(recorder && recorder.state !== "inactive") recorder.stop();
+    if(stream) stream.getTracks().forEach(t=>t.stop());
 
     recorder.onstop=()=>{
         if(!canceled){
@@ -336,7 +349,7 @@ function finishRec(){
     };
 }
 
-// If locked, clicking mic finishes recording
+// Event listeners
 mic.addEventListener('pointerdown', startRec);
 mic.addEventListener('pointermove', moveRec);
 mic.addEventListener('pointerup', stopRec);
