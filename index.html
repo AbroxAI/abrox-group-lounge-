@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -62,12 +62,10 @@ tailwind.config = {
     <img src="assets/logo.png" class="w-8 h-8">
     <div>
       <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-
       <div class="flex items-center gap-1 text-xs text-muted">
         <i data-lucide="lock" class="w-3 h-3"></i>
         <span>Private Group</span>
       </div>
-
       <div class="text-xs text-muted">
         Members: 4,872 • Online: <span id="onlineCount">132</span><br>
         Demo discussion · Verification required
@@ -104,21 +102,13 @@ tailwind.config = {
 
 <!-- SIDEBAR -->
 <aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full transition-transform z-50 flex flex-col">
-
-  <!-- HEADER WITH CLOSE ICON -->
   <div class="p-4 border-b border-border flex items-center justify-between">
     <strong>Members</strong>
-
-    <!-- NEW: close button -->
-    <button id="closeSidebar" class="text-muted hover:text-white">
-      <i data-lucide="x"></i>
-    </button>
+    <button id="closeSidebar"><i data-lucide="x"></i></button>
   </div>
-
   <div class="px-4 pb-2">
     <input id="search" class="w-full bg-bg px-2 py-1 text-sm rounded" placeholder="Search members">
   </div>
-
   <div id="memberList" class="flex-1 p-3 space-y-4 overflow-y-auto"></div>
 </aside>
 
@@ -131,52 +121,16 @@ lucide.createIcons();
 let online=132;
 setInterval(()=>{online+=Math.random()>.5?1:-1;onlineCount.textContent=online},8000);
 
-/* ===== MEMBERS + PRESENCE ===== */
-const ACTIVE_WINDOW = 90000;
-
+/* ===== MEMBERS ===== */
 const members=[
- {name:'Sam_Admin',role:'ADMIN',avatar:'https://randomuser.me/api/portraits/men/32.jpg',lastActive:Date.now()},
- {name:'Sara_Mod',role:'MOD',avatar:'https://randomuser.me/api/portraits/women/44.jpg',lastActive:Date.now()},
- {name:'Mina_fx',role:'VERIFIED',avatar:'https://randomuser.me/api/portraits/women/68.jpg',lastActive:Date.now()-120000}
+ {name:'Sam_Admin',role:'ADMIN',avatar:'https://randomuser.me/api/portraits/men/32.jpg'},
+ {name:'Sara_Mod',role:'MOD',avatar:'https://randomuser.me/api/portraits/women/44.jpg'},
+ {name:'Mina_fx',role:'VERIFIED',avatar:'https://randomuser.me/api/portraits/women/68.jpg'}
 ];
 
-function isOnline(m){
- return Date.now()-m.lastActive < ACTIVE_WINDOW;
-}
-
-/* simulate background activity */
-setInterval(()=>{
- const m=members[Math.floor(Math.random()*members.length)];
- m.lastActive=Date.now();
- renderMembers();
-},20000);
-
-/* ===== SIDEBAR TOGGLE ===== */
+/* ===== SIDEBAR ===== */
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
-closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full'); // NEW
-
-function renderMembers(){
- memberList.innerHTML='';
- const q=search.value.toLowerCase();
- members.filter(m=>m.name.toLowerCase().includes(q))
-  .sort((a,b)=>isOnline(b)-isOnline(a))
-  .forEach(m=>{
-   memberList.innerHTML+=`
-   <div class="flex items-center gap-3">
-    <div class="relative">
-      <img src="${m.avatar}" class="w-9 h-9 rounded-full">
-      <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${isOnline(m)?'bg-green-500':'bg-gray-500'}"></span>
-    </div>
-    <div>
-     <div class="text-sm">${m.name}</div>
-     <span class="badge ${m.role.toLowerCase()}">${m.role}</span>
-    </div>
-   </div>`;
-  });
-}
-search.oninput=renderMembers;
-setInterval(renderMembers,5000);
-renderMembers();
+closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
 /* ===== CHAT ===== */
 const chat=document.getElementById('chat');
@@ -193,7 +147,10 @@ function addDate(d){chat.innerHTML+=`<div class="date-sep">${d}</div>`}
 
 function append(text,sender,out=false){
  const now=new Date();
- if(now.toDateString()!==lastDate){addDate(now.toDateString());lastDate=now.toDateString()}
+ if(now.toDateString()!==lastDate){
+  addDate(now.toDateString());
+  lastDate=now.toDateString();
+ }
 
  const grouped=lastMeta&&lastMeta.sender===sender&&lastMeta.out===out&&(now-lastMeta.time)<120000;
  const role=members.find(m=>m.name===sender)?.role;
@@ -201,13 +158,22 @@ function append(text,sender,out=false){
 
  const el=document.createElement('div');
  el.className=`msg ${out?'out':'in'} ${grouped?'grouped':''}`;
+
  el.innerHTML=`
  <div class="bubble">
   ${!grouped&&!out?`<div class="sender">${sender} ${badge}</div>`:''}
   ${text}
   <div class="time">✓ ${now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
  </div>`;
+
  chat.appendChild(el);
+
+ /* ===== READ RECEIPTS ===== */
+ if(out){
+  const t=el.querySelector('.time');
+  setTimeout(()=>t.textContent=`✓✓ ${t.textContent.slice(2)}`,600);
+  setTimeout(()=>t.textContent=`✓✓ 👀 ${t.textContent.slice(2)}`,1400);
+ }
 
  lastMeta={sender,out,time:now};
  chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
