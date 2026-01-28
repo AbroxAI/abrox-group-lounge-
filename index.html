@@ -42,6 +42,20 @@ tailwind.config = {
 .date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
 .typing{font-size:11px;color:#a0a6b5;padding:6px}
 
+/* NEW: per-user read avatars */
+.read-by{
+ display:flex;
+ gap:4px;
+ margin-top:4px;
+ justify-content:flex-end;
+}
+.read-by img{
+ width:14px;
+ height:14px;
+ border-radius:999px;
+ border:1px solid #1c1f26;
+}
+
 .badge{font-size:10px;padding:2px 6px;border-radius:999px}
 .badge.admin{background:#e74c3c}
 .badge.mod{background:#f39c12}
@@ -138,7 +152,7 @@ function isOnline(m){
  return Date.now()-m.lastActive < ACTIVE_WINDOW;
 }
 
-/* simulate background activity */
+/* simulate activity */
 setInterval(()=>{
  const m=members[Math.floor(Math.random()*members.length)];
  m.lastActive=Date.now();
@@ -214,14 +228,26 @@ function append(text,sender,out=false){
   ${!grouped&&!out?`<div class="sender">${sender} ${badge}</div>`:''}
   ${text}
   <div class="time">✓ ${now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+  <div class="read-by"></div>
  </div>`;
  chat.appendChild(el);
 
- /* READ RECEIPTS */
+ /* ===== PER-USER READ RECEIPTS ===== */
  if(out){
   const t=el.querySelector('.time');
+  const readBy=el.querySelector('.read-by');
+
   setTimeout(()=>t.textContent=`✓✓ ${t.textContent.slice(2)}`,600);
-  setTimeout(()=>t.textContent=`✓✓ 👀 ${t.textContent.slice(2)}`,1400);
+
+  setTimeout(()=>{
+   t.textContent=`✓✓ 👀 ${t.textContent.slice(2)}`;
+   members
+    .filter(m=>isOnline(m))
+    .slice(0,3)
+    .forEach(m=>{
+      readBy.innerHTML+=`<img src="${m.avatar}" title="${m.name}">`;
+    });
+  },1400);
  }
 
  lastMeta={sender,out,time:now};
