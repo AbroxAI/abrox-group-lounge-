@@ -9,7 +9,6 @@
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
-
 <script src="emoji-pack.js" defer></script>
 
 <script>
@@ -46,6 +45,27 @@ tailwind.config = {
 .wave span{display:inline-block;width:3px;background:#2ecc71;margin-right:2px;border-radius:2px}
 .typing{font-size:11px;color:#a0a6b5;padding:6px}
 .reactions{font-size:14px;margin-top:4px}
+
+.date-sep{
+  text-align:center;
+  font-size:11px;
+  color:#a0a6b5;
+  margin:10px 0;
+}
+
+#newMsgBtn{
+  position:absolute;
+  bottom:90px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#2ecc71;
+  color:#000;
+  font-size:11px;
+  padding:6px 12px;
+  border-radius:9999px;
+  display:none;
+  cursor:pointer;
+}
 </style>
 </head>
 
@@ -79,7 +99,7 @@ tailwind.config = {
   </div>
 </header>
 
-<section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+<section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-4 relative">
   <div class="system text-center text-muted text-sm">
     📌 <strong>Group Rules</strong><br>
     New members are read-only until verified<br>
@@ -89,54 +109,26 @@ tailwind.config = {
   </div>
 </section>
 
+<div id="newMsgBtn">New messages ↓</div>
 <div id="typing" class="typing hidden">Someone is typing…</div>
 
 <footer class="bg-panel border-t border-border px-4 py-3 pb-[env(safe-area-inset-bottom)]">
   <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2">
-
-    <button onclick="EmojiPack.openPicker(input)">
-      <i data-lucide="smile" class="w-5 h-5 text-muted"></i>
-    </button>
-
     <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-
-    <button onclick="file.click()">
-      <i data-lucide="paperclip" class="w-5 h-5 text-muted"></i>
-    </button>
-    <input id="file" type="file" hidden>
-
-    <div class="relative w-10 h-10">
-      <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center">
-        <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
-      </button>
-      <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
-        <i data-lucide="send" class="w-5 h-5"></i>
-      </button>
-    </div>
-
+    <button id="send" class="hidden">Send</button>
   </div>
 </footer>
 
 </main>
 
-<!-- SLIDING SIDEBAR -->
+<!-- SIDEBAR -->
 <aside id="sidebar"
 class="fixed top-0 right-0 h-full w-72 bg-panel border-l border-border p-4
 translate-x-full transition-transform duration-300 ease-in-out z-50">
-
   <div class="flex justify-between items-center mb-4">
     <span class="text-sm font-semibold">Members</span>
     <button onclick="toggleSidebar()">✕</button>
   </div>
-
-  <div class="text-xs text-muted mb-2">ADMINS</div>
-  <div class="mb-3">Sam_Admin</div>
-
-  <div class="text-xs text-muted mb-2">MODERATORS</div>
-  <div class="mb-3">Sara_Mod</div>
-
-  <div class="text-xs text-muted mb-2">VERIFIED MEMBERS</div>
-  <div>Mina_fx</div>
 </aside>
 
 </div>
@@ -147,47 +139,63 @@ lucide.createIcons();
 let online=132;
 setInterval(()=>{online+=Math.random()>.5?1:-1;onlineCount.textContent=online},8000);
 
-const input=document.getElementById('input');
 const chat=document.getElementById('chat');
+const input=document.getElementById('input');
 const send=document.getElementById('send');
-const mic=document.getElementById('mic');
-const typing=document.getElementById('typing');
-const file=document.getElementById('file');
+const newMsgBtn=document.getElementById('newMsgBtn');
 const sidebar=document.getElementById('sidebar');
 const membersBtn=document.getElementById('membersBtn');
+
+let lastDate=null;
+let userAtBottom=true;
+
+function isAtBottom(){
+  return chat.scrollHeight - chat.scrollTop - chat.clientHeight < 50;
+}
+
+chat.addEventListener('scroll',()=>{
+  userAtBottom=isAtBottom();
+  newMsgBtn.style.display=userAtBottom?'none':'block';
+});
+
+newMsgBtn.onclick=()=>{
+  chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
+};
 
 function toggleSidebar(){
   sidebar.classList.toggle('translate-x-full');
 }
-
 membersBtn.onclick=toggleSidebar;
 
-function toggle(){
-  send.classList.toggle('hidden',!input.value.trim());
-  mic.classList.toggle('hidden',input.value.trim());
+function appendDateIfNeeded(date){
+  if(date!==lastDate){
+    const d=document.createElement('div');
+    d.className='date-sep';
+    d.textContent=new Date(date).toDateString();
+    chat.appendChild(d);
+    lastDate=date;
+  }
 }
 
-input.addEventListener('input',()=>{
-  toggle();
-  typing.classList.remove('hidden');
-  clearTimeout(window.tt);
-  window.tt=setTimeout(()=>typing.classList.add('hidden'),1200);
-});
-
 function appendMessage({text,sender,outgoing=false}){
-  const t=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const now=new Date();
+  appendDateIfNeeded(now.toDateString());
+
+  const t=now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
   const m=document.createElement('div');
   m.className='msg'+(outgoing?' out':'');
   m.innerHTML=`
     <div class="bubble">
       ${!outgoing?`<div class="sender">${sender}</div>`:''}
       ${text}
-      <div class="reactions"></div>
       <div class="time">✓ ${t}</div>
     </div>`;
   chat.appendChild(m);
-  EmojiPack.attachReactions(m.querySelector('.bubble'));
-  chat.scrollTop=chat.scrollHeight;
+
+  if(userAtBottom){
+    m.scrollIntoView({behavior:'smooth'});
+  }
+
   setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ '+t,700);
   setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ 👀 '+t,2000);
 }
@@ -195,54 +203,16 @@ function appendMessage({text,sender,outgoing=false}){
 send.onclick=()=>{
   if(!input.value.trim())return;
   appendMessage({text:input.value,sender:'You',outgoing:true});
-  input.value='';toggle();
-
-  setTimeout(()=>{
-    typing.textContent='Sara_Mod is typing…';
-    typing.classList.remove('hidden');
-  },1200);
-
-  setTimeout(()=>{
-    typing.classList.add('hidden');
-    appendMessage({text:'Please keep chat demo-only.',sender:'Sara_Mod'});
-  },2600);
+  input.value='';
 };
 
-file.onchange=e=>{
-  const f=e.target.files[0]; if(!f)return;
-  if(f.type.startsWith('image/')){
-    const r=new FileReader();
-    r.onload=()=>appendMessage({text:`<img src="${r.result}" class="rounded-lg max-w-full">`,sender:'You',outgoing:true});
-    r.readAsDataURL(f);
-  } else {
-    appendMessage({text:`📎 ${f.name}`,sender:'You',outgoing:true});
-  }
-};
-
-let rec,chunks=[],wave;
-mic.onmousedown=async()=>{
-  const s=await navigator.mediaDevices.getUserMedia({audio:true});
-  rec=new MediaRecorder(s);chunks=[];
-  rec.ondataavailable=e=>chunks.push(e.data);
-  rec.start();
-  const m=document.createElement('div');
-  m.className='msg out';
-  m.innerHTML=`<div class="bubble">Recording<div class="wave">${'<span></span>'.repeat(8)}</div></div>`;
-  chat.appendChild(m);
-  wave=setInterval(()=>m.querySelectorAll('span').forEach(b=>b.style.height=(Math.random()*14+4)+'px'),180);
-};
-mic.onmouseup=()=>{
-  clearInterval(wave);
-  rec.stop();
-  rec.onstop=()=>{
-    const url=URL.createObjectURL(new Blob(chunks));
-    appendMessage({
-      sender:'You',
-      outgoing:true,
-      text:`<audio controls class="w-full"><source src="${url}"></audio>`
-    });
-  };
-};
+let startX=0;
+document.addEventListener('touchstart',e=>startX=e.touches[0].clientX);
+document.addEventListener('touchend',e=>{
+  const diff=e.changedTouches[0].clientX-startX;
+  if(diff>80)sidebar.classList.remove('translate-x-full');
+  if(diff<-80)sidebar.classList.add('translate-x-full');
+});
 </script>
 
 </body>
