@@ -29,43 +29,23 @@ tailwind.config = {
 </script>
 
 <style>
-.msg{display:flex;gap:8px;align-items:flex-end}
+.msg{display:flex;gap:8px}
 .msg.out{justify-content:flex-end}
-.msg .bubble{
-  background:#262b38;
-  padding:10px 12px;
-  font-size:13px;
-  border-radius:14px 14px 14px 4px;
-  max-width:78%;
-  position:relative;
-}
-.msg.out .bubble{border-radius:14px 14px 4px 14px}
+.bubble{background:#262b38;padding:10px 12px;font-size:13px;max-width:78%;position:relative;border-radius:14px}
+.grouped.in .bubble{border-top-left-radius:4px}
+.grouped.out .bubble{border-top-right-radius:4px}
 .sender{font-size:11px;color:#2ecc71;margin-bottom:2px}
 .time{font-size:10px;color:#a0a6b5;margin-top:4px;text-align:right}
-.wave span{display:inline-block;width:3px;background:#2ecc71;margin-right:2px;border-radius:2px}
 .typing{font-size:11px;color:#a0a6b5;padding:6px}
+.date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
+.reply-box{border-left:3px solid #2ecc71;padding-left:6px;font-size:11px;color:#a0a6b5;margin-bottom:4px}
+.forwarded{font-size:10px;color:#a0a6b5;margin-bottom:2px}
+.context{position:absolute;top:-18px;right:0;font-size:10px;display:flex;gap:6px}
+.badge{font-size:10px;padding:2px 6px;border-radius:999px}
 .reactions{font-size:14px;margin-top:4px}
-
-.date-sep{
-  text-align:center;
-  font-size:11px;
-  color:#a0a6b5;
-  margin:10px 0;
-}
-
-#newMsgBtn{
-  position:absolute;
-  bottom:90px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#2ecc71;
-  color:#000;
-  font-size:11px;
-  padding:6px 12px;
-  border-radius:9999px;
-  display:none;
-  cursor:pointer;
-}
+.wave span{display:inline-block;width:3px;background:#2ecc71;margin-right:2px;border-radius:2px}
+.highlight{animation:flash 1.5s}
+@keyframes flash{0%{background:#2ecc7133}100%{background:transparent}}
 </style>
 </head>
 
@@ -73,33 +53,20 @@ tailwind.config = {
 
 <div class="flex h-full relative">
 
+<!-- MAIN -->
 <main class="flex flex-col flex-1 border-r border-border">
 
-<header class="bg-panel border-b border-border px-4 py-3">
-  <div class="flex justify-between items-start">
-    <div class="flex gap-4">
-      <img src="assets/logo.png" class="w-10 h-10 object-contain"/>
-      <div>
-        <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-        <div class="text-xs text-muted flex items-center gap-1">
-          <i data-lucide="lock" class="w-3.5 h-3.5"></i> Private Group
-        </div>
-        <div class="text-xs text-muted">
-          Members: 4,872 • Online: <span id="onlineCount">132</span>
-        </div>
-        <div class="text-[11px] text-muted/80">
-          Demo discussion · Verification required
-        </div>
-      </div>
+<header class="bg-panel border-b border-border px-4 py-3 flex justify-between">
+  <div>
+    <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
+    <div class="text-xs text-muted">
+      Members: 4,872 • Online: <span id="onlineCount">132</span>
     </div>
-
-    <button id="membersBtn">
-      <i data-lucide="users" class="w-5 h-5 text-muted"></i>
-    </button>
   </div>
+  <button id="membersBtn"><i data-lucide="users"></i></button>
 </header>
 
-<section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-4 relative">
+<section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-2">
   <div class="system text-center text-muted text-sm">
     📌 <strong>Group Rules</strong><br>
     New members are read-only until verified<br>
@@ -109,26 +76,36 @@ tailwind.config = {
   </div>
 </section>
 
-<div id="newMsgBtn">New messages ↓</div>
+<div id="newMsg" class="hidden text-center mb-2">
+  <button class="bg-panel px-3 py-1 rounded text-xs">New messages ↓</button>
+</div>
+
 <div id="typing" class="typing hidden">Someone is typing…</div>
 
-<footer class="bg-panel border-t border-border px-4 py-3 pb-[env(safe-area-inset-bottom)]">
-  <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2">
+<footer class="bg-panel border-t border-border px-4 py-3">
+  <div id="replyPreview" class="hidden text-xs text-muted mb-1 cursor-pointer"></div>
+  <div class="flex gap-2 items-center bg-bg rounded-full px-3 py-2">
+    <button onclick="EmojiPack.openPicker(input)">😀</button>
     <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-    <button id="send" class="hidden">Send</button>
+    <button onclick="file.click()">📎</button>
+    <input id="file" type="file" hidden>
+    <button id="mic">🎤</button>
+    <button id="send" class="hidden">➡️</button>
   </div>
 </footer>
 
 </main>
 
 <!-- SIDEBAR -->
-<aside id="sidebar"
-class="fixed top-0 right-0 h-full w-72 bg-panel border-l border-border p-4
-translate-x-full transition-transform duration-300 ease-in-out z-50">
-  <div class="flex justify-between items-center mb-4">
-    <span class="text-sm font-semibold">Members</span>
-    <button onclick="toggleSidebar()">✕</button>
+<aside id="sidebar" class="fixed top-0 right-0 w-72 h-full bg-panel border-l border-border translate-x-full transition-transform z-50 flex flex-col">
+  <div class="p-4 border-b border-border">
+    <div class="flex justify-between">
+      <strong>Members</strong>
+      <button onclick="toggleSidebar()">✕</button>
+    </div>
+    <input id="search" placeholder="Search members" class="mt-2 w-full bg-bg px-2 py-1 text-sm rounded">
   </div>
+  <div id="memberList" class="flex-1 overflow-y-auto p-3 space-y-4"></div>
 </aside>
 
 </div>
@@ -136,82 +113,218 @@ translate-x-full transition-transform duration-300 ease-in-out z-50">
 <script>
 lucide.createIcons();
 
+/* ================= STORAGE ================= */
+const STORAGE_KEY='abrox_messages';
+const READ_KEY='abrox_last_read';
+let unreadCount=0;
+
+/* ================= ONLINE COUNT ================= */
 let online=132;
 setInterval(()=>{online+=Math.random()>.5?1:-1;onlineCount.textContent=online},8000);
 
+/* ================= MEMBERS ================= */
+const members=[
+ {name:'Sam_Admin',role:'ADMIN',online:true,avatar:'https://randomuser.me/api/portraits/men/32.jpg'},
+ {name:'Sara_Mod',role:'MOD',online:true,avatar:'https://randomuser.me/api/portraits/women/44.jpg'},
+ {name:'Mina_fx',role:'VERIFIED',online:false,avatar:'https://randomuser.me/api/portraits/women/68.jpg'}
+];
+const collapsed={ADMIN:false,MOD:false,VERIFIED:false};
+
+function avatarFallback(img,name){
+ img.onerror=()=>img.outerHTML=
+ `<div class="w-10 h-10 rounded-full bg-accent text-bg flex items-center justify-center text-sm">${name[0]}</div>`;
+}
+function toggleSidebar(){sidebar.classList.toggle('translate-x-full')}
+membersBtn.onclick=toggleSidebar;
+
+function renderMembers(){
+ memberList.innerHTML='';
+ const q=search.value.toLowerCase();
+ ['ADMIN','MOD','VERIFIED'].forEach(role=>{
+  const list=members.filter(m=>m.role===role && m.name.toLowerCase().includes(q))
+                    .sort((a,b)=>b.online-a.online);
+  if(!list.length)return;
+  memberList.innerHTML+=`<div onclick="collapsed['${role}']=!collapsed['${role}'];renderMembers()" class="text-xs text-muted cursor-pointer">${role}</div>`;
+  if(collapsed[role])return;
+  list.forEach(m=>{
+   memberList.innerHTML+=`
+   <div class="flex items-center gap-2">
+    <div class="relative">
+     <img src="${m.avatar}" class="w-10 h-10 rounded-full" onerror="avatarFallback(this,'${m.name}')">
+     <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${m.online?'bg-green-500':'bg-gray-500'}"></span>
+    </div>
+    <div>
+     <div class="text-sm">${m.name}</div>
+     <span class="badge bg-panel">${m.role}</span>
+    </div>
+   </div>`;
+  });
+ });
+}
+search.oninput=renderMembers;
+renderMembers();
+
+/* ================= CHAT ================= */
 const chat=document.getElementById('chat');
 const input=document.getElementById('input');
 const send=document.getElementById('send');
-const newMsgBtn=document.getElementById('newMsgBtn');
-const sidebar=document.getElementById('sidebar');
-const membersBtn=document.getElementById('membersBtn');
+const mic=document.getElementById('mic');
+const typing=document.getElementById('typing');
+const file=document.getElementById('file');
+const newMsg=document.getElementById('newMsg');
+const replyPreview=document.getElementById('replyPreview');
 
-let lastDate=null;
-let userAtBottom=true;
+let lastMsg=null,lastDate='',replyTo=null,replyId=null;
 
-function isAtBottom(){
-  return chat.scrollHeight - chat.scrollTop - chat.clientHeight < 50;
+function addDate(d){chat.innerHTML+=`<div class="date-sep">${d}</div>`}
+function nearBottom(){return chat.scrollHeight-chat.scrollTop-chat.clientHeight<120}
+
+/* ===== Persistence ===== */
+function saveMessage(m){
+ const data=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+ data.push(m);
+ localStorage.setItem(STORAGE_KEY,JSON.stringify(data.slice(-500)));
+}
+function loadMessages(){
+ const data=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+ data.forEach(m=>appendMessage(m.text,m.sender,m.out,m.reply,m.forward,true));
 }
 
-chat.addEventListener('scroll',()=>{
-  userAtBottom=isAtBottom();
-  newMsgBtn.style.display=userAtBottom?'none':'block';
-});
+/* ===== Unread ===== */
+function markRead(){
+ const last=chat.lastElementChild?.id;
+ if(last)localStorage.setItem(READ_KEY,last);
+ unreadCount=0;
+ updateUnread();
+}
+function updateUnread(){
+ if(unreadCount>0){
+  newMsg.classList.remove('hidden');
+  newMsg.querySelector('button').textContent=`New messages (${unreadCount}) ↓`;
+ }else newMsg.classList.add('hidden');
+}
 
-newMsgBtn.onclick=()=>{
-  chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
+/* ===== Message Append ===== */
+function appendMessage(text,sender,out=false,reply=null,forward=false,restore=false){
+ const now=new Date();
+ const date=now.toDateString();
+ if(date!==lastDate){addDate(date);lastDate=date}
+
+ const grouped=lastMsg && lastMsg.sender===sender && (now-lastMsg.time)<120000;
+ const id='m'+Date.now()+Math.random().toString(36).slice(2);
+
+ const m=document.createElement('div');
+ m.className=`msg ${out?'out':'in'} ${grouped?'grouped':''}`;
+ m.id=id;
+ m.innerHTML=`
+ <div class="bubble">
+  <div class="context">
+   <button onclick="setReply('${id}')">↩</button>
+   <button onclick="forwardMsg(this)">⤴</button>
+  </div>
+  ${forward?`<div class="forwarded">Forwarded</div>`:''}
+  ${reply?`<div class="reply-box">${reply}</div>`:''}
+  ${!grouped&&!out?`<div class="sender">${sender}</div>`:''}
+  ${text}
+  <div class="reactions"></div>
+  <div class="time">✓ ${now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+ </div>`;
+ chat.appendChild(m);
+
+ EmojiPack.attachReactions(m.querySelector('.bubble'));
+ setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ '+m.querySelector('.time').textContent.slice(2),700);
+ setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ 👀 '+m.querySelector('.time').textContent.slice(2),2000);
+
+ lastMsg={sender,time:now};
+
+ if(!restore){
+  saveMessage({text,sender,out,reply,forward,time:now});
+  if(nearBottom()){chat.scrollTo({top:chat.scrollHeight});markRead();}
+  else{unreadCount++;updateUnread();}
+ }
+}
+
+/* ===== Reply / Forward ===== */
+function setReply(id){
+ const el=document.getElementById(id);
+ replyTo=el.innerText.slice(0,80);
+ replyId=id;
+ replyPreview.textContent='Replying to: '+replyTo;
+ replyPreview.classList.remove('hidden');
+}
+replyPreview.onclick=()=>{
+ const el=document.getElementById(replyId);
+ if(el){el.classList.add('highlight');el.scrollIntoView({behavior:'smooth',block:'center'});
+ setTimeout(()=>el.classList.remove('highlight'),1500);}
 };
-
-function toggleSidebar(){
-  sidebar.classList.toggle('translate-x-full');
-}
-membersBtn.onclick=toggleSidebar;
-
-function appendDateIfNeeded(date){
-  if(date!==lastDate){
-    const d=document.createElement('div');
-    d.className='date-sep';
-    d.textContent=new Date(date).toDateString();
-    chat.appendChild(d);
-    lastDate=date;
-  }
+function forwardMsg(btn){
+ appendMessage(btn.closest('.bubble').innerText,'You',true,null,true);
 }
 
-function appendMessage({text,sender,outgoing=false}){
-  const now=new Date();
-  appendDateIfNeeded(now.toDateString());
-
-  const t=now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  const m=document.createElement('div');
-  m.className='msg'+(outgoing?' out':'');
-  m.innerHTML=`
-    <div class="bubble">
-      ${!outgoing?`<div class="sender">${sender}</div>`:''}
-      ${text}
-      <div class="time">✓ ${t}</div>
-    </div>`;
-  chat.appendChild(m);
-
-  if(userAtBottom){
-    m.scrollIntoView({behavior:'smooth'});
-  }
-
-  setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ '+t,700);
-  setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ 👀 '+t,2000);
-}
-
+/* ===== Input ===== */
 send.onclick=()=>{
-  if(!input.value.trim())return;
-  appendMessage({text:input.value,sender:'You',outgoing:true});
-  input.value='';
+ if(!input.value.trim())return;
+ appendMessage(input.value,'You',true,replyTo);
+ replyPreview.classList.add('hidden');
+ replyTo=null;
+ input.value='';
+};
+input.oninput=()=>{
+ send.classList.toggle('hidden',!input.value.trim());
+ mic.classList.toggle('hidden',input.value.trim());
+ typing.classList.remove('hidden');
+ clearTimeout(window.tt);
+ window.tt=setTimeout(()=>typing.classList.add('hidden'),1200);
 };
 
+/* ===== Files ===== */
+file.onchange=e=>{
+ const f=e.target.files[0];
+ if(!f)return;
+ const r=new FileReader();
+ r.onload=()=>appendMessage(`<img src="${r.result}" class="rounded-lg max-w-full">`,'You',true);
+ r.readAsDataURL(f);
+};
+
+/* ===== Voice ===== */
+let rec,chunks=[],wave;
+mic.onmousedown=async()=>{
+ const s=await navigator.mediaDevices.getUserMedia({audio:true});
+ rec=new MediaRecorder(s);chunks=[];
+ rec.ondataavailable=e=>chunks.push(e.data);
+ rec.start();
+ const m=document.createElement('div');
+ m.className='msg out';
+ m.innerHTML=`<div class="bubble">Recording<div class="wave">${'<span></span>'.repeat(8)}</div></div>`;
+ chat.appendChild(m);
+ wave=setInterval(()=>m.querySelectorAll('span').forEach(b=>b.style.height=(Math.random()*14+4)+'px'),180);
+};
+mic.onmouseup=()=>{
+ clearInterval(wave);
+ rec.stop();
+ rec.onstop=()=>{
+  const url=URL.createObjectURL(new Blob(chunks));
+  appendMessage(`<audio controls src="${url}"></audio>`,'You',true);
+ };
+};
+
+/* ===== Swipe ===== */
 let startX=0;
 document.addEventListener('touchstart',e=>startX=e.touches[0].clientX);
 document.addEventListener('touchend',e=>{
-  const diff=e.changedTouches[0].clientX-startX;
-  if(diff>80)sidebar.classList.remove('translate-x-full');
-  if(diff<-80)sidebar.classList.add('translate-x-full');
+ const dx=e.changedTouches[0].clientX-startX;
+ if(dx<-80||dx>80)toggleSidebar();
+});
+
+/* ===== Load ===== */
+window.addEventListener('load',()=>{
+ loadMessages();
+ const last=localStorage.getItem(READ_KEY);
+ if(last){
+  const el=document.getElementById(last);
+  if(el){el.scrollIntoView({block:'center'});el.classList.add('highlight');
+   setTimeout(()=>el.classList.remove('highlight'),1500);}
+ }
 });
 </script>
 
