@@ -30,19 +30,81 @@ tailwind.config = {
 </script>
 
 <style>
+/* ===== CHAT LAYOUT ===== */
 .msg{display:flex;gap:8px}
 .msg.out{justify-content:flex-end}
-.bubble{background:#262b38;padding:10px 12px;font-size:13px;max-width:78%;border-radius:14px}
 
-.grouped.in .bubble{border-top-left-radius:4px}
-.grouped.out .bubble{border-top-right-radius:4px}
+/* ===== IMPROVED CHAT BUBBLES ===== */
+.bubble{
+  padding:10px 14px;
+  font-size:13px;
+  line-height:1.45;
+  max-width:78%;
+  border-radius:16px;
+  position:relative;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);
+}
 
-.sender{font-size:11px;color:#2ecc71;margin-bottom:2px}
-.time{font-size:10px;color:#a0a6b5;margin-top:4px;text-align:right}
+/* incoming */
+.msg.in .bubble{
+  background:#262b38;
+  border-top-left-radius:6px;
+}
+
+/* outgoing */
+.msg.out .bubble{
+  background:linear-gradient(135deg,#3b82f6,#2563eb);
+  color:#fff;
+  border-top-right-radius:6px;
+}
+
+/* tails */
+.msg.in .bubble::before{
+  content:'';
+  position:absolute;
+  left:-6px;
+  bottom:8px;
+  width:12px;
+  height:12px;
+  background:#262b38;
+  border-bottom-right-radius:12px;
+}
+
+.msg.out .bubble::before{
+  content:'';
+  position:absolute;
+  right:-6px;
+  bottom:8px;
+  width:12px;
+  height:12px;
+  background:#2563eb;
+  border-bottom-left-radius:12px;
+}
+
+/* grouped messages */
+.grouped.in .bubble::before,
+.grouped.out .bubble::before{
+  display:none;
+}
+
+.grouped.in .bubble{border-top-left-radius:6px}
+.grouped.out .bubble{border-top-right-radius:6px}
+
+/* sender + meta */
+.sender{font-size:11px;font-weight:600;color:#2ecc71;margin-bottom:4px}
+.time{
+  font-size:10px;
+  opacity:.75;
+  margin-top:6px;
+  display:flex;
+  justify-content:flex-end;
+  gap:4px;
+}
+
 .date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
 .typing{font-size:11px;color:#a0a6b5;padding:6px}
 
-/* NEW: per-user read avatars */
+/* per-user read avatars */
 .read-by{
  display:flex;
  gap:4px;
@@ -50,12 +112,13 @@ tailwind.config = {
  justify-content:flex-end;
 }
 .read-by img{
- width:14px;
- height:14px;
+ width:13px;
+ height:13px;
  border-radius:999px;
  border:1px solid #1c1f26;
 }
 
+/* badges */
 .badge{font-size:10px;padding:2px 6px;border-radius:999px}
 .badge.admin{background:#e74c3c}
 .badge.mod{background:#f39c12}
@@ -133,29 +196,20 @@ lucide.createIcons();
 
 /* ===== ONLINE COUNT ===== */
 let online=132;
-setInterval(()=>{
- online+=Math.random()>.5?1:-1;
- onlineCount.textContent=online;
-},8000);
+setInterval(()=>{online+=Math.random()>.5?1:-1;onlineCount.textContent=online},8000);
 
-/* ===== PRESENCE SYSTEM ===== */
-const ACTIVE_WINDOW = 90000;
-
-/* ===== MEMBERS ===== */
+/* ===== PRESENCE ===== */
+const ACTIVE_WINDOW=90000;
 const members=[
  {name:'Sam_Admin',role:'ADMIN',avatar:'https://randomuser.me/api/portraits/men/32.jpg',lastActive:Date.now()},
  {name:'Sara_Mod',role:'MOD',avatar:'https://randomuser.me/api/portraits/women/44.jpg',lastActive:Date.now()},
  {name:'Mina_fx',role:'VERIFIED',avatar:'https://randomuser.me/api/portraits/women/68.jpg',lastActive:Date.now()-120000}
 ];
 
-function isOnline(m){
- return Date.now()-m.lastActive < ACTIVE_WINDOW;
-}
+const isOnline=m=>Date.now()-m.lastActive<ACTIVE_WINDOW;
 
-/* simulate activity */
 setInterval(()=>{
- const m=members[Math.floor(Math.random()*members.length)];
- m.lastActive=Date.now();
+ members[Math.floor(Math.random()*members.length)].lastActive=Date.now();
  renderMembers();
 },20000);
 
@@ -163,15 +217,13 @@ setInterval(()=>{
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
-/* swipe to close */
 let sx=0;
 sidebar.addEventListener('touchstart',e=>sx=e.touches[0].clientX);
 sidebar.addEventListener('touchend',e=>{
- if(e.changedTouches[0].clientX-sx>80)
-  sidebar.classList.add('translate-x-full');
+ if(e.changedTouches[0].clientX-sx>80)sidebar.classList.add('translate-x-full');
 });
 
-/* ===== RENDER MEMBERS ===== */
+/* ===== MEMBERS LIST ===== */
 function renderMembers(){
  memberList.innerHTML='';
  const q=search.value.toLowerCase();
@@ -206,16 +258,11 @@ const file=document.getElementById('file');
 
 let lastMeta=null,lastDate='';
 
-function addDate(d){
- chat.innerHTML+=`<div class="date-sep">${d}</div>`;
-}
+function addDate(d){chat.innerHTML+=`<div class="date-sep">${d}</div>`}
 
 function append(text,sender,out=false){
  const now=new Date();
- if(now.toDateString()!==lastDate){
-  addDate(now.toDateString());
-  lastDate=now.toDateString();
- }
+ if(now.toDateString()!==lastDate){addDate(now.toDateString());lastDate=now.toDateString()}
 
  const grouped=lastMeta&&lastMeta.sender===sender&&lastMeta.out===out&&(now-lastMeta.time)<120000;
  const role=members.find(m=>m.name===sender)?.role;
@@ -232,21 +279,14 @@ function append(text,sender,out=false){
  </div>`;
  chat.appendChild(el);
 
- /* ===== PER-USER READ RECEIPTS ===== */
  if(out){
   const t=el.querySelector('.time');
-  const readBy=el.querySelector('.read-by');
-
+  const r=el.querySelector('.read-by');
   setTimeout(()=>t.textContent=`✓✓ ${t.textContent.slice(2)}`,600);
-
   setTimeout(()=>{
-   t.textContent=`✓✓ 👀 ${t.textContent.slice(2)}`;
-   members
-    .filter(m=>isOnline(m))
-    .slice(0,3)
-    .forEach(m=>{
-      readBy.innerHTML+=`<img src="${m.avatar}" title="${m.name}">`;
-    });
+    t.textContent=`✓✓ 👀 ${t.textContent.slice(2)}`;
+    members.filter(isOnline).slice(0,3)
+      .forEach(m=>r.innerHTML+=`<img src="${m.avatar}" title="${m.name}">`);
   },1400);
  }
 
@@ -256,11 +296,10 @@ function append(text,sender,out=false){
 
 /* ===== INPUT ===== */
 input.oninput=()=>{
- const has=input.value.trim().length>0;
+ const has=input.value.trim();
  send.classList.toggle('hidden',!has);
  mic.classList.toggle('hidden',has);
  attach.classList.toggle('hidden',has);
-
  typing.classList.remove('hidden');
  clearTimeout(window.tt);
  window.tt=setTimeout(()=>typing.classList.add('hidden'),1200);
@@ -275,7 +314,6 @@ send.onclick=()=>{
  attach.classList.remove('hidden');
 };
 
-/* ===== FILE ===== */
 file.onchange=e=>{
  const r=new FileReader();
  r.onload=()=>append(`<img src="${r.result}" class="rounded-lg max-w-full">`,'You',true);
