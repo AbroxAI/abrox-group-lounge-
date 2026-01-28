@@ -48,9 +48,6 @@ tailwind.config = {
 .badge.admin{background:#e74c3c}
 .badge.mod{background:#f39c12}
 .badge.verified{background:#2ecc71}
-
-.highlight{animation:flash 1.5s}
-@keyframes flash{0%{background:#2ecc7133}100%{background:transparent}}
 </style>
 </head>
 
@@ -64,11 +61,8 @@ tailwind.config = {
   <div class="flex gap-3 items-center">
     <img src="assets/logo.png" class="w-8 h-8">
     <div>
-      <div class="text-sm font-semibold">
-        Abrox Binary Bot – Private Lounge
-      </div>
+      <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
 
-      <!-- FIX 1: own line -->
       <div class="flex items-center gap-1 text-xs text-muted">
         <i data-lucide="lock" class="w-3 h-3"></i>
         <span>Private Group</span>
@@ -93,28 +87,22 @@ tailwind.config = {
   </div>
 </section>
 
-<div id="newMsg" class="hidden text-center mb-2">
-  <button class="bg-panel px-3 py-1 rounded text-xs"></button>
-</div>
-
 <div id="typing" class="typing hidden">Someone is typing…</div>
 
 <footer class="bg-panel border-t border-border px-4 py-3">
-  <div id="replyPreview" class="hidden text-xs text-muted mb-1 cursor-pointer"></div>
   <div class="flex gap-2 items-center bg-bg rounded-full px-3 py-2">
     <button onclick="EmojiPack.openPicker(input)"><i data-lucide="smile"></i></button>
     <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-    <!-- FIX 2: attach id -->
     <button id="attach" onclick="file.click()"><i data-lucide="paperclip"></i></button>
     <input id="file" type="file" hidden>
     <button id="mic"><i data-lucide="mic"></i></button>
-    <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
+    <button id="send" class="hidden"><i data-lucide="send"></i></button>
   </div>
 </footer>
 
 </main>
 
-<aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full transition-transform z-50 flex flex-col scroll-smooth">
+<aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full transition-transform z-50 flex flex-col">
   <div class="p-4 border-b border-border">
     <strong>Members</strong>
     <input id="search" class="mt-2 w-full bg-bg px-2 py-1 text-sm rounded" placeholder="Search members">
@@ -127,32 +115,50 @@ tailwind.config = {
 <script>
 lucide.createIcons();
 
-/* ================= STORAGE ================= */
-const STORAGE_KEY='abrox_messages';
-const READ_KEY='abrox_last_read';
-
-/* ================= ONLINE ================= */
+/* ===== ONLINE COUNT ===== */
 let online=132;
 setInterval(()=>{online+=Math.random()>.5?1:-1;onlineCount.textContent=online},8000);
 
-/* ================= MEMBERS ================= */
+/* ===== MEMBERS + PRESENCE ===== */
+const ACTIVE_WINDOW = 90000;
+
 const members=[
- {name:'Sam_Admin',role:'ADMIN',online:true,avatar:'https://randomuser.me/api/portraits/men/32.jpg'},
- {name:'Sara_Mod',role:'MOD',online:true,avatar:'https://randomuser.me/api/portraits/women/44.jpg'},
- {name:'Mina_fx',role:'VERIFIED',online:false,avatar:'https://randomuser.me/api/portraits/women/68.jpg'}
+ {name:'Sam_Admin',role:'ADMIN',avatar:'https://randomuser.me/api/portraits/men/32.jpg',lastActive:Date.now()},
+ {name:'Sara_Mod',role:'MOD',avatar:'https://randomuser.me/api/portraits/women/44.jpg',lastActive:Date.now()},
+ {name:'Mina_fx',role:'VERIFIED',avatar:'https://randomuser.me/api/portraits/women/68.jpg',lastActive:Date.now()-120000}
 ];
 
+function isOnline(m){
+ return Date.now()-m.lastActive < ACTIVE_WINDOW;
+}
+
+function markActive(name){
+ const m=members.find(x=>x.name===name);
+ if(m)m.lastActive=Date.now();
+}
+
+/* simulate background activity */
+setInterval(()=>{
+ const m=members[Math.floor(Math.random()*members.length)];
+ m.lastActive=Date.now();
+ renderMembers();
+},20000);
+
+/* ===== SIDEBAR ===== */
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 
 function renderMembers(){
  memberList.innerHTML='';
  const q=search.value.toLowerCase();
  members.filter(m=>m.name.toLowerCase().includes(q))
-  .sort((a,b)=>b.online-a.online)
+  .sort((a,b)=>isOnline(b)-isOnline(a))
   .forEach(m=>{
    memberList.innerHTML+=`
    <div class="flex items-center gap-3">
-    <img src="${m.avatar}" class="w-9 h-9 rounded-full">
+    <div class="relative">
+      <img src="${m.avatar}" class="w-9 h-9 rounded-full">
+      <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${isOnline(m)?'bg-green-500':'bg-gray-500'}"></span>
+    </div>
     <div>
      <div class="text-sm">${m.name}</div>
      <span class="badge ${m.role.toLowerCase()}">${m.role}</span>
@@ -161,9 +167,10 @@ function renderMembers(){
   });
 }
 search.oninput=renderMembers;
+setInterval(renderMembers,5000);
 renderMembers();
 
-/* ================= CHAT ================= */
+/* ===== CHAT ===== */
 const chat=document.getElementById('chat');
 const input=document.getElementById('input');
 const send=document.getElementById('send');
@@ -171,36 +178,12 @@ const mic=document.getElementById('mic');
 const attach=document.getElementById('attach');
 const typing=document.getElementById('typing');
 const file=document.getElementById('file');
-const replyPreview=document.getElementById('replyPreview');
-const newMsg=document.getElementById('newMsg');
 
-let lastMeta=null,lastDate='',replyTo=null,replyId=null,unread=0;
+let lastMeta=null,lastDate='';
 
-/* ===== HELPERS ===== */
 function addDate(d){chat.innerHTML+=`<div class="date-sep">${d}</div>`}
-function nearBottom(){return chat.scrollHeight-chat.scrollTop-chat.clientHeight<120}
 
-/* ===== STORAGE ===== */
-function save(m){
- const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
- d.push(m);localStorage.setItem(STORAGE_KEY,JSON.stringify(d.slice(-500)));
-}
-function load(){
- JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')
-  .forEach(m=>append(m.text,m.sender,m.out,m.reply,m.forward,true));
-}
-
-/* ===== UNREAD ===== */
-function updateUnread(){
- if(unread>0){
-  newMsg.classList.remove('hidden');
-  newMsg.querySelector('button').textContent=`New messages (${unread}) ↓`;
- }else newMsg.classList.add('hidden');
-}
-newMsg.onclick=()=>chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
-
-/* ===== MESSAGE APPEND ===== */
-function append(text,sender,out=false,reply=null,forward=false,restore=false){
+function append(text,sender,out=false){
  const now=new Date();
  if(now.toDateString()!==lastDate){addDate(now.toDateString());lastDate=now.toDateString()}
 
@@ -212,8 +195,6 @@ function append(text,sender,out=false,reply=null,forward=false,restore=false){
  el.className=`msg ${out?'out':'in'} ${grouped?'grouped':''}`;
  el.innerHTML=`
  <div class="bubble">
-  ${forward?`<div class="forwarded">Forwarded</div>`:''}
-  ${reply?`<div class="reply-box">${reply}</div>`:''}
   ${!grouped&&!out?`<div class="sender">${sender} ${badge}</div>`:''}
   ${text}
   <div class="time">✓ ${now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
@@ -221,21 +202,15 @@ function append(text,sender,out=false,reply=null,forward=false,restore=false){
  chat.appendChild(el);
 
  lastMeta={sender,out,time:now};
-
- if(!restore){
-  save({text,sender,out,reply,forward,time:now});
-  if(!nearBottom()){unread++;updateUnread();}
- }
-
  chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
 }
 
-/* ===== INPUT (FIXED) ===== */
+/* ===== INPUT ===== */
 input.oninput=()=>{
- const hasText=input.value.trim().length>0;
- send.classList.toggle('hidden',!hasText);
- mic.classList.toggle('hidden',hasText);
- attach.classList.toggle('hidden',hasText);
+ const has=input.value.trim().length>0;
+ send.classList.toggle('hidden',!has);
+ mic.classList.toggle('hidden',has);
+ attach.classList.toggle('hidden',has);
 
  typing.classList.remove('hidden');
  clearTimeout(window.tt);
@@ -244,9 +219,8 @@ input.oninput=()=>{
 
 send.onclick=()=>{
  if(!input.value.trim())return;
- append(input.value,'You',true,replyTo);
- input.value='';replyTo=null;
- replyPreview.classList.add('hidden');
+ append(input.value,'You',true);
+ input.value='';
  send.classList.add('hidden');
  mic.classList.remove('hidden');
  attach.classList.remove('hidden');
@@ -258,9 +232,6 @@ file.onchange=e=>{
  r.onload=()=>append(`<img src="${r.result}" class="rounded-lg max-w-full">`,'You',true);
  r.readAsDataURL(e.target.files[0]);
 };
-
-/* ===== LOAD ===== */
-window.addEventListener('load',load);
 </script>
 
 </body>
