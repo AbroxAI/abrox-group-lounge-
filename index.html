@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -102,11 +102,23 @@ tailwind.config = {
 
 </main>
 
+<!-- SIDEBAR -->
 <aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full transition-transform z-50 flex flex-col">
-  <div class="p-4 border-b border-border">
+
+  <!-- HEADER WITH CLOSE ICON -->
+  <div class="p-4 border-b border-border flex items-center justify-between">
     <strong>Members</strong>
-    <input id="search" class="mt-2 w-full bg-bg px-2 py-1 text-sm rounded" placeholder="Search members">
+
+    <!-- NEW: close button -->
+    <button id="closeSidebar" class="text-muted hover:text-white">
+      <i data-lucide="x"></i>
+    </button>
   </div>
+
+  <div class="px-4 pb-2">
+    <input id="search" class="w-full bg-bg px-2 py-1 text-sm rounded" placeholder="Search members">
+  </div>
+
   <div id="memberList" class="flex-1 p-3 space-y-4 overflow-y-auto"></div>
 </aside>
 
@@ -132,11 +144,6 @@ function isOnline(m){
  return Date.now()-m.lastActive < ACTIVE_WINDOW;
 }
 
-function markActive(name){
- const m=members.find(x=>x.name===name);
- if(m)m.lastActive=Date.now();
-}
-
 /* simulate background activity */
 setInterval(()=>{
  const m=members[Math.floor(Math.random()*members.length)];
@@ -144,8 +151,9 @@ setInterval(()=>{
  renderMembers();
 },20000);
 
-/* ===== SIDEBAR ===== */
+/* ===== SIDEBAR TOGGLE ===== */
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
+closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full'); // NEW
 
 function renderMembers(){
  memberList.innerHTML='';
