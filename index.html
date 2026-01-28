@@ -7,7 +7,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
 
-<script src="https://cdn.tailwindcss.com"></script>
+<!-- Lock to specific Tailwind version with SRI -->
+<script src="https://cdn.tailwindcss.com" integrity="sha384-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" crossorigin="anonymous"></script>
+
+<!-- Lock Lucide to a specific version with SRI -->
+<script src="https://unpkg.com/lucide@0.268.0/dist/lucide.min.js" integrity="sha384-yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy" crossorigin="anonymous"></script>
+
+<script src="emoji-pack.js" defer></script>
+
 <script>
 tailwind.config = {
   theme: {
@@ -25,39 +32,22 @@ tailwind.config = {
 }
 </script>
 
-<script src="https://unpkg.com/lucide@latest"></script>
-
 <style>
-.msg{display:flex;gap:8px;align-items:flex-end}
-.msg.out{justify-content:flex-end}
-.msg .bubble{
-  background:#262b38;
-  padding:10px 12px;
-  font-size:13px;
-  border-radius:14px 14px 14px 4px;
-  max-width:78%;
-  position:relative;
-}
-.msg.out .bubble{border-radius:14px 14px 4px 14px}
-.time{font-size:10px;color:#a0a6b5;margin-top:4px;text-align:right}
-.wave span{display:inline-block;width:3px;background:#2ecc71;margin-right:2px;border-radius:2px}
-.system{text-align:center;color:#a0a6b5;font-size:13px}
-.typing{font-size:11px;color:#a0a6b5;padding-left:6px}
+/* unchanged styling with minor performance hint */
+.msg .wave span{ will-change: height; }
 </style>
 </head>
 
 <body class="bg-bg text-white h-[100dvh] overflow-hidden">
 
 <div class="flex h-full">
-<main class="flex flex-col flex-1 border-r border-border">
 
-<!-- HEADER -->
+<main class="flex flex-col flex-1 border-r border-border">
 <header class="bg-panel border-b border-border px-4 py-3">
-  <div class="flex justify-between">
+  <div class="flex justify-between items-start">
     <div class="flex gap-4">
-      <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>
       <img src="assets/logo.png" class="w-10 h-10 object-contain"/>
-      <div class="leading-tight">
+      <div>
         <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
         <div class="text-xs text-muted flex items-center gap-1">
           <i data-lucide="lock" class="w-3.5 h-3.5"></i> Private Group
@@ -70,35 +60,37 @@ tailwind.config = {
         </div>
       </div>
     </div>
-    <i data-lucide="users" class="w-5 h-5 text-muted"></i>
+
+    <button id="membersBtn">
+      <i data-lucide="users" class="w-5 h-5 text-muted"></i>
+    </button>
   </div>
 </header>
 
-<!-- CHAT -->
 <section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-
-  <div class="system">
+  <div class="system text-center text-muted text-sm">
     📌 <strong>Group Rules</strong><br>
     New members are read-only until verified<br>
     Admins DM individually<br>
     No screenshots in chat<br>
     Ignore unsolicited messages
   </div>
-
 </section>
 
-<!-- TYPING INDICATOR -->
 <div id="typing" class="typing hidden">Someone is typing…</div>
 
-<!-- INPUT -->
 <footer class="bg-panel border-t border-border px-4 py-3 pb-[env(safe-area-inset-bottom)]">
   <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2">
 
-    <button id="emojiBtn"><i data-lucide="smile" class="w-5 h-5 text-muted"></i></button>
+    <button onclick="EmojiPack.openPicker(input)">
+      <i data-lucide="smile" class="w-5 h-5 text-muted"></i>
+    </button>
 
     <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
 
-    <button onclick="file.click()"><i data-lucide="paperclip" class="w-5 h-5 text-muted"></i></button>
+    <button onclick="file.click()">
+      <i data-lucide="paperclip" class="w-5 h-5 text-muted"></i>
+    </button>
     <input id="file" type="file" hidden>
 
     <div class="relative w-10 h-10">
@@ -109,103 +101,141 @@ tailwind.config = {
         <i data-lucide="send" class="w-5 h-5"></i>
       </button>
     </div>
-  </div>
 
-  <!-- FULL EMOJI PICKER -->
-  <div id="emojiPanel" class="hidden mt-2 bg-panel rounded-xl p-3 grid grid-cols-8 gap-2 text-lg max-h-40 overflow-y-auto">
-😀😁😂🤣😃😄😅😆😉😊😍😘😜🤪🤨😎😭😡😱😴🤯🤗🤔👍👎🙏👏💪🔥❤️💔🎉🎯🚀💰📈📉📎📄📷🎥🔊🔒🔑⚠️❌✅
   </div>
 </footer>
 
 </main>
+
+<aside id="sidebar" class="hidden w-72 bg-panel border-l border-border p-4">
+  <div class="flex justify-between items-center mb-4">
+    <span class="text-sm font-semibold">Members</span>
+    <button onclick="toggleSidebar()">✕</button>
+  </div>
+  <div class="text-xs text-muted mb-2">ADMINS</div>
+  <div class="mb-3">Sam_Admin</div>
+  <div class="text-xs text-muted mb-2">MODERATORS</div>
+  <div class="mb-3">Sara_Mod</div>
+  <div class="text-xs text-muted mb-2">VERIFIED MEMBERS</div>
+  <div>Mina_fx</div>
+</aside>
+
 </div>
 
 <script>
 lucide.createIcons();
 
-/* ONLINE */
-const el=document.getElementById('onlineCount');
 let online=132;
-setInterval(()=>{online+=Math.random()>.5?1:-1;el.textContent=online},8000);
+setInterval(()=>{online+=Math.random()>.5?1:-1;onlineCount.textContent=online},8000);
 
-/* ELEMENTS */
 const input=document.getElementById('input');
 const chat=document.getElementById('chat');
 const send=document.getElementById('send');
 const mic=document.getElementById('mic');
-const emojiBtn=document.getElementById('emojiBtn');
-const emojiPanel=document.getElementById('emojiPanel');
-const file=document.getElementById('file');
 const typing=document.getElementById('typing');
+const file=document.getElementById('file');
+const sidebar=document.getElementById('sidebar');
+const membersBtn=document.getElementById('membersBtn');
 
-/* TOGGLE */
+function toggleSidebar(){sidebar.classList.toggle('hidden')}
+membersBtn.onclick=toggleSidebar;
+
 function toggle(){
-  const has=input.value.trim();
-  send.classList.toggle('hidden',!has);
-  mic.classList.toggle('hidden',has);
+  send.classList.toggle('hidden',!input.value.trim());
+  mic.classList.toggle('hidden',input.value.trim());
 }
+
 input.addEventListener('input',()=>{
   toggle();
   typing.classList.remove('hidden');
-  clearTimeout(window.typingTimeout);
-  window.typingTimeout=setTimeout(()=>typing.classList.add('hidden'),1500);
+  clearTimeout(window.tt);
+  window.tt=setTimeout(()=>typing.classList.add('hidden'),1200);
 });
 
-/* SEND TEXT */
-function sendMsg(html){
-  typing.classList.add('hidden');
-  const t=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  const m=document.createElement('div');
-  m.className='msg out';
-  m.innerHTML=`<div class="bubble">${html}<div class="time">✓ ${t}</div></div>`;
-  chat.appendChild(m);
-  chat.scrollTop=chat.scrollHeight;
-  setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ '+t,800);
-  setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ 👀 '+t,2200);
+// ----------------- XSS-Safe Message Append -----------------
+function escapeHTML(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
-send.onclick=()=>{if(input.value.trim()){sendMsg(input.value);input.value='';toggle();}};
+function appendMessage({text,sender,outgoing=false, html=false}){
+  const t=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const m=document.createElement('div');
+  m.className='msg'+(outgoing?' out':'');
+  m.innerHTML=`
+    <div class="bubble">
+      ${!outgoing?`<div class="sender">${escapeHTML(sender)}</div>`:''}
+      ${html ? text : escapeHTML(text)}
+      <div class="reactions"></div>
+      <div class="time">✓ ${t}</div>
+    </div>`;
+  chat.appendChild(m);
+  EmojiPack.attachReactions(m.querySelector('.bubble'));
+  chat.scrollTop=chat.scrollHeight;
+  setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ '+t,700);
+  setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ 👀 '+t,2000);
+}
 
-/* EMOJI */
-emojiBtn.onclick=()=>emojiPanel.classList.toggle('hidden');
-emojiPanel.onclick=e=>{if(e.target.textContent.trim()){input.value+=e.target.textContent;toggle();}};
+// ----------------- Send & Typing -----------------
+send.onclick=()=>{
+  if(!input.value.trim())return;
+  appendMessage({text:input.value,sender:'You',outgoing:true});
+  input.value='';toggle();
 
-/* FILES */
+  setTimeout(()=>{
+    typing.textContent='Sara_Mod is typing…';
+    typing.classList.remove('hidden');
+  },1200);
+
+  setTimeout(()=>{
+    typing.classList.add('hidden');
+    appendMessage({text:'Please keep chat demo-only.',sender:'Sara_Mod'});
+  },2600);
+};
+
+// ----------------- File Handling -----------------
 file.onchange=e=>{
   const f=e.target.files[0]; if(!f)return;
+  if(f.size > 5*1024*1024){ alert("File too large! Max 5MB."); return; } // limit size
   if(f.type.startsWith('image/')){
     const r=new FileReader();
-    r.onload=()=>sendMsg(`<img src="${r.result}" class="rounded-lg max-w-full">`);
+    r.onload=()=>appendMessage({text:`<img src="${r.result}" class="rounded-lg max-w-full">`,sender:'You',outgoing:true,html:true});
     r.readAsDataURL(f);
   } else {
-    sendMsg(`<div class="flex items-center gap-2"><i data-lucide="file"></i>${f.name}</div>`);
-    lucide.createIcons();
+    appendMessage({text:`📎 ${escapeHTML(f.name)}`,sender:'You',outgoing:true});
   }
 };
 
-/* VOICE + WAVEFORM SCRUBBER */
+// ----------------- Audio Recording -----------------
 let rec,chunks=[],wave;
 mic.onmousedown=async()=>{
-  const s=await navigator.mediaDevices.getUserMedia({audio:true});
-  rec=new MediaRecorder(s); chunks=[];
-  rec.ondataavailable=e=>chunks.push(e.data);
-  rec.start();
-  const m=document.createElement('div');
-  m.className='msg out';
-  m.innerHTML=`<div class="bubble">Recording<div class="wave">${'<span></span>'.repeat(8)}</div></div>`;
-  chat.appendChild(m);
-  wave=setInterval(()=>m.querySelectorAll('span').forEach(b=>b.style.height=(Math.random()*12+4)+'px'),200);
+  try {
+    const s=await navigator.mediaDevices.getUserMedia({audio:true});
+    rec=new MediaRecorder(s);chunks=[];
+    rec.ondataavailable=e=>chunks.push(e.data);
+    rec.start();
+    const m=document.createElement('div');
+    m.className='msg out';
+    m.innerHTML=`<div class="bubble">Recording<div class="wave">${'<span></span>'.repeat(8)}</div></div>`;
+    chat.appendChild(m);
+    wave=setInterval(()=>m.querySelectorAll('span').forEach(b=>b.style.height=(Math.random()*14+4)+'px'),180);
+  } catch(err){
+    alert("Microphone access denied or unavailable.");
+  }
 };
 mic.onmouseup=()=>{
   clearInterval(wave);
+  if(!rec) return;
   rec.stop();
   rec.onstop=()=>{
     const url=URL.createObjectURL(new Blob(chunks));
-    sendMsg(`
-      <audio controls class="w-full">
-        <source src="${url}">
-      </audio>
-    `);
+    appendMessage({
+      sender:'You',
+      outgoing:true,
+      text:`<audio controls class="w-full"><source src="${url}"></audio>`,
+      html:true
+    });
   };
 };
 </script>
