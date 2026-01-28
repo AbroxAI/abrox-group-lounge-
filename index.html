@@ -10,7 +10,6 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 
-<!-- EXTERNAL EMOJI PACK -->
 <script src="emoji-pack.js" defer></script>
 
 <script>
@@ -52,7 +51,7 @@ tailwind.config = {
 
 <body class="bg-bg text-white h-[100dvh] overflow-hidden">
 
-<div class="flex h-full">
+<div class="flex h-full relative">
 
 <main class="flex flex-col flex-1 border-r border-border">
 
@@ -120,8 +119,11 @@ tailwind.config = {
 
 </main>
 
-<!-- SIDEBAR -->
-<aside id="sidebar" class="hidden w-72 bg-panel border-l border-border p-4">
+<!-- SLIDING SIDEBAR -->
+<aside id="sidebar"
+class="fixed top-0 right-0 h-full w-72 bg-panel border-l border-border p-4
+translate-x-full transition-transform duration-300 ease-in-out z-50">
+
   <div class="flex justify-between items-center mb-4">
     <span class="text-sm font-semibold">Members</span>
     <button onclick="toggleSidebar()">✕</button>
@@ -154,7 +156,10 @@ const file=document.getElementById('file');
 const sidebar=document.getElementById('sidebar');
 const membersBtn=document.getElementById('membersBtn');
 
-function toggleSidebar(){sidebar.classList.toggle('hidden')}
+function toggleSidebar(){
+  sidebar.classList.toggle('translate-x-full');
+}
+
 membersBtn.onclick=toggleSidebar;
 
 function toggle(){
