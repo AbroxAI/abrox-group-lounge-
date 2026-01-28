@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <title>Abrox – Private Lounge</title>
+
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
 
@@ -17,8 +18,7 @@ tailwind.config = {
         border:'#343a4a',
         muted:'#a0a6b5',
         accent:'#2ecc71',
-        bubble:'#262b38',
-        recording:'#e74c3c'
+        bubble:'#262b38'
       }
     }
   }
@@ -38,17 +38,11 @@ tailwind.config = {
   max-width:78%;
   position:relative;
 }
-.msg.out .bubble{border-radius:14px 14px 4px 14}
+.msg.out .bubble{border-radius:14px 14px 4px 14px}
 .time{font-size:10px;color:#a0a6b5;margin-top:4px;text-align:right}
+.wave span{display:inline-block;width:3px;background:#2ecc71;margin-right:2px;border-radius:2px}
 .system{text-align:center;color:#a0a6b5;font-size:13px}
-.typing{font-size:11px;color:#a0a6b5;padding-left:6px;transition:opacity .3s}
-.transition-bg{transition:background-color .2s}
-.bg-recording{background:#e74c3c!important}
-.text-white-important{color:#fff!important}
-.wave-bar{display:inline-block;width:2px;background:#fff;border-radius:2px}
-#send i{transition:transform .2s}
-#send.send-active i{transform:translateX(4px) rotate(20deg)}
-#mic{touch-action:none}
+.typing{font-size:11px;color:#a0a6b5;padding-left:6px}
 </style>
 </head>
 
@@ -57,6 +51,7 @@ tailwind.config = {
 <div class="flex h-full">
 <main class="flex flex-col flex-1 border-r border-border">
 
+<!-- HEADER -->
 <header class="bg-panel border-b border-border px-4 py-3">
   <div class="flex justify-between">
     <div class="flex gap-4">
@@ -79,7 +74,9 @@ tailwind.config = {
   </div>
 </header>
 
+<!-- CHAT -->
 <section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+
   <div class="system">
     📌 <strong>Group Rules</strong><br>
     New members are read-only until verified<br>
@@ -87,28 +84,26 @@ tailwind.config = {
     No screenshots in chat<br>
     Ignore unsolicited messages
   </div>
+
 </section>
 
-<div id="typing" class="typing opacity-0">Someone is typing…</div>
+<!-- TYPING INDICATOR -->
+<div id="typing" class="typing hidden">Someone is typing…</div>
 
+<!-- INPUT -->
 <footer class="bg-panel border-t border-border px-4 py-3 pb-[env(safe-area-inset-bottom)]">
   <div class="flex items-center gap-3 bg-bg rounded-full px-4 py-2">
 
     <button id="emojiBtn"><i data-lucide="smile" class="w-5 h-5 text-muted"></i></button>
+
     <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
+
     <button onclick="file.click()"><i data-lucide="paperclip" class="w-5 h-5 text-muted"></i></button>
     <input id="file" type="file" hidden>
 
     <div class="relative w-10 h-10">
-      <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center transition-bg overflow-hidden">
+      <button id="mic" class="absolute inset-0 bg-white rounded-full flex items-center justify-center">
         <i data-lucide="mic" class="w-5 h-5 text-bg"></i>
-        <div id="micWave" class="absolute flex bottom-1 left-1/2 -translate-x-1/2 h-6 gap-1 hidden">
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
-          <span class="wave-bar"></span>
-        </div>
       </button>
       <button id="send" class="absolute inset-0 hidden bg-accent rounded-full flex items-center justify-center">
         <i data-lucide="send" class="w-5 h-5"></i>
@@ -116,8 +111,9 @@ tailwind.config = {
     </div>
   </div>
 
+  <!-- FULL EMOJI PICKER -->
   <div id="emojiPanel" class="hidden mt-2 bg-panel rounded-xl p-3 grid grid-cols-8 gap-2 text-lg max-h-40 overflow-y-auto">
-😀 😁 😂 🤣 😃 😄 😅 😆 😉 😊 😍 😘 😜 🤪 🤨 😎 😭 😡 😱 😴 🤯 🤗 🤔 👍 👎 🙏 👏 💪 🔥 ❤️ 💔 🎉 🎯 🚀 💰 📈 📉
+😀😁😂🤣😃😄😅😆😉😊😍😘😜🤪🤨😎😭😡😱😴🤯🤗🤔👍👎🙏👏💪🔥❤️💔🎉🎯🚀💰📈📉📎📄📷🎥🔊🔒🔑⚠️❌✅
   </div>
 </footer>
 
@@ -127,7 +123,7 @@ tailwind.config = {
 <script>
 lucide.createIcons();
 
-/* ONLINE COUNT */
+/* ONLINE */
 const el=document.getElementById('onlineCount');
 let online=132;
 setInterval(()=>{online+=Math.random()>.5?1:-1;el.textContent=online},8000);
@@ -137,92 +133,81 @@ const input=document.getElementById('input');
 const chat=document.getElementById('chat');
 const send=document.getElementById('send');
 const mic=document.getElementById('mic');
-const micWave=document.getElementById('micWave');
-const bars=[...micWave.children];
+const emojiBtn=document.getElementById('emojiBtn');
+const emojiPanel=document.getElementById('emojiPanel');
+const file=document.getElementById('file');
+const typing=document.getElementById('typing');
 
-/* TOGGLE SEND/MIC */
-input.addEventListener('input',()=>{
+/* TOGGLE */
+function toggle(){
   const has=input.value.trim();
   send.classList.toggle('hidden',!has);
   mic.classList.toggle('hidden',has);
+}
+input.addEventListener('input',()=>{
+  toggle();
+  typing.classList.remove('hidden');
+  clearTimeout(window.typingTimeout);
+  window.typingTimeout=setTimeout(()=>typing.classList.add('hidden'),1500);
 });
 
-/* VOICE RECORDING */
-let recorder, stream, chunks=[], recording=false, canceled=false, locked=false;
-let audioCtx, analyser, data;
-
-const vibrate=ms=>navigator.vibrate&&navigator.vibrate(ms);
-
-async function startRec(e){
-  e.preventDefault();
-  if(recording) return;
-  vibrate(30);
-
-  stream=await navigator.mediaDevices.getUserMedia({audio:true});
-  recorder=new MediaRecorder(stream);
-  chunks=[];
-  recorder.ondataavailable=e=>chunks.push(e.data);
-  recorder.start();
-
-  audioCtx=new AudioContext();
-  analyser=audioCtx.createAnalyser();
-  audioCtx.createMediaStreamSource(stream).connect(analyser);
-  data=new Uint8Array(analyser.frequencyBinCount);
-
-  recording=true;
-  mic.classList.add('bg-recording');
-  mic.querySelector('i').classList.add('text-white-important');
-  micWave.classList.remove('hidden');
-  animateWave();
+/* SEND TEXT */
+function sendMsg(html){
+  typing.classList.add('hidden');
+  const t=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const m=document.createElement('div');
+  m.className='msg out';
+  m.innerHTML=`<div class="bubble">${html}<div class="time">✓ ${t}</div></div>`;
+  chat.appendChild(m);
+  chat.scrollTop=chat.scrollHeight;
+  setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ '+t,800);
+  setTimeout(()=>m.querySelector('.time').innerHTML='✓✓ 👀 '+t,2200);
 }
 
-function animateWave(){
-  if(!recording) return;
-  analyser.getByteFrequencyData(data);
-  bars.forEach((b,i)=>b.style.height=(data[i]*0.06+4)+'px');
-  requestAnimationFrame(animateWave);
-}
+send.onclick=()=>{if(input.value.trim()){sendMsg(input.value);input.value='';toggle();}};
 
-function moveRec(e){
-  if(!recording||locked) return;
-  const p=e.touches?e.touches[0]:e;
-  const r=mic.getBoundingClientRect();
-  if(p.clientY<r.top-40) locked=true;
-  if(p.clientX<r.left-40) canceled=true;
-}
+/* EMOJI */
+emojiBtn.onclick=()=>emojiPanel.classList.toggle('hidden');
+emojiPanel.onclick=e=>{if(e.target.textContent.trim()){input.value+=e.target.textContent;toggle();}};
 
-function stopRec(){
-  if(!recording) return;
-  recording=false;
+/* FILES */
+file.onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  if(f.type.startsWith('image/')){
+    const r=new FileReader();
+    r.onload=()=>sendMsg(`<img src="${r.result}" class="rounded-lg max-w-full">`);
+    r.readAsDataURL(f);
+  } else {
+    sendMsg(`<div class="flex items-center gap-2"><i data-lucide="file"></i>${f.name}</div>`);
+    lucide.createIcons();
+  }
+};
 
-  mic.classList.remove('bg-recording');
-  mic.querySelector('i').classList.remove('text-white-important');
-  micWave.classList.add('hidden');
-
-  recorder.stop();
-  stream.getTracks().forEach(t=>t.stop());
-
-  recorder.onstop=()=>{
-    if(!canceled){
-      const url=URL.createObjectURL(new Blob(chunks,{type:'audio/webm'}));
-      chat.innerHTML+=`
-        <div class="msg out">
-          <div class="bubble">
-            <audio controls src="${url}" class="w-full"></audio>
-          </div>
-        </div>`;
-      chat.scrollTop=chat.scrollHeight;
-    }
-    canceled=false;
-    locked=false;
+/* VOICE + WAVEFORM SCRUBBER */
+let rec,chunks=[],wave;
+mic.onmousedown=async()=>{
+  const s=await navigator.mediaDevices.getUserMedia({audio:true});
+  rec=new MediaRecorder(s); chunks=[];
+  rec.ondataavailable=e=>chunks.push(e.data);
+  rec.start();
+  const m=document.createElement('div');
+  m.className='msg out';
+  m.innerHTML=`<div class="bubble">Recording<div class="wave">${'<span></span>'.repeat(8)}</div></div>`;
+  chat.appendChild(m);
+  wave=setInterval(()=>m.querySelectorAll('span').forEach(b=>b.style.height=(Math.random()*12+4)+'px'),200);
+};
+mic.onmouseup=()=>{
+  clearInterval(wave);
+  rec.stop();
+  rec.onstop=()=>{
+    const url=URL.createObjectURL(new Blob(chunks));
+    sendMsg(`
+      <audio controls class="w-full">
+        <source src="${url}">
+      </audio>
+    `);
   };
-}
-
-/* POINTER EVENTS */
-mic.addEventListener('pointerdown',startRec);
-mic.addEventListener('pointermove',moveRec);
-mic.addEventListener('pointerup',stopRec);
-mic.addEventListener('pointercancel',()=>{canceled=true;stopRec()});
+};
 </script>
 
 </body>
