@@ -34,7 +34,7 @@ tailwind.config = {
 </script>
 
 <style>
-/* ===== TELEGRAM RHYTHM ===== */
+/* ===== TELEGRAM RHYTHM (kept original weights/spacing) ===== */
 .msg{display:flex;gap:8px;margin-bottom:8px}
 .grouped{margin-top:-6px}
 .msg.out{justify-content:flex-end}
@@ -87,6 +87,27 @@ tailwind.config = {
 .badge.mod{background:#f39c12}
 .badge.verified{background:#2ecc71}
 
+/* Verified pill inside chat bubble (gem + text) */
+.verified-bubble{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:3px 8px;
+  border-radius:999px;
+  background:linear-gradient(180deg,#0f5f3b,#0b3e2a);
+  color:#c7f3d9;
+  font-size:11px;
+  font-weight:600;
+  line-height:1;
+  box-shadow:0 1px 0 rgba(0,0,0,.25);
+  margin-left:6px;
+  vertical-align:middle;
+}
+.verified-bubble i[data-lucide="gem"]{ width:14px; height:14px; stroke:#b8f1c8; stroke-width:1.6; display:inline-block }
+
+/* Sidebar verified pill (text-only) - no gem */
+.verified-pill-sidebar{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:linear-gradient(180deg,#2ecc71,#1e8b4a);color:#03140b;font-weight:700;font-size:11px;box-shadow:0 1px 0 rgba(0,0,0,.25)}
+
 /* ===== VOICE ===== */
 .wave{display:flex;gap:3px;align-items:flex-end;height:18px}
 .wave span{width:3px;background:#fff;border-radius:2px;animation:wave 1s infinite ease-in-out}
@@ -96,11 +117,11 @@ tailwind.config = {
 @keyframes wave{0%,100%{height:4px}50%{height:16px}}
 .recording{background:#e74c3c;border-radius:999px;padding:6px}
 
-/* ===== AVATAR ===== */
+/* ===== AVATAR (keep original balance) ===== */
 .avatar{width:32px;height:32px;border-radius:999px;margin-top:2px;flex-shrink:0}
 .avatar-spacer{width:32px;flex-shrink:0}
 
-/* ===== PATCH 2: PER-MEMBER TYPING ===== */
+/* ===== PATCH 2: PER-MEMBER TYPING (legacy kept) ===== */
 .typing-row{
   display:flex;
   gap:8px;
@@ -126,6 +147,40 @@ tailwind.config = {
 .typing-dots span:nth-child(2){animation-delay:.2s}
 .typing-dots span:nth-child(3){animation-delay:.4s}
 @keyframes typing{0%,80%,100%{opacity:.3}40%{opacity:1}}
+
+/* ===== GROUP TYPING BAR + UNREAD COUNTER minimal styles, absolute to avoid header reflow ===== */
+header{position:relative}
+.group-typing-bar{
+  position:absolute;
+  right:56px;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:50;
+  display:inline-flex;
+  gap:8px;
+  align-items:center;
+  padding:6px 10px;
+  min-height:34px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:40vw;
+  background:rgba(255,255,255,0.02);
+  border-radius:999px;
+  font-size:13px;
+  color:#a0a6b5;
+  transition:opacity .12s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+}
+.group-typing-bar .dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;box-shadow:0 0 6px rgba(46,204,113,.14);flex-shrink:0}
+.group-typing-bar .typing-summary{overflow:hidden;text-overflow:ellipsis;display:block;color:#2ecc71;font-weight:600}
+header.typing-active .header-members-line{display:none}
+
+/* unread counter - placed near header controls */
+.patched-unread-counter{position:absolute; right:12px; top:50%; transform:translateY(-50%); background:#2b3242;padding:6px 10px;border-radius:999px;font-size:12px;color:#fff;display:none;min-width:28px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer; z-index:60}
+
+/* sidebar search minimal (inserted into sidebar but not intrusive) */
+#memberSearch{width:100%;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.02);color:inherit;border:1px solid rgba(255,255,255,0.02);outline:none;font-size:13px}
 </style>
 </head>
 
@@ -133,7 +188,7 @@ tailwind.config = {
 <div class="flex h-full">
 <main class="flex flex-col flex-1 border-r border-border">
 
-<header class="bg-panel border-b border-border px-4 py-3 flex items-center justify-between">
+<header class="bg-panel border-b border-border px-4 py-3 flex items-center justify-between" id="mainHeader">
   <div class="flex gap-3 items-center">
     <img src="assets/logo.png" class="w-8 h-8">
     <div>
@@ -142,13 +197,22 @@ tailwind.config = {
         <i data-lucide="lock" class="w-3 h-3"></i>
         <span>Private Group</span>
       </div>
-      <div class="text-xs text-muted">
+      <div class="text-xs text-muted header-members-line">
         Members: 4,872 • Online: <span id="onlineCount">132</span><br>
         Demo discussion · Verification required
       </div>
     </div>
   </div>
-  <button id="membersBtn"><i data-lucide="users"></i></button>
+
+  <!-- Group typing bar + unread counter added non-invasively; default hidden -->
+  <div style="position:relative;min-width:120px;">
+    <div id="group-typing-bar" class="group-typing-bar" style="display:none">
+      <div class="dot"></div>
+      <div class="typing-summary">Someone is typing…</div>
+    </div>
+    <div id="unread-counter" class="patched-unread-counter" style="display:none">0</div>
+    <button id="membersBtn"><i data-lucide="users"></i></button>
+  </div>
 </header>
 
 <section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-2 scroll-smooth">
@@ -183,6 +247,10 @@ tailwind.config = {
     <strong>Members</strong>
     <button id="closeSidebar"><i data-lucide="x"></i></button>
   </div>
+  <!-- search added (non-invasive) -->
+  <div style="padding:0 12px 8px 12px">
+    <input id="memberSearch" placeholder="Search members..." />
+  </div>
   <div id="memberList" class="flex-1 p-3 space-y-4 overflow-y-auto"></div>
 </aside>
 
@@ -192,8 +260,9 @@ tailwind.config = {
 <script>
 lucide.createIcons();
 
-/* ================= FULL LOGIC ================= */
+/* ================= FULL LOGIC (original structure preserved; fixes implemented) ================= */
 
+/* DOM refs */
 const chat=document.getElementById('chat');
 const input=document.getElementById('input');
 const send=document.getElementById('send');
@@ -207,6 +276,11 @@ const membersBtn=document.getElementById('membersBtn');
 const closeSidebar=document.getElementById('closeSidebar');
 const memberList=document.getElementById('memberList');
 const onlineCount=document.getElementById('onlineCount');
+const groupTypingBar = document.getElementById('group-typing-bar');
+const unreadCounter = document.getElementById('unread-counter');
+const memberSearch = document.getElementById('memberSearch');
+const mainHeader = document.getElementById('mainHeader');
+const headerMembersLine = document.querySelector('.header-members-line');
 
 /* EMOJI */
 emojiBtn.onclick=()=>EmojiPack.openPicker(input);
@@ -257,7 +331,8 @@ function stopUI(){
   lucide.createIcons();
 }
 async function startRecording(){
-  stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  try { stream=await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(err){ console.warn('Microphone access denied or unavailable',err); return; }
   recorder=new MediaRecorder(stream);
   chunks=[];
   recorder.ondataavailable=e=>chunks.push(e.data);
@@ -298,10 +373,39 @@ const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
 
 const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
 
-function renderMembers(){
+/* Render members in sidebar — sidebar uses text-only verified pill (no gem) */
+function renderMembers(filter=''){
+  const priority = role => {
+    const r=(role||'').toUpperCase();
+    if(r.includes('ADMIN')) return 0;
+    if(r.includes('MOD')) return 1;
+    if(r.includes('VERIFIED')) return 2;
+    return 3;
+  };
+  const q=(filter||'').trim().toLowerCase();
+  const list = members
+    .filter(m => !q || m.name.toLowerCase().includes(q))
+    .sort((a,b)=>{
+      const pa=priority(a.role), pb=priority(b.role);
+      if(pa!==pb) return pa-pb;
+      const oa=isOnline(a)?0:1, ob=isOnline(b)?0:1;
+      if(oa!==ob) return oa-ob;
+      return a.name.localeCompare(b.name);
+    });
+
   memberList.innerHTML='';
-  members.forEach(m=>{
-    memberList.innerHTML+=`
+  list.forEach(m=>{
+    let rightHTML = '';
+    const roleUpper = (m.role||'').toUpperCase();
+    if(roleUpper === 'VERIFIED'){
+      rightHTML = `<span class="verified-pill-sidebar" title="Verified">VERIFIED</span>`;
+    } else if(roleUpper.includes('ADMIN') || roleUpper.includes('MOD')){
+      rightHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
+    } else if(m.role){
+      rightHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
+    }
+
+    memberList.innerHTML += `
     <div class="flex gap-3 items-center">
       <div class="relative">
         <img src="${m.avatar}" class="w-9 h-9 rounded-full">
@@ -309,16 +413,14 @@ function renderMembers(){
       </div>
       <div>
         <div class="text-sm">${m.name}</div>
-        <span class="badge ${m.role.toLowerCase()}">${m.role}</span>
+        <div style="margin-top:6px">${rightHTML}</div>
       </div>
     </div>`;
   });
-  onlineCount.textContent=members.filter(isOnline).length;
+  onlineCount.textContent = members.filter(isOnline).length;
 }
-setInterval(()=>{
-  members[Math.floor(Math.random()*members.length)].lastActive=Date.now();
-  renderMembers();
-},8000);
+memberSearch.addEventListener('input', e => { renderMembers(e.target.value); });
+setInterval(()=>{ members[Math.floor(Math.random()*members.length)].lastActive=Date.now(); renderMembers(memberSearch.value); },8000);
 renderMembers();
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
@@ -375,15 +477,25 @@ function render(m,prepend=false){
     const user=members.find(u=>u.name===m.name);
     avatarHTML=grouped?`<div class="avatar-spacer"></div>`:`<img class="avatar" src="${user?.avatar||''}">`;
   }
+
+  // verified badge inside chat bubble only (gem + pill)
+  const verifiedBubbleHTML = (m.role && m.role.toUpperCase() === 'VERIFIED')
+    ? `<span class="verified-bubble"><i data-lucide="gem"></i><span style="font-size:11px">VERIFIED</span></span>`
+    : '';
+
   el.innerHTML=`
     ${avatarHTML}
     <div class="bubble">
-      ${!grouped&&!m.out?`<div class="sender">${m.name} <span class="badge ${m.role.toLowerCase()}">${m.role}</span></div>`:''}
+      ${!grouped&&!m.out?`<div class="sender">${m.name} ${verifiedBubbleHTML} <span class="badge ${m.role.toLowerCase()}">${m.role}</span></div>`:''}
       ${m.text}
       <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
       <div class="read-by"></div>
     </div>`;
   prepend?chat.prepend(el):chat.appendChild(el);
+
+  // render lucide icons for the inserted gem
+  lucide.createIcons();
+
   if(m.out)receipts(el);
   if(m.out&&m.type==='voice'){
     let t;
@@ -396,6 +508,10 @@ function render(m,prepend=false){
     },800));
     ['mouseup','mouseleave'].forEach(e=>el.addEventListener(e,()=>clearTimeout(t)));
   }
+
+  // when an incoming message is rendered, cancel typing (prevent ghost typing) & unread
+  handleIncomingMessage(m);
+
   lastMeta={sender:m.name,time:d};
 }
 function receipts(el){
@@ -412,9 +528,217 @@ function receipts(el){
   },1400);
 }
 
-/* ===== PATCH 2: TYPING LOGIC ===== */
+/* ===== GROUP-HEADER TYPING ENGINE (human-like) ===== */
+
+/* map of active typers keyed by member.name (works with unique names; if names can duplicate consider adding id) */
+const activeTypers = new Map();
+
+/* config */
+const ADMIN_ROLES = new Set(['ADMIN','ADMINISTRATOR','OWNER']);
+const TYPING_BASE_WPM = 40;
+const NIGHT_SLOW_FACTOR = 1.6;
+const ADMIN_PAUSE_MULTIPLIER = 1.4;
+const MAX_VISIBLE_NAMES = 3;
+
+/* unread helpers */
+let unreadCount = 0;
+function isUserAtBottom(){
+  return chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 10;
+}
+function incrementUnread(){
+  unreadCount++;
+  unreadCounter.textContent = unreadCount;
+  unreadCounter.style.display = 'inline-block';
+}
+function clearUnread(){
+  unreadCount = 0;
+  unreadCounter.style.display = 'none';
+  unreadCounter.textContent = '';
+}
+
+/* scroll listener: preserve original load on top behavior and manage typing pause/resume & unread counter */
+chat.addEventListener('scroll', ()=>{
+  if(chat.scrollTop===0) load();
+  if(isUserAtBottom()){
+    resumeTypingAfterPause();
+    clearUnread();
+  } else {
+    pauseTypingForContextChange();
+  }
+});
+unreadCounter.addEventListener('click', ()=>{ chat.scrollTop = chat.scrollHeight; clearUnread(); });
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) pauseTypingForContextChange(); else resumeTypingAfterPause(); });
+
+function isNightTime(){ const hr=new Date().getHours(); return (hr<7 || hr>=22); }
+
+/* start typing simulation for a member (human-like) */
+function startTypingSimulation(member, text='', options={}){
+  if(activeTypers.has(member.name)) return;
+  const role=(member.role||'').toUpperCase();
+  const isAdmin = ADMIN_ROLES.has(role);
+
+  const entry = {
+    member,
+    state:'starting',
+    timers: [],
+    paused: false,
+    originalText: text,
+    startedAt: Date.now(),
+    urgent: !!options.urgent
+  };
+  activeTypers.set(member.name, entry);
+  updateTypingHeader();
+
+  // compute estimated duration
+  const wordCount = (text && text.trim()) ? text.trim().split(/\s+/).length : Math.max(1, Math.floor(Math.random()*8)+1);
+  let wpm = TYPING_BASE_WPM;
+  if(/[!?]{2,}/.test(text)) wpm *= 1.15;
+  if(text && text.includes('http')) wpm *= 0.9;
+  if(options.urgent) wpm *= 1.5;
+  if(isNightTime()) wpm /= NIGHT_SLOW_FACTOR;
+  if(isAdmin) wpm /= ADMIN_PAUSE_MULTIPLIER;
+
+  const minutes = wordCount / wpm;
+  const totalMs = Math.max(400, Math.floor(minutes * 60 * 1000));
+  let elapsed = 0;
+
+  // random start delay
+  const startDelay = 200 + Math.random()*900;
+  entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, startDelay));
+  elapsed += startDelay;
+
+  // break into chunks with mid-sentence pauses
+  const chunks = 2 + Math.floor(Math.random()*3);
+  for(let i=0;i<chunks;i++){
+    const chunkMs = Math.floor(totalMs/chunks * (0.7 + Math.random()*0.6));
+    entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, elapsed));
+    elapsed += chunkMs;
+
+    if(i < chunks-1){
+      const pauseMs = 150 + Math.random()*(isAdmin?900:500);
+      entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='paused'; updateTypingHeader();
+        setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, 150 + Math.random()*400);
+      }, elapsed));
+      elapsed += pauseMs;
+    }
+  }
+
+  // typo/correction chance
+  const typoChance = isAdmin?0.35:0.12;
+  if(Math.random() < typoChance){
+    const typoDelay = Math.max(200, Math.min(totalMs-100, 300 + Math.random()*(totalMs-300)));
+    entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='typo'; updateTypingHeader();
+      setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, 250 + Math.random()*500);
+    }, typoDelay));
+  }
+
+  let finishDelay = 150 + Math.random()*600;
+  if(text && text.includes('http')) finishDelay += 400 + Math.random()*800;
+
+  entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='sending'; updateTypingHeader(); dispatchTypingFinished(member.name, text); setTimeout(()=>{ stopTyping(member.name); }, 300 + Math.random()*500); }, elapsed + finishDelay));
+
+  updateTypingHeader();
+}
+
+/* stop/pause/resume helpers */
+function stopTyping(name){ const entry = activeTypers.get(name); if(!entry) return; entry.timers.forEach(t=>clearTimeout(t)); activeTypers.delete(name); updateTypingHeader(); }
+function cancelTypingExcept(keepName=null){ for(const name of Array.from(activeTypers.keys())){ if(name !== keepName) stopTyping(name); } }
+function pauseTypingForContextChange(){ for(const [name, entry] of activeTypers.entries()){ if(!entry.paused){ entry.paused = true; entry.timers.forEach(t=>clearTimeout(t)); entry.timers = []; } } if(groupTypingBar) groupTypingBar.style.display = 'none'; mainHeader.classList.remove('typing-active'); }
+function resumeTypingAfterPause(){ for(const [name, entry] of activeTypers.entries()){ if(entry.paused){ entry.paused = false; entry.state = 'typing'; updateTypingHeader(); const resumeDelay = 150 + Math.random()*600; const t = setTimeout(()=>{ dispatchTypingFinished(name, entry.originalText); stopTyping(name); }, resumeDelay); entry.timers.push(t); } } if(activeTypers.size && groupTypingBar) groupTypingBar.style.display = ''; }
+
+/* throttle header updates to avoid glitch/reflow */
+let headerRaf = null;
+function updateTypingHeader(){
+  if(!groupTypingBar) return;
+  if(headerRaf) cancelAnimationFrame(headerRaf);
+  headerRaf = requestAnimationFrame(()=>{
+    const typers = Array.from(activeTypers.values()).map(e=>e.member);
+    if(typers.length === 0){
+      groupTypingBar.style.display = 'none';
+      groupTypingBar.innerHTML = `<div class="dot"></div><div class="typing-summary"></div>`;
+      mainHeader.classList.remove('typing-active');
+      return;
+    }
+
+    // admins first
+    typers.sort((a,b)=>{
+      const pa = ADMIN_ROLES.has((a.role||'').toUpperCase())?0:1;
+      const pb = ADMIN_ROLES.has((b.role||'').toUpperCase())?0:1;
+      if(pa!==pb) return pa-pb;
+      return 0;
+    });
+
+    const buildName = m => `<strong class="typing-name" style="font-weight:600">${escapeHtml(m.name)}</strong>`;
+    let html = '';
+    if(typers.length === 1) html = `${buildName(typers[0])} is typing…`;
+    else if(typers.length <= MAX_VISIBLE_NAMES) html = `${typers.map(buildName).join(', ')} are typing…`;
+    else html = `${typers.length} people are typing…`;
+
+    groupTypingBar.innerHTML = `<div class="dot"></div><div class="typing-summary">${html}</div>`;
+    groupTypingBar.style.display = '';
+    // hide only members/online part — lock and demo lines remain
+    mainHeader.classList.add('typing-active');
+  });
+}
+
+/* finished typing -> emit to render message */
+function dispatchTypingFinished(name, text){ const ev = new CustomEvent('typingFinished', { detail: { name, text }}); window.dispatchEvent(ev); }
+window.addEventListener('typingFinished', (e) => {
+  const { name, text } = e.detail;
+  const member = members.find(m => m.name === name);
+  if(!member){ stopTyping(name); return; }
+  cancelTypingExcept(name);
+  const m = { name: member.name, role: member.role, text: text || '…', timestamp: Date.now(), out: false };
+  save(m); render(m);
+  if(!isUserAtBottom()) incrementUnread();
+  else chat.scrollTop = chat.scrollHeight;
+});
+
+/* helper wrappers to maintain compatibility with previous showTyping/hideTyping calls */
+function showTyping(member, text=''){ startTypingSimulation(member, text); }
+function hideTyping(member){ stopTyping(member.name || member); }
+function fakeMemberSend(member,text){ startTypingSimulation(member,text); }
+
+/* demo simulation (keeps original simulate interval but using new engine) */
+if(typeof members !== 'undefined'){
+  if(!window._groupTypingSimInterval){
+    window._groupTypingSimInterval = setInterval(()=>{
+      if(!members || members.length === 0) return;
+      const m = members[Math.floor(Math.random()*members.length)];
+      startTypingSimulation(m, 'Typing indicator now works per-member ✅');
+    }, 16000);
+  }
+}
+
+/* SEND handler (unchanged) */
+send.onclick=()=>{
+  if(!input.value.trim())return;
+  const m={name:'You',role:'VERIFIED',text:input.value,timestamp:Date.now(),out:true};
+  save(m);render(m);
+  input.value='';
+  send.classList.add('hidden');
+  mediaBtn.classList.remove('hidden');
+  micBtn.classList.remove('hidden');
+  cancelTypingExcept('You');
+  if(isUserAtBottom()) chat.scrollTop = chat.scrollHeight;
+};
+
+/* handle incoming message: stops typing for that member and increments unread if user not at bottom */
+function handleIncomingMessage(m){
+  cancelTypingExcept(m.name);
+  if(!isUserAtBottom() && !(m.out && m.name === 'You')) incrementUnread();
+}
+
+/* small escape utility */
+function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>'"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ensure icons render for any dynamic gem elements */
+lucide.createIcons();
+
+/* ===== Backwards compatible per-member show/hide typing functions used in some parts of original code (kept) ===== */
 const typingMap=new Map();
-function showTyping(member){
+function legacy_showTyping(member){
+  // legacy visual kept (but not used for header summary). This preserves any old calls.
   if(typingMap.has(member.name))return;
   const row=document.createElement('div');
   row.className='typing-row';
@@ -428,36 +752,23 @@ function showTyping(member){
   chat.scrollTop=chat.scrollHeight;
   typingMap.set(member.name,row);
 }
-function hideTyping(member){
+function legacy_hideTyping(member){
   const row=typingMap.get(member.name);
   if(row){row.remove();typingMap.delete(member.name);}
 }
-function fakeMemberSend(member,text){
-  showTyping(member);
-  setTimeout(()=>{
-    hideTyping(member);
-    const m={name:member.name,role:member.role,text,timestamp:Date.now(),out:false};
-    save(m);render(m);
-  },900+Math.random()*800);
+
+/* keep original simulate function name expected by earlier code */
+function fakeMemberSendLegacy(member,text){
+  // prefer the new engine, but keep behavior: start simulation then render
+  startTypingSimulation(member, text);
 }
 
-/* simulate members typing */
-setInterval(()=>{
-  const m=members[Math.floor(Math.random()*members.length)];
-  fakeMemberSend(m,'Typing indicator now works per-member ✅');
-},16000);
+/* expose legacy names so other parts of script that use them still work */
+window.showTyping = showTyping;
+window.hideTyping = hideTyping;
+window.fakeMemberSend = fakeMemberSend;
 
-send.onclick=()=>{
-  if(!input.value.trim())return;
-  const m={name:'You',role:'VERIFIED',text:input.value,timestamp:Date.now(),out:true};
-  save(m);render(m);
-  input.value='';
-  send.classList.add('hidden');
-  mediaBtn.classList.remove('hidden');
-  micBtn.classList.remove('hidden');
-};
-
-chat.addEventListener('scroll',()=>{if(chat.scrollTop===0)load();});
+/* END of script */
 </script>
 </body>
 </html>
