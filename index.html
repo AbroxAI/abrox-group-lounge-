@@ -174,9 +174,9 @@ fileInput.onchange=e=>{
   fileInput.value='';
 };
 
-/* ===== REAL VOICE RECORDING (FIXED) ===== */
-let pressTimer, recorder, chunks=[], recStart, recTick;
-let isRecording = false;
+/* ===== REAL VOICE RECORDING (WORKING) ===== */
+let recorder, chunks=[], recStart, recTick;
+let holding=false, stream=null;
 
 function startUI(){
   recStart=Date.now();
@@ -197,9 +197,9 @@ function stopUI(){
   lucide.createIcons();
 }
 
-async function startRec(){
-  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-  recorder=new MediaRecorder(stream);
+async function startRecording(){
+  stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+  recorder = new MediaRecorder(stream);
   chunks=[];
   recorder.ondataavailable=e=>chunks.push(e.data);
   recorder.onstop=()=>{
@@ -214,35 +214,39 @@ async function startRec(){
       text:`<audio controls src="${url}"></audio>`
     };
     save(m); render(m);
+    stream.getTracks().forEach(t=>t.stop());
+    stream=null;
   };
   recorder.start();
 }
 
-function stopRec(){
-  if(recorder && recorder.state!=='inactive') recorder.stop();
+function stopRecording(){
+  if(recorder && recorder.state==='recording') recorder.stop();
 }
 
-micBtn.addEventListener('mousedown',()=>{
-  pressTimer=setTimeout(async ()=>{
-    isRecording=true;
-    startUI();
-    await startRec();
-  },300);
+/* POINTER EVENTS (CRITICAL) */
+micBtn.addEventListener('pointerdown', async e=>{
+  e.preventDefault();
+  holding=true;
+  await startRecording();
+  setTimeout(()=>{ if(holding) startUI(); },300);
 });
 
-['mouseup','mouseleave','touchend','touchcancel'].forEach(e=>
-  micBtn.addEventListener(e,()=>{
-    clearTimeout(pressTimer);
-    if(!isRecording) return;
-    isRecording=false;
-    stopUI();
-    stopRec();
-  })
-);
+micBtn.addEventListener('pointerup', ()=>{
+  if(!holding) return;
+  holding=false;
+  stopUI();
+  stopRecording();
+});
 
-/* ===== MEMBERS, DB, CHAT, RECEIPTS (UNCHANGED) ===== */
-/* everything below is identical to your original script */
+micBtn.addEventListener('pointerleave', ()=>{
+  if(!holding) return;
+  holding=false;
+  stopUI();
+  stopRecording();
+});
 
+/* ===== MEMBERS + DB + CHAT (UNCHANGED) ===== */
 const ACTIVE=90000;
 const ADMIN={name:'Profit Hunter 🌐',role:'ADMIN',avatar:'assets/admin.jpg'};
 const MOD={name:'Kitty Star ⭐',role:'MOD',avatar:'assets/mod.jpg'};
