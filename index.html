@@ -1,30 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
+<meta charset="UTF-8" />
 <title>Abrox – Private Lounge</title>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
 <link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Abrox">
+
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="emoji-pack.js" defer></script>
 
 <script>
-  tailwind.config = { theme:{ extend:{ colors:{ bg:'#1c1f26', panel:'#232833', border:'#343a4a', muted:'#a0a6b5', accent:'#2ecc71', bubble:'#262b38', bubbleOut:'#2b3242', send:'#3b82f6' } } } };
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        bg:'#1c1f26',
+        panel:'#232833',
+        border:'#343a4a',
+        muted:'#a0a6b5',
+        accent:'#2ecc71',
+        bubble:'#262b38',
+        bubbleOut:'#2b3242',
+        send:'#3b82f6'
+      }
+    }
+  }
+}
 </script>
 
 <style>
-/* ===== Core visuals (kept close to original, with tiny refinements) ===== */
-:root{--muted:#a0a6b5;--bubble:#262b38;--bubbleOut:#2b3242;--accent:#2ecc71}
-body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
-
-/* message layout */
+/* ===== TELEGRAM RHYTHM ===== */
 .msg{display:flex;gap:8px;margin-bottom:8px}
 .grouped{margin-top:-6px}
 .msg.out{justify-content:flex-end}
 
-/* bubbles (reduced weight so not too bold) */
+/* ===== BUBBLES ===== */
 .bubble{
   padding:8px 14px 7px;
   font-size:13px;
@@ -32,185 +47,153 @@ body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Rob
   max-width:78%;
   position:relative;
   box-shadow:0 2px 8px rgba(0,0,0,.18);
-  font-weight:400;
-  color:#e6eef3;
-  overflow-wrap:anywhere;
 }
-.msg.in .bubble{background:var(--bubble);border-radius:6px 18px 18px 6px}
-.msg.out .bubble{background:var(--bubbleOut);border:1px solid #343a4a;border-radius:18px 6px 6px 18px}
+.msg.in .bubble{background:#262b38;border-radius:6px 18px 18px 6px}
+.msg.out .bubble{background:#2b3242;border:1px solid #343a4a;border-radius:18px 6px 6px 18px}
 .grouped.in .bubble{border-top-left-radius:18px}
 .grouped.out .bubble{border-top-right-radius:18px}
 
-/* tail */
-.msg.in .bubble::before{content:'';position:absolute;left:-7px;bottom:6px;width:14px;height:14px;background:inherit;transform:rotate(45deg);border-bottom-right-radius:14px}
-.msg.out .bubble::before{content:'';position:absolute;right:-7px;bottom:6px;width:14px;height:14px;background:inherit;transform:rotate(45deg);border-bottom-left-radius:14px}
-.grouped.in .bubble::before,.grouped.out .bubble::before{display:none}
+/* ===== TELEGRAM TAIL ===== */
+.msg.in .bubble::before{
+  content:'';
+  position:absolute;
+  left:-7px;bottom:6px;
+  width:14px;height:14px;
+  background:inherit;
+  transform:rotate(45deg);
+  border-bottom-right-radius:14px;
+}
+.msg.out .bubble::before{
+  content:'';
+  position:absolute;
+  right:-7px;bottom:6px;
+  width:14px;height:14px;
+  background:inherit;
+  transform:rotate(45deg);
+  border-bottom-left-radius:14px;
+}
+.grouped.in .bubble::before,
+.grouped.out .bubble::before{display:none}
 
-/* meta */
-.sender{font-size:11px;font-weight:550;color:#d1d5db;margin-bottom:4px;display:flex;align-items:center;gap:8px}
-.sender .role-badge{margin-left:6px}
+/* ===== META ===== */
+.sender{font-size:11px;font-weight:600;color:#2ecc71;margin-bottom:4px}
 .time{font-size:10px;opacity:.7;margin-top:6px;display:flex;justify-content:flex-end;gap:4px;line-height:1;transform:translateY(1px)}
 .read-by{display:flex;gap:4px;margin-top:4px;justify-content:flex-end}
 .read-by img{width:13px;height:13px;border-radius:999px;border:1px solid #1c1f26}
-.date-sep{text-align:center;font-size:11px;color:var(--muted);margin:12px 0}
-.badge{font-size:10px;padding:2px 6px;border-radius:999px;font-weight:600}
+.date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
+.typing{font-size:11px;color:#a0a6b5;padding:6px}
+.badge{font-size:10px;padding:2px 6px;border-radius:999px}
 .badge.admin{background:#e74c3c}
 .badge.mod{background:#f39c12}
-.badge.verified{background:#2ecc71;color:#05110c}
+.badge.verified{background:#2ecc71}
 
-/* Verified pill INSIDE chat bubble (contains lucide gem & text) */
-.verified-bubble{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:3px 8px;
-  border-radius:999px;
-  background:linear-gradient(180deg,#0f5f3b,#0b3e2a);
-  color:#c7f3d9;
-  font-size:11px;
-  font-weight:600;
-  line-height:1;
-  box-shadow:0 1px 0 rgba(0,0,0,.25);
-  margin-left:6px;
-  vertical-align:middle;
-}
-.verified-bubble i[data-lucide="gem"]{ width:14px; height:14px; stroke:#b8f1c8; stroke-width:1.6; display:inline-block }
+/* ===== VOICE ===== */
+.wave{display:flex;gap:3px;align-items:flex-end;height:18px}
+.wave span{width:3px;background:#fff;border-radius:2px;animation:wave 1s infinite ease-in-out}
+.wave span:nth-child(2){animation-delay:.1s}
+.wave span:nth-child(3){animation-delay:.2s}
+.wave span:nth-child(4){animation-delay:.3s}
+@keyframes wave{0%,100%{height:4px}50%{height:16px}}
+.recording{background:#e74c3c;border-radius:999px;padding:6px}
 
-/* Sidebar verified pill (text-only, NO gem) */
-.verified-pill-sidebar{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:linear-gradient(180deg,#2ecc71,#1e8b4a);color:#03140b;font-weight:700;font-size:11px;box-shadow:0 1px 0 rgba(0,0,0,.25)}
-
-/* avatar alignment fix (remove top offset) */
-.avatar{width:32px;height:32px;border-radius:999px;margin:0;flex-shrink:0;display:block;object-fit:cover}
+/* ===== AVATAR ===== */
+.avatar{width:32px;height:32px;border-radius:999px;margin-top:2px;flex-shrink:0}
 .avatar-spacer{width:32px;flex-shrink:0}
 
-/* typing-row legacy kept but not used for header typing */
-.typing-row{display:flex;gap:8px;align-items:flex-end;margin:6px 0}
-.typing-bubble{background:var(--bubble);padding:6px 10px;border-radius:18px;display:flex;align-items:center;gap:6px;font-size:12px}
+/* ===== PATCH 2: PER-MEMBER TYPING ===== */
+.typing-row{
+  display:flex;
+  gap:8px;
+  align-items:flex-end;
+  margin:6px 0;
+}
+.typing-bubble{
+  background:#262b38;
+  padding:6px 10px;
+  border-radius:18px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+}
 .typing-dots{display:flex;gap:3px}
-.typing-dots span{width:4px;height:4px;background:var(--muted);border-radius:50%;animation:typing 1.4s infinite ease-in-out}
+.typing-dots span{
+  width:4px;height:4px;
+  background:#a0a6b5;
+  border-radius:50%;
+  animation:typing 1.4s infinite ease-in-out;
+}
 .typing-dots span:nth-child(2){animation-delay:.2s}
 .typing-dots span:nth-child(3){animation-delay:.4s}
 @keyframes typing{0%,80%,100%{opacity:.3}40%{opacity:1}}
-
-/* GROUP TYPING BAR - absolute so header doesn't reflow/shift */
-header { position: relative; }
-.group-typing-bar{
-  position:absolute;
-  right:56px;
-  top:50%;
-  transform:translateY(-50%);
-  z-index:50;
-  display:inline-flex;
-  gap:8px;
-  align-items:center;
-  padding:6px 10px;
-  min-height:34px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  max-width:46vw;
-  background:rgba(255,255,255,0.02);
-  border-radius:999px;
-  font-size:13px;
-  color:var(--muted);
-  transition:opacity .12s ease;
-  box-shadow: 0 2px 6px rgba(0,0,0,.15);
-}
-.group-typing-bar .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px rgba(46,204,113,.14);flex-shrink:0}
-.group-typing-bar .typing-summary{overflow:hidden;text-overflow:ellipsis;display:block;color:var(--accent);font-weight:500}
-@media (max-width:420px){ .group-typing-bar{ max-width:58%; font-size:12px; right:48px; } }
-
-/* hide only Members/Online line while typing visible */
-header.typing-active #headerMetaMembers{ display:none; }
-
-/* unread counter (click scrolls) */
-.patched-unread-counter{position:absolute; right:12px; top:50%; transform:translateY(-50%); background:#2b3242;padding:6px 10px;border-radius:999px;font-size:12px;color:#fff;display:none;min-width:28px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer; z-index:60}
-
-/* ensure left column shrinks gracefully */
-header > .flex:first-child { min-width:0; }
-
-/* sidebar search */
-#memberSearch{width:100%;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.02);color:inherit;border:1px solid rgba(255,255,255,0.02);outline:none;font-size:13px}
 </style>
 </head>
 
 <body class="bg-bg text-white h-[100dvh] overflow-hidden">
 <div class="flex h-full">
-  <main class="flex flex-col flex-1 border-r border-border">
+<main class="flex flex-col flex-1 border-r border-border">
 
-    <header class="bg-panel border-b border-border px-4 py-3 flex items-start justify-between" id="mainHeader">
-      <div class="flex gap-3 items-start" id="headerLeft">
-        <img src="assets/logo.png" class="w-8 h-8" alt="logo">
-        <div style="min-width:0">
-          <div class="text-sm font-semibold" style="font-weight:600;color:#fff">Abrox Binary Bot – Private Lounge</div>
-          <div class="flex items-center gap-1 text-xs text-muted">
-            <i data-lucide="lock" class="w-3 h-3"></i>
-            <span>Private Group</span>
-          </div>
-          <!-- Members/Online line: will hide while typing (preserves lock + demo lines) -->
-          <div class="text-xs text-muted" id="headerMetaMembers">
-            Members: 4,872 • Online: <span id="onlineCount">132</span>
-          </div>
-          <div class="text-xs text-muted" id="headerMetaDemo">
-            Demo discussion · Verification required
-          </div>
-        </div>
+<header class="bg-panel border-b border-border px-4 py-3 flex items-center justify-between">
+  <div class="flex gap-3 items-center">
+    <img src="assets/logo.png" class="w-8 h-8">
+    <div>
+      <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
+      <div class="flex items-center gap-1 text-xs text-muted">
+        <i data-lucide="lock" class="w-3 h-3"></i>
+        <span>Private Group</span>
       </div>
-
-      <div style="position:relative;min-width:120px;">
-        <div id="group-typing-bar" class="group-typing-bar" style="display:none">
-          <div class="dot"></div>
-          <div class="typing-summary">Someone is typing…</div>
-        </div>
-        <div id="unread-counter" class="patched-unread-counter" style="display:none">0</div>
-        <button id="membersBtn" style="position:relative;z-index:70"><i data-lucide="users" class="w-5 h-5"></i></button>
+      <div class="text-xs text-muted">
+        Members: 4,872 • Online: <span id="onlineCount">132</span><br>
+        Demo discussion · Verification required
       </div>
-    </header>
-
-    <section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-2 scroll-smooth">
-      <div class="text-center text-muted text-sm">
-        📌 <strong>Group Rules</strong><br>
-        New members are read-only until verified<br>
-        Admins DM individually<br>
-        No screenshots in chat<br>
-        Ignore unsolicited messages
-      </div>
-    </section>
-
-    <footer class="bg-panel border-t border-border px-4 py-3">
-      <div id="recordTimer" class="typing hidden text-center text-red-500">● 0:00</div>
-      <div class="flex items-center bg-bg rounded-full px-3 py-2 gap-2">
-        <button id="emojiBtn"><i data-lucide="smile"></i></button>
-        <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-        <div class="flex items-center gap-2 ml-auto">
-          <button id="mediaBtn"><i data-lucide="paperclip"></i></button>
-          <button id="micBtn"><i data-lucide="mic"></i></button>
-          <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
-        </div>
-      </div>
-    </footer>
-  </main>
-
-  <aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full transition-transform z-50 flex flex-col">
-    <div class="p-4 border-b border-border">
-      <div class="flex items-center justify-between mb-2">
-        <strong>Members</strong>
-        <button id="closeSidebar"><i data-lucide="x"></i></button>
-      </div>
-      <input id="memberSearch" placeholder="Search members..." />
     </div>
-    <div id="memberList" class="flex-1 p-3 space-y-4 overflow-y-auto"></div>
-  </aside>
+  </div>
+  <button id="membersBtn"><i data-lucide="users"></i></button>
+</header>
 
-  <input type="file" id="fileInput" class="hidden">
+<section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-2 scroll-smooth">
+  <div class="text-center text-muted text-sm">
+    📌 <strong>Group Rules</strong><br>
+    New members are read-only until verified<br>
+    Admins DM individually<br>
+    No screenshots in chat<br>
+    Ignore unsolicited messages
+  </div>
+</section>
+
+<div id="typing" class="typing hidden">Someone is typing…</div>
+
+<footer class="bg-panel border-t border-border px-4 py-3">
+  <div id="recordTimer" class="typing hidden text-center text-red-500">● 0:00</div>
+  <div class="flex items-center bg-bg rounded-full px-3 py-2 gap-2">
+    <button id="emojiBtn"><i data-lucide="smile"></i></button>
+    <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
+    <div class="flex items-center gap-2 ml-auto">
+      <button id="mediaBtn"><i data-lucide="paperclip"></i></button>
+      <button id="micBtn"><i data-lucide="mic"></i></button>
+      <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
+    </div>
+  </div>
+</footer>
+
+</main>
+
+<aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full transition-transform z-50 flex flex-col">
+  <div class="p-4 border-b border-border flex items-center justify-between">
+    <strong>Members</strong>
+    <button id="closeSidebar"><i data-lucide="x"></i></button>
+  </div>
+  <div id="memberList" class="flex-1 p-3 space-y-4 overflow-y-auto"></div>
+</aside>
+
+<input type="file" id="fileInput" class="hidden">
 </div>
 
 <script>
 lucide.createIcons();
 
-/* ====================== Full logic with patches applied ====================== */
+/* ================= FULL LOGIC ================= */
 
-/* DOM refs (kept same as your original) */
 const chat=document.getElementById('chat');
 const input=document.getElementById('input');
 const send=document.getElementById('send');
@@ -224,11 +207,6 @@ const membersBtn=document.getElementById('membersBtn');
 const closeSidebar=document.getElementById('closeSidebar');
 const memberList=document.getElementById('memberList');
 const onlineCount=document.getElementById('onlineCount');
-const groupTypingBar = document.getElementById('group-typing-bar');
-const unreadCounter = document.getElementById('unread-counter');
-const memberSearch = document.getElementById('memberSearch');
-const mainHeader = document.getElementById('mainHeader');
-const headerMetaMembers = document.getElementById('headerMetaMembers');
 
 /* EMOJI */
 emojiBtn.onclick=()=>EmojiPack.openPicker(input);
@@ -257,7 +235,7 @@ fileInput.onchange=e=>{
   fileInput.value='';
 };
 
-/* ===== VOICE RECORDING (unchanged) ===== */
+/* ===== VOICE RECORDING ===== */
 let recorder,chunks=[],recStart,recTick;
 let holding=false,stream=null;
 
@@ -279,8 +257,7 @@ function stopUI(){
   lucide.createIcons();
 }
 async function startRecording(){
-  try { stream=await navigator.mediaDevices.getUserMedia({audio:true}); }
-  catch(err){ console.warn('Microphone access denied or unavailable',err); return; }
+  stream=await navigator.mediaDevices.getUserMedia({audio:true});
   recorder=new MediaRecorder(stream);
   chunks=[];
   recorder.ondataavailable=e=>chunks.push(e.data);
@@ -308,7 +285,7 @@ micBtn.addEventListener('pointerdown',async e=>{
 micBtn.addEventListener('pointerup',()=>{if(!holding)return;holding=false;stopUI();stopRecording();});
 micBtn.addEventListener('pointerleave',()=>{if(!holding)return;holding=false;stopUI();stopRecording();});
 
-/* ===== MEMBERS (kept original, with priority ordering in renderMembers) ===== */
+/* ===== MEMBERS ===== */
 const ACTIVE=90000;
 const ADMIN={name:'Profit Hunter 🌐',role:'ADMIN',avatar:'assets/admin.jpg'};
 const MOD={name:'Kitty Star ⭐',role:'MOD',avatar:'assets/mod.jpg'};
@@ -321,62 +298,32 @@ const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
 
 const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
 
-/* Render members (sidebar) — only show text-only verified pill (no gem), ordered: Admins, Mods, Verified, others */
-function renderMembers(filter=''){
-  const priority = role => {
-    const r=(role||'').toUpperCase();
-    if(r.includes('ADMIN')) return 0;
-    if(r.includes('MOD')) return 1;
-    if(r.includes('VERIFIED')) return 2;
-    return 3;
-  };
-  const q=(filter||'').trim().toLowerCase();
-  const list = members
-    .filter(m => !q || m.name.toLowerCase().includes(q))
-    .sort((a,b)=>{
-      const pa=priority(a.role), pb=priority(b.role);
-      if(pa!==pb) return pa-pb;
-      const oa=isOnline(a)?0:1, ob=isOnline(b)?0:1;
-      if(oa!==ob) return oa-ob;
-      return a.name.localeCompare(b.name);
-    });
-
+function renderMembers(){
   memberList.innerHTML='';
-  list.forEach(m=>{
-    let rightHTML = '';
-    const roleUpper = (m.role||'').toUpperCase();
-    if(roleUpper === 'VERIFIED'){
-      // sidebar: text-only verified pill (no gem)
-      rightHTML = `<span class="verified-pill-sidebar" title="Verified">VERIFIED</span>`;
-    } else if(roleUpper.includes('ADMIN') || roleUpper.includes('MOD')){
-      rightHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
-    } else if(m.role){
-      rightHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
-    }
-
-    memberList.innerHTML += `
+  members.forEach(m=>{
+    memberList.innerHTML+=`
     <div class="flex gap-3 items-center">
       <div class="relative">
         <img src="${m.avatar}" class="w-9 h-9 rounded-full">
-        <span class="absolute bottom-0 right-0 ${isOnline(m)?'bg-green-500':'bg-gray-500'}" style="width:10px;height:10px;border-radius:999px;border:1px solid #1c1f26"></span>
+        <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${isOnline(m)?'bg-green-500':'bg-gray-500'}"></span>
       </div>
-      <div style="flex:1">
+      <div>
         <div class="text-sm">${m.name}</div>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
-          ${rightHTML}
-        </div>
+        <span class="badge ${m.role.toLowerCase()}">${m.role}</span>
       </div>
     </div>`;
   });
-  onlineCount.textContent = members.filter(isOnline).length;
+  onlineCount.textContent=members.filter(isOnline).length;
 }
-memberSearch.addEventListener('input', e => { renderMembers(e.target.value); });
-setInterval(()=>{ members[Math.floor(Math.random()*members.length)].lastActive=Date.now(); renderMembers(memberSearch.value); },8000);
+setInterval(()=>{
+  members[Math.floor(Math.random()*members.length)].lastActive=Date.now();
+  renderMembers();
+},8000);
 renderMembers();
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
-/* ===== DB (unchanged) ===== */
+/* ===== DB ===== */
 const DB='AbroxDB',STORE='messages',PAGE=20;
 let db,offset=0,loading=false,lastMeta=null,lastDate='';
 indexedDB.open(DB,1).onupgradeneeded=e=>{
@@ -385,7 +332,9 @@ indexedDB.open(DB,1).onupgradeneeded=e=>{
 indexedDB.open(DB,1).onsuccess=e=>{
   db=e.target.result;seed();load();
 };
-function save(m){ db.transaction(STORE,'readwrite').objectStore(STORE).add(m); }
+function save(m){
+  db.transaction(STORE,'readwrite').objectStore(STORE).add(m);
+}
 function seed(){
   const st=db.transaction(STORE).objectStore(STORE);
   st.count().onsuccess=e=>{
@@ -408,7 +357,7 @@ function load(){
   };
 }
 
-/* ===== render() (preserves your original structure while adding verified gem pill inside bubble only) ===== */
+/* ===== render() ===== */
 function render(m,prepend=false){
   const d=new Date(m.timestamp);
   if(d.toDateString()!==lastDate){
@@ -426,27 +375,15 @@ function render(m,prepend=false){
     const user=members.find(u=>u.name===m.name);
     avatarHTML=grouped?`<div class="avatar-spacer"></div>`:`<img class="avatar" src="${user?.avatar||''}">`;
   }
-
-  const roleUpper=(m.role||'').toUpperCase();
-  // ONLY inside chat bubble: gem + verified pill (lucide gem icon). Sidebar uses text-only verified pill.
-  const verifiedBubbleHTML = roleUpper==='VERIFIED' ? `<span class="verified-bubble"><i data-lucide="gem"></i><span style="font-size:11px">VERIFIED</span></span>` : '';
-  // Admin/Mod badge inside bubble (kept)
-  let roleBadgeHTML = '';
-  if(roleUpper.includes('ADMIN') || roleUpper.includes('MOD')) roleBadgeHTML = `<span class="badge ${m.role.toLowerCase()} role-badge">${m.role}</span>`;
-
   el.innerHTML=`
     ${avatarHTML}
     <div class="bubble">
-      ${!grouped&&!m.out?`<div class="sender"><span class="name">${m.name}</span> ${verifiedBubbleHTML} ${roleBadgeHTML}</div>`:''}
+      ${!grouped&&!m.out?`<div class="sender">${m.name} <span class="badge ${m.role.toLowerCase()}">${m.role}</span></div>`:''}
       ${m.text}
       <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
       <div class="read-by"></div>
     </div>`;
   prepend?chat.prepend(el):chat.appendChild(el);
-
-  // render any inserted lucide icons (gem)
-  lucide.createIcons();
-
   if(m.out)receipts(el);
   if(m.out&&m.type==='voice'){
     let t;
@@ -457,12 +394,8 @@ function render(m,prepend=false){
         e.target.result.forEach(r=>{if(r.timestamp===m.timestamp)tx.delete(r.id);});
       };
     },800));
-    ['mouseup','mouseleave'].forEach(ev=>el.addEventListener(ev,()=>clearTimeout(t)));
+    ['mouseup','mouseleave'].forEach(e=>el.addEventListener(e,()=>clearTimeout(t)));
   }
-
-  // when rendering an incoming message, cancel typing for that member and manage unread
-  handleIncomingMessage(m);
-
   lastMeta={sender:m.name,time:d};
 }
 function receipts(el){
@@ -479,4 +412,52 @@ function receipts(el){
   },1400);
 }
 
-/* ===== GROU
+/* ===== PATCH 2: TYPING LOGIC ===== */
+const typingMap=new Map();
+function showTyping(member){
+  if(typingMap.has(member.name))return;
+  const row=document.createElement('div');
+  row.className='typing-row';
+  row.innerHTML=`
+    <img class="avatar" src="${member.avatar}">
+    <div class="typing-bubble">
+      <strong>${member.name}</strong>
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>`;
+  chat.appendChild(row);
+  chat.scrollTop=chat.scrollHeight;
+  typingMap.set(member.name,row);
+}
+function hideTyping(member){
+  const row=typingMap.get(member.name);
+  if(row){row.remove();typingMap.delete(member.name);}
+}
+function fakeMemberSend(member,text){
+  showTyping(member);
+  setTimeout(()=>{
+    hideTyping(member);
+    const m={name:member.name,role:member.role,text,timestamp:Date.now(),out:false};
+    save(m);render(m);
+  },900+Math.random()*800);
+}
+
+/* simulate members typing */
+setInterval(()=>{
+  const m=members[Math.floor(Math.random()*members.length)];
+  fakeMemberSend(m,'Typing indicator now works per-member ✅');
+},16000);
+
+send.onclick=()=>{
+  if(!input.value.trim())return;
+  const m={name:'You',role:'VERIFIED',text:input.value,timestamp:Date.now(),out:true};
+  save(m);render(m);
+  input.value='';
+  send.classList.add('hidden');
+  mediaBtn.classList.remove('hidden');
+  micBtn.classList.remove('hidden');
+};
+
+chat.addEventListener('scroll',()=>{if(chat.scrollTop===0)load();});
+</script>
+</body>
+</html>
