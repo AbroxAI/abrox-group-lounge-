@@ -87,6 +87,9 @@ tailwind.config = {
 .badge.mod{background:#f39c12}
 .badge.verified{background:#2ecc71}
 
+/* Verified badge small inline */
+.verified-badge{display:inline-block;margin-left:6px;font-size:11px;color:#2ecc71}
+
 /* ===== VOICE ===== */
 .wave{display:flex;gap:3px;align-items:flex-end;height:18px}
 .wave span{width:3px;background:#fff;border-radius:2px;animation:wave 1s infinite ease-in-out}
@@ -100,7 +103,7 @@ tailwind.config = {
 .avatar{width:32px;height:32px;border-radius:999px;margin-top:2px;flex-shrink:0}
 .avatar-spacer{width:32px;flex-shrink:0}
 
-/* ===== PATCH 2: PER-MEMBER TYPING ===== */
+/* ===== PATCH 2: PER-MEMBER TYPING (legacy styles retained) ===== */
 .typing-row{
   display:flex;
   gap:8px;
@@ -126,6 +129,49 @@ tailwind.config = {
 .typing-dots span:nth-child(2){animation-delay:.2s}
 .typing-dots span:nth-child(3){animation-delay:.4s}
 @keyframes typing{0%,80%,100%{opacity:.3}40%{opacity:1}}
+
+/* ===== GROUP TYPING BAR + UNREAD COUNTER (minimal non-invasive classes) ===== */
+/* --- TINY CSS TWEAKS ADDED BELOW --- */
+/* 1) a subtle pill with a small avatar/icon on the left to match header rhythm */
+/* 2) unread counter visually matches chat style and sits next to typing bar */
+.group-typing-bar{
+  padding:6px 10px;
+  background:rgba(255,255,255,0.02);
+  border-radius:999px;
+  font-size:13px;
+  color:#a0a6b5;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  max-width:320px;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  align-self:flex-end;
+  min-height:36px;
+}
+.group-typing-bar .dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#2ecc71;
+  box-shadow:0 0 6px rgba(46,204,113,.12);
+  flex-shrink:0;
+}
+.group-typing-bar .mini-avatar{
+  width:20px;height:20px;border-radius:999px;flex-shrink:0;object-fit:cover;border:1px solid rgba(0,0,0,.25)
+}
+.group-typing-bar .typing-summary{overflow:hidden;text-overflow:ellipsis;font-size:13px;color:#c7cbd4}
+
+/* unread counter tweak */
+.patched-unread-counter{
+  background:#2b3242;padding:6px 10px;border-radius:999px;font-size:12px;color:#fff;margin-left:6px;display:none;min-width:28px;text-align:center;
+  box-shadow:0 2px 6px rgba(0,0,0,.25);
+}
+
+/* small inline badges */
+.verified-badge-inline{margin-left:6px;font-size:11px;color:#2ecc71}
+.role-inline{margin-left:6px;font-size:11px;opacity:.8}
 </style>
 </head>
 
@@ -148,7 +194,15 @@ tailwind.config = {
       </div>
     </div>
   </div>
-  <button id="membersBtn"><i data-lucide="users"></i></button>
+  <div class="flex items-center gap-2">
+    <!-- group typing bar / unread counter will be inserted here by script if not present -->
+    <div id="group-typing-bar" class="group-typing-bar" style="display:none">
+      <div class="dot"></div>
+      <div class="typing-summary">Someone is typing…</div>
+    </div>
+    <div id="unread-counter" class="patched-unread-counter" style="display:none"></div>
+    <button id="membersBtn"><i data-lucide="users"></i></button>
+  </div>
 </header>
 
 <section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-2 scroll-smooth">
@@ -192,7 +246,19 @@ tailwind.config = {
 <script>
 lucide.createIcons();
 
-/* ================= FULL LOGIC ================= */
+/* ================= FULL LOGIC (patched + tiny CSS tweaks applied) ================= */
+
+/*
+  PATCH SUMMARY
+  1) Group Header Typing (Telegram-style) — shown in #group-typing-bar
+  2) Human-Like Typing Engine (start delays, pauses, typos, thinking)
+  3) Admin-Specific Typing Behavior (priority & pauses)
+  4) Verified Badge Fix (real badge, not green dot) — used in render()
+  5) Unread Message Counter (when user not at bottom) — #unread-counter
+  6) Typing Stops on User Context Change (scroll away, visibility)
+  7) Role-Aware Typing Summaries (names/admins/numbered)
+  Minimal CSS tweaks added for header pill + unread badge (non-invasive).
+*/
 
 const chat=document.getElementById('chat');
 const input=document.getElementById('input');
@@ -207,6 +273,8 @@ const membersBtn=document.getElementById('membersBtn');
 const closeSidebar=document.getElementById('closeSidebar');
 const memberList=document.getElementById('memberList');
 const onlineCount=document.getElementById('onlineCount');
+const groupTypingBar = document.getElementById('group-typing-bar');
+const unreadCounter = document.getElementById('unread-counter');
 
 /* EMOJI */
 emojiBtn.onclick=()=>EmojiPack.openPicker(input);
@@ -357,7 +425,7 @@ function load(){
   };
 }
 
-/* ===== render() ===== */
+/* ===== render() (patched for verified badge usage + typing cancellation hook) ===== */
 function render(m,prepend=false){
   const d=new Date(m.timestamp);
   if(d.toDateString()!==lastDate){
@@ -375,16 +443,22 @@ function render(m,prepend=false){
     const user=members.find(u=>u.name===m.name);
     avatarHTML=grouped?`<div class="avatar-spacer"></div>`:`<img class="avatar" src="${user?.avatar||''}">`;
   }
+
+  // verified badge fix: real badge next to sender name when role is VERIFIED
+  const verifiedBadgeHTML = (m.role && m.role.toUpperCase() === 'VERIFIED') ? `<span class="verified-badge">✔︎</span>` : '';
+
   el.innerHTML=`
     ${avatarHTML}
     <div class="bubble">
-      ${!grouped&&!m.out?`<div class="sender">${m.name} <span class="badge ${m.role.toLowerCase()}">${m.role}</span></div>`:''}
+      ${!grouped&&!m.out?`<div class="sender">${m.name} ${verifiedBadgeHTML} <span class="badge ${m.role.toLowerCase()}">${m.role}</span></div>`:''}
       ${m.text}
       <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
       <div class="read-by"></div>
     </div>`;
   prepend?chat.prepend(el):chat.appendChild(el);
+
   if(m.out)receipts(el);
+
   if(m.out&&m.type==='voice'){
     let t;
     el.addEventListener('mousedown',()=>t=setTimeout(()=>{
@@ -396,6 +470,10 @@ function render(m,prepend=false){
     },800));
     ['mouseup','mouseleave'].forEach(e=>el.addEventListener(e,()=>clearTimeout(t)));
   }
+
+  // when an incoming message is rendered, cancel typing (ghost typing prevention) and manage unread.
+  handleIncomingMessage(m);
+
   lastMeta={sender:m.name,time:d};
 }
 function receipts(el){
@@ -412,52 +490,284 @@ function receipts(el){
   },1400);
 }
 
-/* ===== PATCH 2: TYPING LOGIC ===== */
-const typingMap=new Map();
+/* ===== TYPING ENGINE & GROUP-HEADER LOGIC (replaces per-message appended typing rows behavior) ===== */
+
+/* Active typers map */
+const activeTypers = new Map();
+
+/* config */
+const ADMIN_ROLES = new Set(['ADMIN','ADMINISTRATOR','OWNER']);
+const TYPING_BASE_WPM = 40;
+const NIGHT_SLOW_FACTOR = 1.6;
+const ADMIN_PAUSE_MULTIPLIER = 1.4;
+const MAX_VISIBLE_NAMES = 3;
+
+/* unread counter helpers */
+let unreadCount = 0;
+function isUserAtBottom(){
+  return chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 10;
+}
+function incrementUnread(){
+  unreadCount++;
+  unreadCounter.textContent = unreadCount;
+  unreadCounter.style.display = 'inline-block';
+}
+function clearUnread(){
+  unreadCount = 0;
+  unreadCounter.style.display = 'none';
+  unreadCounter.textContent = '';
+}
+
+/* handle scroll: existing load on top behavior preserved; additional unread & typing pause/resume */
+chat.addEventListener('scroll', ()=>{
+  if(chat.scrollTop===0) load();
+  if(isUserAtBottom()){
+    resumeTypingAfterPause();
+    clearUnread();
+  } else {
+    pauseTypingForContextChange();
+  }
+});
+
+/* helper: time-of-day */
+function isNightTime(){ const hr=new Date().getHours(); return (hr<7 || hr>=22); }
+
+/* start typing simulation for a member (name-based key) */
+function startTypingSimulation(member, text='', options={}){
+  if(activeTypers.has(member.name)) return;
+  const role=(member.role||'').toUpperCase();
+  const isAdmin = ADMIN_ROLES.has(role);
+
+  const entry = {
+    member,
+    state:'starting',
+    timers: [],
+    paused: false,
+    originalText: text,
+    startedAt: Date.now(),
+    urgent: !!options.urgent
+  };
+  activeTypers.set(member.name, entry);
+  updateTypingHeader();
+
+  // compute duration
+  const wordCount = (text && text.trim()) ? text.trim().split(/\s+/).length : Math.max(1, Math.floor(Math.random()*8)+1);
+  let wpm = TYPING_BASE_WPM;
+  if(/[!?]{2,}/.test(text)) wpm *= 1.15;
+  if(text && text.includes('http')) wpm *= 0.9;
+  if(options.urgent) wpm *= 1.5;
+  if(isNightTime()) wpm /= NIGHT_SLOW_FACTOR;
+  if(isAdmin) wpm /= ADMIN_PAUSE_MULTIPLIER;
+
+  const minutes = wordCount / wpm;
+  const totalMs = Math.max(400, Math.floor(minutes * 60 * 1000));
+  let elapsed = 0;
+
+  // random start delay
+  const startDelay = 200 + Math.random()*900;
+  entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, startDelay));
+  elapsed += startDelay;
+
+  const chunks = 2 + Math.floor(Math.random()*3);
+  for(let i=0;i<chunks;i++){
+    const chunkMs = Math.floor(totalMs/chunks * (0.7 + Math.random()*0.6));
+    entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, elapsed));
+    elapsed += chunkMs;
+
+    if(i < chunks-1){
+      const pauseMs = 150 + Math.random()*(isAdmin?900:500);
+      entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='paused'; updateTypingHeader();
+        setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, 150 + Math.random()*400);
+      }, elapsed));
+      elapsed += pauseMs;
+    }
+  }
+
+  const typoChance = isAdmin?0.35:0.12;
+  if(Math.random() < typoChance){
+    const typoDelay = Math.max(200, Math.min(totalMs-100, 300 + Math.random()*(totalMs-300)));
+    entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='typo'; updateTypingHeader();
+      setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, 250 + Math.random()*500);
+    }, typoDelay));
+  }
+
+  let finishDelay = 150 + Math.random()*600;
+  if(text && text.includes('http')) finishDelay += 400 + Math.random()*800;
+
+  entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='sending'; updateTypingHeader(); dispatchTypingFinished(member.name, text); setTimeout(()=>{ stopTyping(member.name); }, 300 + Math.random()*500); }, elapsed + finishDelay));
+
+  updateTypingHeader();
+}
+
+/* stop typing */
+function stopTyping(name){
+  const entry = activeTypers.get(name);
+  if(!entry) return;
+  entry.timers.forEach(t=>clearTimeout(t));
+  activeTypers.delete(name);
+  updateTypingHeader();
+}
+
+/* cancel others except one (when someone sends) */
+function cancelTypingExcept(keepName=null){
+  for(const name of Array.from(activeTypers.keys())){
+    if(name !== keepName) stopTyping(name);
+  }
+}
+
+/* pause/resume for context changes */
+function pauseTypingForContextChange(){
+  for(const [name, entry] of activeTypers.entries()){
+    if(!entry.paused){
+      entry.paused = true;
+      entry.timers.forEach(t=>clearTimeout(t));
+      entry.timers = [];
+    }
+  }
+  if(groupTypingBar) groupTypingBar.style.display = 'none';
+}
+function resumeTypingAfterPause(){
+  for(const [name, entry] of activeTypers.entries()){
+    if(entry.paused){
+      entry.paused = false;
+      entry.state = 'typing';
+      updateTypingHeader();
+      const resumeDelay = 150 + Math.random()*600;
+      const t = setTimeout(()=>{ dispatchTypingFinished(name, entry.originalText); stopTyping(name); }, resumeDelay);
+      entry.timers.push(t);
+    }
+  }
+  if(activeTypers.size && groupTypingBar) groupTypingBar.style.display = '';
+}
+
+/* update the header summary (role-aware, admin priority) */
+function updateTypingHeader(){
+  if(!groupTypingBar) return;
+  const typers = Array.from(activeTypers.values()).map(e=>e.member);
+  if(typers.length === 0){
+    groupTypingBar.style.display = 'none';
+    groupTypingBar.innerHTML = '<div class="dot"></div><div class="typing-summary"></div>';
+    return;
+  }
+  typers.sort((a,b)=>{
+    const ra = (a.role||'').toUpperCase();
+    const rb = (b.role||'').toUpperCase();
+    const pa = ADMIN_ROLES.has(ra)?0:1;
+    const pb = ADMIN_ROLES.has(rb)?0:1;
+    if(pa !== pb) return pa - pb;
+    return 0;
+  });
+
+  const buildNameWithBadge = m => {
+    const v = (m.role && m.role.toUpperCase() === 'VERIFIED') ? '<span class="verified-badge-inline">✔︎</span>' : '';
+    const roleBadge = (m.role) ? `<span class="role-inline ${m.role.toLowerCase()}">${m.role}</span>` : '';
+    return `<strong class="typing-name">${escapeHtml(m.name)}</strong>${v}${roleBadge}`;
+  };
+
+  let html = '';
+  if(typers.length === 1){
+    html = `${buildNameWithBadge(typers[0])} is typing…`;
+  } else if(typers.length <= MAX_VISIBLE_NAMES){
+    const names = typers.map(buildNameWithBadge).join(', ');
+    html = `${names} are typing…`;
+  } else {
+    html = `${typers.length} people are typing…`;
+  }
+
+  groupTypingBar.innerHTML = `<div class="dot"></div><div class="typing-summary">${html}</div>`;
+  groupTypingBar.style.display = '';
+}
+
+/* small escape helper */
+function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* typing finished event dispatch */
+function dispatchTypingFinished(name, text){
+  const ev = new CustomEvent('typingFinished', { detail: { name, text }});
+  window.dispatchEvent(ev);
+}
+
+/* default handler: create message (respects unread & scroll) */
+window.addEventListener('typingFinished', (e) => {
+  const { name, text } = e.detail;
+  const member = members.find(m => m.name === name);
+  if(!member){ stopTyping(name); return; }
+
+  cancelTypingExcept(name);
+
+  const m = { name: member.name, role: member.role, text: text || '…', timestamp: Date.now(), out: false };
+  save(m);
+  render(m);
+
+  if(!isUserAtBottom()){
+    incrementUnread();
+    // do not scroll to keep user context
+  } else {
+    chat.scrollTop = chat.scrollHeight;
+  }
+});
+
+/* Backwards-compatible showTyping/hideTyping API mapping to group engine */
 function showTyping(member){
-  if(typingMap.has(member.name))return;
-  const row=document.createElement('div');
-  row.className='typing-row';
-  row.innerHTML=`
-    <img class="avatar" src="${member.avatar}">
-    <div class="typing-bubble">
-      <strong>${member.name}</strong>
-      <div class="typing-dots"><span></span><span></span><span></span></div>
-    </div>`;
-  chat.appendChild(row);
-  chat.scrollTop=chat.scrollHeight;
-  typingMap.set(member.name,row);
+  startTypingSimulation(member, member._previewText || '', {});
 }
 function hideTyping(member){
-  const row=typingMap.get(member.name);
-  if(row){row.remove();typingMap.delete(member.name);}
-}
-function fakeMemberSend(member,text){
-  showTyping(member);
-  setTimeout(()=>{
-    hideTyping(member);
-    const m={name:member.name,role:member.role,text,timestamp:Date.now(),out:false};
-    save(m);render(m);
-  },900+Math.random()*800);
+  stopTyping(member.name || member);
 }
 
-/* simulate members typing */
-setInterval(()=>{
-  const m=members[Math.floor(Math.random()*members.length)];
-  fakeMemberSend(m,'Typing indicator now works per-member ✅');
-},16000);
+/* demo simulation interval (replaces earlier per-member append behavior) */
+if(typeof members !== 'undefined'){
+  if(!window._groupTypingSimInterval){
+    window._groupTypingSimInterval = setInterval(()=>{
+      if(!members || members.length === 0) return;
+      const m = members[Math.floor(Math.random()*members.length)];
+      startTypingSimulation(m, 'Typing indicator now works per-group ✅');
+    }, 16000);
+  }
+}
 
-send.onclick=()=>{
-  if(!input.value.trim())return;
-  const m={name:'You',role:'VERIFIED',text:input.value,timestamp:Date.now(),out:true};
-  save(m);render(m);
-  input.value='';
+/* When someone (You) sends, cancel typers and manage scroll/unread (patched send handler) */
+send.onclick = () => {
+  if(!input.value.trim()) return;
+  const m = { name: 'You', role: 'VERIFIED', text: input.value, timestamp: Date.now(), out: true };
+  save(m); render(m);
+  input.value = '';
   send.classList.add('hidden');
   mediaBtn.classList.remove('hidden');
   micBtn.classList.remove('hidden');
+
+  // cancel others (you sent)
+  cancelTypingExcept('You');
+
+  if(isUserAtBottom()) chat.scrollTop = chat.scrollHeight;
 };
 
-chat.addEventListener('scroll',()=>{if(chat.scrollTop===0)load();});
+/* ensure typing halts on visibility change */
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) pauseTypingForContextChange();
+  else resumeTypingAfterPause();
+});
+
+/* handle incoming message: cancel typers and manage unread (called by render) */
+function handleIncomingMessage(m){
+  cancelTypingExcept(m.name);
+  if(!isUserAtBottom() && !(m.out && m.name === 'You')) incrementUnread();
+}
+
+/* expose small API */
+window.groupTyping = {
+  show: startTypingSimulation,
+  hide: stopTyping,
+  stopAll: ()=>{ for(const n of Array.from(activeTypers.keys())) stopTyping(n); if(groupTypingBar) groupTypingBar.style.display='none'; },
+  getActive: ()=>Array.from(activeTypers.keys())
+};
+
+/* Legacy compatibility: keep original fakeMemberSend semantics (calls new engine) */
+function fakeMemberSend(member,text){
+  startTypingSimulation(member, text);
+}
+
+/* EOF script */
 </script>
 </body>
 </html>
