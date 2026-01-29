@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+     <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -7,7 +7,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
 
-<!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -96,30 +95,34 @@ tailwind.config = {
 <div id="typing" class="typing hidden">Someone is typing…</div>
 
 <footer class="bg-panel border-t border-border px-4 py-3">
-  <div class="flex gap-2 items-center bg-bg rounded-full px-3 py-2">
+  <div class="flex items-center bg-bg rounded-full px-3 py-2 gap-2">
 
-    <!-- MEDIA -->
-    <button id="mediaBtn">
-      <i data-lucide="paperclip"></i>
-    </button>
-
-    <!-- EMOJI -->
+    <!-- EMOJI (LEFT) -->
     <button id="emojiBtn">
       <i data-lucide="smile"></i>
     </button>
 
-    <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
+    <!-- INPUT -->
+    <input id="input"
+      class="flex-1 bg-transparent outline-none text-sm"
+      placeholder="Message">
 
-    <!-- MIC -->
-    <button id="micBtn">
-      <i data-lucide="mic"></i>
-    </button>
+    <!-- RIGHT SLOT (FIXED) -->
+    <div class="flex items-center gap-2 ml-auto">
 
-    <!-- SEND -->
-    <button id="send" class="hidden text-send">
-      <i data-lucide="send"></i>
-    </button>
+      <button id="mediaBtn">
+        <i data-lucide="paperclip"></i>
+      </button>
 
+      <button id="micBtn">
+        <i data-lucide="mic"></i>
+      </button>
+
+      <button id="send" class="hidden text-send">
+        <i data-lucide="send"></i>
+      </button>
+
+    </div>
   </div>
 </footer>
 
@@ -144,6 +147,8 @@ const chat=document.getElementById('chat');
 const input=document.getElementById('input');
 const send=document.getElementById('send');
 const emojiBtn=document.getElementById('emojiBtn');
+const mediaBtn=document.getElementById('mediaBtn');
+const micBtn=document.getElementById('micBtn');
 const sidebar=document.getElementById('sidebar');
 const membersBtn=document.getElementById('membersBtn');
 const closeSidebar=document.getElementById('closeSidebar');
@@ -153,11 +158,19 @@ const onlineCount=document.getElementById('onlineCount');
 /* EMOJI */
 emojiBtn.onclick=()=>EmojiPack.openPicker(input);
 
+/* INPUT UI TOGGLE (FINAL FIX) */
+input.oninput=()=>{
+  const hasText=input.value.trim().length>0;
+  send.classList.toggle('hidden',!hasText);
+  mediaBtn.classList.toggle('hidden',hasText);
+  micBtn.classList.toggle('hidden',hasText);
+};
+
 /* MEMBERS */
 const ACTIVE=90000;
 
-const ADMIN={ name:'Profit Hunter 🌐', role:'ADMIN', avatar:'assets/admin.jpg' };
-const MOD={ name:'Kitty Star ⭐', role:'MOD', avatar:'assets/mod.jpg' };
+const ADMIN={name:'Profit Hunter 🌐',role:'ADMIN',avatar:'assets/admin.jpg'};
+const MOD={name:'Kitty Star ⭐',role:'MOD',avatar:'assets/mod.jpg'};
 
 const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
   name:`Member_${i+1}`,
@@ -196,7 +209,7 @@ renderMembers();
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
-/* DB */
+/* DB + CHAT LOGIC */
 const DB='AbroxDB',STORE='messages',PAGE=20;
 let db,offset=0,loading=false,lastMeta=null,lastDate='';
 
@@ -217,7 +230,7 @@ function save(m){
 function seed(){
   const st=db.transaction(STORE).objectStore(STORE);
   st.count().onsuccess=e=>{
-    if(e.target.result) return;
+    if(e.target.result)return;
     [
       {...ADMIN,text:'Welcome to Abrox Private Lounge.',timestamp:Date.now()-86400000,out:false},
       {...MOD,text:'Please read pinned rules before chatting.',timestamp:Date.now()-86300000,out:false}
@@ -226,7 +239,7 @@ function seed(){
 }
 
 function load(){
-  if(loading) return;
+  if(loading)return;
   loading=true;
   db.transaction(STORE).objectStore(STORE).getAll().onsuccess=e=>{
     const all=e.target.result.sort((a,b)=>a.timestamp-b.timestamp);
@@ -239,7 +252,6 @@ function load(){
 
 function render(m,prepend=false){
   const d=new Date(m.timestamp);
-
   if(d.toDateString()!==lastDate){
     const sep=document.createElement('div');
     sep.className='date-sep';
@@ -249,52 +261,46 @@ function render(m,prepend=false){
   }
 
   const grouped=lastMeta&&lastMeta.sender===m.name&&(d-lastMeta.time)<120000;
-
   const el=document.createElement('div');
   el.className=`msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
   el.innerHTML=`
-  <div class="bubble">
-    ${!grouped&&!m.out?`<div class="sender">${m.name} <span class="badge ${m.role.toLowerCase()}">${m.role}</span></div>`:''}
-    ${m.text}
-    <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
-    <div class="read-by"></div>
-  </div>`;
-
+    <div class="bubble">
+      ${!grouped&&!m.out?`<div class="sender">${m.name} <span class="badge ${m.role.toLowerCase()}">${m.role}</span></div>`:''}
+      ${m.text}
+      <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+      <div class="read-by"></div>
+    </div>`;
   prepend?chat.prepend(el):chat.appendChild(el);
-  if(m.out) receipts(el);
-
+  if(m.out)receipts(el);
   lastMeta={sender:m.name,time:d};
 }
 
 function receipts(el){
   const t=el.querySelector('.time');
   const r=el.querySelector('.read-by');
-
   setTimeout(()=>t.textContent=`✓✓ ${t.textContent.slice(2)}`,600);
-
   setTimeout(()=>{
     t.textContent=`✓✓ 👀 ${t.textContent.slice(2)}`;
     [ADMIN,MOD].forEach(u=>{
       const img=document.createElement('img');
       img.src=u.avatar;
-      img.title=u.name;
       r.appendChild(img);
     });
   },1400);
 }
 
-input.oninput=()=>send.classList.toggle('hidden',!input.value.trim());
-
 send.onclick=()=>{
   if(!input.value.trim())return;
-  const m={ name:'You', role:'VERIFIED', text:input.value, timestamp:Date.now(), out:true };
+  const m={name:'You',role:'VERIFIED',text:input.value,timestamp:Date.now(),out:true};
   save(m);
   render(m);
   input.value='';
   send.classList.add('hidden');
+  mediaBtn.classList.remove('hidden');
+  micBtn.classList.remove('hidden');
 };
 
-chat.addEventListener('scroll',()=>{ if(chat.scrollTop===0) load(); });
+chat.addEventListener('scroll',()=>{if(chat.scrollTop===0)load();});
 </script>
 </body>
 </html>
