@@ -15,7 +15,7 @@
 </script>
 
 <style>
-/* ===== base chat visuals (preserved) ===== */
+/* ===== Core visuals (kept close to original, with tiny refinements) ===== */
 :root{--muted:#a0a6b5;--bubble:#262b38;--bubbleOut:#2b3242;--accent:#2ecc71}
 body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
 
@@ -24,7 +24,7 @@ body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Rob
 .grouped{margin-top:-6px}
 .msg.out{justify-content:flex-end}
 
-/* bubbles: lighten weight to avoid overly-bold look */
+/* bubbles (reduced weight so not too bold) */
 .bubble{
   padding:8px 14px 7px;
   font-size:13px;
@@ -32,7 +32,7 @@ body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Rob
   max-width:78%;
   position:relative;
   box-shadow:0 2px 8px rgba(0,0,0,.18);
-  font-weight:400;           /* reduce boldness for bubble text */
+  font-weight:400;
   color:#e6eef3;
   overflow-wrap:anywhere;
 }
@@ -46,33 +46,19 @@ body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Rob
 .msg.out .bubble::before{content:'';position:absolute;right:-7px;bottom:6px;width:14px;height:14px;background:inherit;transform:rotate(45deg);border-bottom-left-radius:14px}
 .grouped.in .bubble::before,.grouped.out .bubble::before{display:none}
 
-/* meta: lighter sender weight and color to reduce boldness */
-.sender{
-  font-size:11px;
-  font-weight:500;            /* reduced from 600 */
-  color:#d1d5db;              /* softer than pure white */
-  margin-bottom:4px;
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-/* small tweaks to sender name spacing and alignment */
-.sender .name { font-weight:550; letter-spacing:0.1px; }
-
-/* time/read area */
+/* meta */
+.sender{font-size:11px;font-weight:550;color:#d1d5db;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.sender .role-badge{margin-left:6px}
 .time{font-size:10px;opacity:.7;margin-top:6px;display:flex;justify-content:flex-end;gap:4px;line-height:1;transform:translateY(1px)}
 .read-by{display:flex;gap:4px;margin-top:4px;justify-content:flex-end}
 .read-by img{width:13px;height:13px;border-radius:999px;border:1px solid #1c1f26}
 .date-sep{text-align:center;font-size:11px;color:var(--muted);margin:12px 0}
-
-/* badges */
 .badge{font-size:10px;padding:2px 6px;border-radius:999px;font-weight:600}
 .badge.admin{background:#e74c3c}
 .badge.mod{background:#f39c12}
 .badge.verified{background:#2ecc71;color:#05110c}
 
-/* ===== VERIFIED pill inside bubble (distinct from sidebar) ===== */
+/* Verified pill INSIDE chat bubble (contains lucide gem & text) */
 .verified-bubble{
   display:inline-flex;
   align-items:center;
@@ -90,18 +76,23 @@ body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Rob
 }
 .verified-bubble i[data-lucide="gem"]{ width:14px; height:14px; stroke:#b8f1c8; stroke-width:1.6; display:inline-block }
 
-/* ===== SIDEBAR VERIFIED PILL (text-only) ===== */
+/* Sidebar verified pill (text-only, NO gem) */
 .verified-pill-sidebar{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:linear-gradient(180deg,#2ecc71,#1e8b4a);color:#03140b;font-weight:700;font-size:11px;box-shadow:0 1px 0 rgba(0,0,0,.25)}
 
-/* ===== AVATAR alignment fix (avoid top offset) ===== */
-.avatar{
-  width:32px;height:32px;border-radius:999px;flex-shrink:0;
-  margin:0; /* remove previous top offset */
-  display:block; /* ensures consistent alignment */
-  object-fit:cover;
-}
+/* avatar alignment fix (remove top offset) */
+.avatar{width:32px;height:32px;border-radius:999px;margin:0;flex-shrink:0;display:block;object-fit:cover}
+.avatar-spacer{width:32px;flex-shrink:0}
 
-/* ===== GROUP TYPING BAR - absolute to prevent header reflow ===== */
+/* typing-row legacy kept but not used for header typing */
+.typing-row{display:flex;gap:8px;align-items:flex-end;margin:6px 0}
+.typing-bubble{background:var(--bubble);padding:6px 10px;border-radius:18px;display:flex;align-items:center;gap:6px;font-size:12px}
+.typing-dots{display:flex;gap:3px}
+.typing-dots span{width:4px;height:4px;background:var(--muted);border-radius:50%;animation:typing 1.4s infinite ease-in-out}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes typing{0%,80%,100%{opacity:.3}40%{opacity:1}}
+
+/* GROUP TYPING BAR - absolute so header doesn't reflow/shift */
 header { position: relative; }
 .group-typing-bar{
   position:absolute;
@@ -125,15 +116,14 @@ header { position: relative; }
   transition:opacity .12s ease;
   box-shadow: 0 2px 6px rgba(0,0,0,.15);
 }
-/* make typing summary noticeable but not too heavy */
 .group-typing-bar .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px rgba(46,204,113,.14);flex-shrink:0}
 .group-typing-bar .typing-summary{overflow:hidden;text-overflow:ellipsis;display:block;color:var(--accent);font-weight:500}
 @media (max-width:420px){ .group-typing-bar{ max-width:58%; font-size:12px; right:48px; } }
 
-/* hide header members line when typing active (prevents reflow) */
+/* hide only Members/Online line while typing visible */
 header.typing-active #headerMetaMembers{ display:none; }
 
-/* unread counter */
+/* unread counter (click scrolls) */
 .patched-unread-counter{position:absolute; right:12px; top:50%; transform:translateY(-50%); background:#2b3242;padding:6px 10px;border-radius:999px;font-size:12px;color:#fff;display:none;min-width:28px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer; z-index:60}
 
 /* ensure left column shrinks gracefully */
@@ -143,6 +133,7 @@ header > .flex:first-child { min-width:0; }
 #memberSearch{width:100%;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.02);color:inherit;border:1px solid rgba(255,255,255,0.02);outline:none;font-size:13px}
 </style>
 </head>
+
 <body class="bg-bg text-white h-[100dvh] overflow-hidden">
 <div class="flex h-full">
   <main class="flex flex-col flex-1 border-r border-border">
@@ -156,11 +147,10 @@ header > .flex:first-child { min-width:0; }
             <i data-lucide="lock" class="w-3 h-3"></i>
             <span>Private Group</span>
           </div>
-          <!-- Members/Online line: will hide while typing -->
+          <!-- Members/Online line: will hide while typing (preserves lock + demo lines) -->
           <div class="text-xs text-muted" id="headerMetaMembers">
             Members: 4,872 • Online: <span id="onlineCount">132</span>
           </div>
-          <!-- Demo/discussion line: always visible -->
           <div class="text-xs text-muted" id="headerMetaDemo">
             Demo discussion · Verification required
           </div>
@@ -216,12 +206,11 @@ header > .flex:first-child { min-width:0; }
 </div>
 
 <script>
-/* ensure lucide icons */
 lucide.createIcons();
 
-/* ================= FULL LOGIC (kept intact) ================= */
+/* ====================== Full logic with patches applied ====================== */
 
-/* DOM refs */
+/* DOM refs (kept same as your original) */
 const chat=document.getElementById('chat');
 const input=document.getElementById('input');
 const send=document.getElementById('send');
@@ -268,7 +257,7 @@ fileInput.onchange=e=>{
   fileInput.value='';
 };
 
-/* ===== VOICE RECORDING ===== */
+/* ===== VOICE RECORDING (unchanged) ===== */
 let recorder,chunks=[],recStart,recTick;
 let holding=false,stream=null;
 
@@ -319,7 +308,7 @@ micBtn.addEventListener('pointerdown',async e=>{
 micBtn.addEventListener('pointerup',()=>{if(!holding)return;holding=false;stopUI();stopRecording();});
 micBtn.addEventListener('pointerleave',()=>{if(!holding)return;holding=false;stopUI();stopRecording();});
 
-/* ===== MEMBERS ===== */
+/* ===== MEMBERS (kept original, with priority ordering in renderMembers) ===== */
 const ACTIVE=90000;
 const ADMIN={name:'Profit Hunter 🌐',role:'ADMIN',avatar:'assets/admin.jpg'};
 const MOD={name:'Kitty Star ⭐',role:'MOD',avatar:'assets/mod.jpg'};
@@ -332,7 +321,7 @@ const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
 
 const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
 
-/* Render members (sidebar) — sidebar shows only text-only verified pill (no gem) */
+/* Render members (sidebar) — only show text-only verified pill (no gem), ordered: Admins, Mods, Verified, others */
 function renderMembers(filter=''){
   const priority = role => {
     const r=(role||'').toUpperCase();
@@ -357,6 +346,7 @@ function renderMembers(filter=''){
     let rightHTML = '';
     const roleUpper = (m.role||'').toUpperCase();
     if(roleUpper === 'VERIFIED'){
+      // sidebar: text-only verified pill (no gem)
       rightHTML = `<span class="verified-pill-sidebar" title="Verified">VERIFIED</span>`;
     } else if(roleUpper.includes('ADMIN') || roleUpper.includes('MOD')){
       rightHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
@@ -386,7 +376,7 @@ renderMembers();
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
-/* ===== DB ===== */
+/* ===== DB (unchanged) ===== */
 const DB='AbroxDB',STORE='messages',PAGE=20;
 let db,offset=0,loading=false,lastMeta=null,lastDate='';
 indexedDB.open(DB,1).onupgradeneeded=e=>{
@@ -418,7 +408,7 @@ function load(){
   };
 }
 
-/* ===== render() — bubble now shows verified-bubble (gem inside rounded pill) for VERIFIED members (distinct from sidebar) ===== */
+/* ===== render() (preserves your original structure while adding verified gem pill inside bubble only) ===== */
 function render(m,prepend=false){
   const d=new Date(m.timestamp);
   if(d.toDateString()!==lastDate){
@@ -438,23 +428,23 @@ function render(m,prepend=false){
   }
 
   const roleUpper=(m.role||'').toUpperCase();
-  // bubble verified pill (small gem inside pill) — only inside chat bubble
+  // ONLY inside chat bubble: gem + verified pill (lucide gem icon). Sidebar uses text-only verified pill.
   const verifiedBubbleHTML = roleUpper==='VERIFIED' ? `<span class="verified-bubble"><i data-lucide="gem"></i><span style="font-size:11px">VERIFIED</span></span>` : '';
-  // role badges for ADMIN/MOD shown in bubble
+  // Admin/Mod badge inside bubble (kept)
   let roleBadgeHTML = '';
-  if(roleUpper.includes('ADMIN') || roleUpper.includes('MOD')) roleBadgeHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
+  if(roleUpper.includes('ADMIN') || roleUpper.includes('MOD')) roleBadgeHTML = `<span class="badge ${m.role.toLowerCase()} role-badge">${m.role}</span>`;
 
   el.innerHTML=`
     ${avatarHTML}
     <div class="bubble">
-      ${!grouped&&!m.out?`<div class="sender">${m.name} ${verifiedBubbleHTML} ${roleBadgeHTML}</div>`:''}
+      ${!grouped&&!m.out?`<div class="sender"><span class="name">${m.name}</span> ${verifiedBubbleHTML} ${roleBadgeHTML}</div>`:''}
       ${m.text}
       <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
       <div class="read-by"></div>
     </div>`;
   prepend?chat.prepend(el):chat.appendChild(el);
 
-  // ensure Lucide icons render for dynamic inserts
+  // render any inserted lucide icons (gem)
   lucide.createIcons();
 
   if(m.out)receipts(el);
@@ -470,7 +460,7 @@ function render(m,prepend=false){
     ['mouseup','mouseleave'].forEach(ev=>el.addEventListener(ev,()=>clearTimeout(t)));
   }
 
-  // cancel typing and manage unread
+  // when rendering an incoming message, cancel typing for that member and manage unread
   handleIncomingMessage(m);
 
   lastMeta={sender:m.name,time:d};
@@ -489,16 +479,4 @@ function receipts(el){
   },1400);
 }
 
-/* ===== TYPING ENGINE & GROUP-HEADER LOGIC (human-like) ===== */
-
-const activeTypers = new Map();
-const ADMIN_ROLES = new Set(['ADMIN','ADMINISTRATOR','OWNER']);
-const TYPING_BASE_WPM = 40;
-const NIGHT_SLOW_FACTOR = 1.6;
-const ADMIN_PAUSE_MULTIPLIER = 1.4;
-const MAX_VISIBLE_NAMES = 3;
-
-/* unread */
-let unreadCount = 0;
-function isUserAtBottom(){ return chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 10; }
-function incremen
+/* ===== GROU
