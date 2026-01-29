@@ -39,103 +39,21 @@ tailwind.config = {
 <style>
 .msg{display:flex;gap:8px}
 .msg.out{justify-content:flex-end}
-
-.bubble{
-  padding:10px 14px;
-  font-size:13px;
-  line-height:1.45;
-  max-width:78%;
-  border-radius:16px;
-  position:relative;
-  box-shadow:0 2px 8px rgba(0,0,0,.18);
-}
-
-.msg.in .bubble{
-  background:#262b38;
-  border-top-left-radius:6px;
-}
-
-.msg.out .bubble{
-  background:#2b3242;
-  border:1px solid #343a4a;
-  border-top-right-radius:6px;
-}
-
-.msg.in .bubble::before{
-  content:'';
-  position:absolute;
-  left:-6px;
-  bottom:8px;
-  width:12px;
-  height:12px;
-  background:#262b38;
-  border-bottom-right-radius:12px;
-}
-
-.msg.out .bubble::before{
-  content:'';
-  position:absolute;
-  right:-6px;
-  bottom:8px;
-  width:12px;
-  height:12px;
-  background:#2b3242;
-  border-bottom-left-radius:12px;
-}
-
-.grouped.in .bubble::before,
-.grouped.out .bubble::before{display:none}
-
+.bubble{padding:10px 14px;font-size:13px;line-height:1.45;max-width:78%;border-radius:16px;position:relative;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.msg.in .bubble{background:#262b38;border-top-left-radius:6px}
+.msg.out .bubble{background:#2b3242;border:1px solid #343a4a;border-top-right-radius:6px}
+.msg.in .bubble::before{content:'';position:absolute;left:-6px;bottom:8px;width:12px;height:12px;background:#262b38;border-bottom-right-radius:12px}
+.msg.out .bubble::before{content:'';position:absolute;right:-6px;bottom:8px;width:12px;height:12px;background:#2b3242;border-bottom-left-radius:12px}
+.grouped.in .bubble::before,.grouped.out .bubble::before{display:none}
 .grouped.in .bubble{border-top-left-radius:6px}
 .grouped.out .bubble{border-top-right-radius:6px}
-
-.sender{
-  font-size:11px;
-  font-weight:600;
-  color:#2ecc71;
-  margin-bottom:4px;
-}
-
-.time{
-  font-size:10px;
-  opacity:.7;
-  margin-top:6px;
-  display:flex;
-  justify-content:flex-end;
-  gap:4px;
-}
-
-.read-by{
- display:flex;
- gap:4px;
- margin-top:4px;
- justify-content:flex-end;
-}
-.read-by img{
- width:13px;
- height:13px;
- border-radius:999px;
- border:1px solid #1c1f26;
-}
-
-.date-sep{
-  text-align:center;
-  font-size:11px;
-  color:#a0a6b5;
-  margin:12px 0
-}
-
-.typing{
-  font-size:11px;
-  color:#a0a6b5;
-  padding:6px
-}
-
-.badge{
-  font-size:10px;
-  padding:2px 6px;
-  border-radius:999px
-}
+.sender{font-size:11px;font-weight:600;color:#2ecc71;margin-bottom:4px}
+.time{font-size:10px;opacity:.7;margin-top:6px;display:flex;justify-content:flex-end;gap:4px}
+.read-by{display:flex;gap:4px;margin-top:4px;justify-content:flex-end}
+.read-by img{width:13px;height:13px;border-radius:999px;border:1px solid #1c1f26}
+.date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
+.typing{font-size:11px;color:#a0a6b5;padding:6px}
+.badge{font-size:10px;padding:2px 6px;border-radius:999px}
 .badge.admin{background:#e74c3c}
 .badge.mod{background:#f39c12}
 .badge.verified{background:#2ecc71}
@@ -143,7 +61,6 @@ tailwind.config = {
 </head>
 
 <body class="bg-bg text-white h-[100dvh] overflow-hidden">
-
 <div class="flex h-full">
 
 <main class="flex flex-col flex-1 border-r border-border">
@@ -180,18 +97,9 @@ tailwind.config = {
 
 <footer class="bg-panel border-t border-border px-4 py-3">
   <div class="flex gap-2 items-center bg-bg rounded-full px-3 py-2">
-    <button onclick="EmojiPack.openPicker(input)">
-      <i data-lucide="smile"></i>
-    </button>
+    <button id="emojiBtn"><i data-lucide="smile"></i></button>
     <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-    <button id="attach" onclick="file.click()">
-      <i data-lucide="paperclip"></i>
-    </button>
-    <input id="file" type="file" hidden>
-    <button id="mic"><i data-lucide="mic"></i></button>
-    <button id="send" class="hidden text-send">
-      <i data-lucide="send"></i>
-    </button>
+    <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
   </div>
 </footer>
 
@@ -202,11 +110,6 @@ tailwind.config = {
     <strong>Members</strong>
     <button id="closeSidebar"><i data-lucide="x"></i></button>
   </div>
-
-  <div class="px-4 pb-2">
-    <input id="search" class="w-full bg-bg px-2 py-1 text-sm rounded" placeholder="Search members">
-  </div>
-
   <div id="memberList" class="flex-1 p-3 space-y-4 overflow-y-auto"></div>
 </aside>
 
@@ -215,150 +118,163 @@ tailwind.config = {
 <script>
 lucide.createIcons();
 
-/* PWA SERVICE WORKER */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
-  });
-}
+/* ================= FULL LOGIC ================= */
 
-/* ONLINE COUNT */
-let online=132;
-setInterval(()=>{
-  online+=Math.random()>.5?1:-1;
-  onlineCount.textContent=online;
-},8000);
-
-/* PRESENCE */
-const ACTIVE_WINDOW=90000;
-const members=[
- {name:'Sam_Admin',role:'ADMIN',avatar:'https://randomuser.me/api/portraits/men/32.jpg',lastActive:Date.now()},
- {name:'Sara_Mod',role:'MOD',avatar:'https://randomuser.me/api/portraits/women/44.jpg',lastActive:Date.now()},
- {name:'Mina_fx',role:'VERIFIED',avatar:'https://randomuser.me/api/portraits/women/68.jpg',lastActive:Date.now()-120000}
-];
-
-const isOnline=m=>Date.now()-m.lastActive<ACTIVE_WINDOW;
-
-setInterval(()=>{
- members[Math.floor(Math.random()*members.length)].lastActive=Date.now();
- renderMembers();
-},20000);
-
-/* SIDEBAR */
-membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
-closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
-
-let sx=0;
-sidebar.addEventListener('touchstart',e=>sx=e.touches[0].clientX);
-sidebar.addEventListener('touchend',e=>{
- if(e.changedTouches[0].clientX-sx>80)
-  sidebar.classList.add('translate-x-full');
-});
-
-/* MEMBERS */
-function renderMembers(){
- memberList.innerHTML='';
- const q=search.value.toLowerCase();
- members.filter(m=>m.name.toLowerCase().includes(q))
- .sort((a,b)=>isOnline(b)-isOnline(a))
- .forEach(m=>{
-  memberList.innerHTML+=`
-  <div class="flex items-center gap-3">
-    <div class="relative">
-      <img src="${m.avatar}" class="w-9 h-9 rounded-full">
-      <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${isOnline(m)?'bg-green-500':'bg-gray-500'}"></span>
-    </div>
-    <div>
-      <div class="text-sm">${m.name}</div>
-      <span class="badge ${m.role.toLowerCase()}">${m.role}</span>
-    </div>
-  </div>`;
- });
-}
-search.oninput=renderMembers;
-setInterval(renderMembers,5000);
-renderMembers();
-
-/* CHAT */
 const chat=document.getElementById('chat');
 const input=document.getElementById('input');
 const send=document.getElementById('send');
-const mic=document.getElementById('mic');
-const attach=document.getElementById('attach');
-const typing=document.getElementById('typing');
-const file=document.getElementById('file');
+const emojiBtn=document.getElementById('emojiBtn');
+const sidebar=document.getElementById('sidebar');
+const membersBtn=document.getElementById('membersBtn');
+const closeSidebar=document.getElementById('closeSidebar');
+const memberList=document.getElementById('memberList');
+const onlineCount=document.getElementById('onlineCount');
 
-let lastMeta=null,lastDate='';
+/* EMOJI */
+emojiBtn.onclick=()=>EmojiPack.openPicker(input);
 
-function addDate(d){
- chat.innerHTML+=`<div class="date-sep">${d}</div>`;
+/* MEMBERS */
+const ACTIVE=90000;
+
+const ADMIN={ name:'Profit Hunter 🌐', role:'ADMIN', avatar:'assets/admin.jpg' };
+const MOD={ name:'Kitty Star ⭐', role:'MOD', avatar:'assets/mod.jpg' };
+
+const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
+  name:`Member_${i+1}`,
+  role:'VERIFIED',
+  avatar:`https://randomuser.me/api/portraits/men/${i+20}.jpg`,
+  lastActive:Date.now()-Math.random()*120000
+}))];
+
+const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
+
+function renderMembers(){
+  memberList.innerHTML='';
+  members.forEach(m=>{
+    memberList.innerHTML+=`
+    <div class="flex gap-3 items-center">
+      <div class="relative">
+        <img src="${m.avatar}" class="w-9 h-9 rounded-full">
+        <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${isOnline(m)?'bg-green-500':'bg-gray-500'}"></span>
+      </div>
+      <div>
+        <div class="text-sm">${m.name}</div>
+        <span class="badge ${m.role.toLowerCase()}">${m.role}</span>
+      </div>
+    </div>`;
+  });
+  onlineCount.textContent=members.filter(isOnline).length;
 }
 
-function append(text,sender,out=false){
- const now=new Date();
- if(now.toDateString()!==lastDate){
-  addDate(now.toDateString());
-  lastDate=now.toDateString();
- }
+setInterval(()=>{
+  members[Math.floor(Math.random()*members.length)].lastActive=Date.now();
+  renderMembers();
+},8000);
 
- const grouped=lastMeta&&lastMeta.sender===sender&&lastMeta.out===out&&(now-lastMeta.time)<120000;
- const role=members.find(m=>m.name===sender)?.role;
- const badge=role?`<span class="badge ${role.toLowerCase()}">${role}</span>`:'';
+renderMembers();
 
- const el=document.createElement('div');
- el.className=`msg ${out?'out':'in'} ${grouped?'grouped':''}`;
- el.innerHTML=`
- <div class="bubble">
-  ${!grouped&&!out?`<div class="sender">${sender} ${badge}</div>`:''}
-  ${text}
-  <div class="time">✓ ${now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
-  <div class="read-by"></div>
- </div>`;
- chat.appendChild(el);
+membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
+closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
- if(out){
+/* DB */
+const DB='AbroxDB',STORE='messages',PAGE=20;
+let db,offset=0,loading=false,lastMeta=null,lastDate='';
+
+indexedDB.open(DB,1).onupgradeneeded=e=>{
+  e.target.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});
+};
+
+indexedDB.open(DB,1).onsuccess=e=>{
+  db=e.target.result;
+  seed();
+  load();
+};
+
+function save(m){
+  db.transaction(STORE,'readwrite').objectStore(STORE).add(m);
+}
+
+function seed(){
+  const st=db.transaction(STORE).objectStore(STORE);
+  st.count().onsuccess=e=>{
+    if(e.target.result) return;
+    [
+      {...ADMIN,text:'Welcome to Abrox Private Lounge.',timestamp:Date.now()-86400000,out:false},
+      {...MOD,text:'Please read pinned rules before chatting.',timestamp:Date.now()-86300000,out:false}
+    ].forEach(save);
+  };
+}
+
+function load(){
+  if(loading) return;
+  loading=true;
+  db.transaction(STORE).objectStore(STORE).getAll().onsuccess=e=>{
+    const all=e.target.result.sort((a,b)=>a.timestamp-b.timestamp);
+    const slice=all.slice(Math.max(0,all.length-offset-PAGE),all.length-offset);
+    slice.forEach(m=>render(m,true));
+    offset+=PAGE;
+    loading=false;
+  };
+}
+
+function render(m,prepend=false){
+  const d=new Date(m.timestamp);
+
+  if(d.toDateString()!==lastDate){
+    const sep=document.createElement('div');
+    sep.className='date-sep';
+    sep.textContent=d.toDateString();
+    prepend?chat.prepend(sep):chat.appendChild(sep);
+    lastDate=d.toDateString();
+  }
+
+  const grouped=lastMeta&&lastMeta.sender===m.name&&(d-lastMeta.time)<120000;
+
+  const el=document.createElement('div');
+  el.className=`msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
+  el.innerHTML=`
+  <div class="bubble">
+    ${!grouped&&!m.out?`<div class="sender">${m.name} <span class="badge ${m.role.toLowerCase()}">${m.role}</span></div>`:''}
+    ${m.text}
+    <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+    <div class="read-by"></div>
+  </div>`;
+
+  prepend?chat.prepend(el):chat.appendChild(el);
+  if(m.out) receipts(el);
+
+  lastMeta={sender:m.name,time:d};
+}
+
+function receipts(el){
   const t=el.querySelector('.time');
   const r=el.querySelector('.read-by');
+
   setTimeout(()=>t.textContent=`✓✓ ${t.textContent.slice(2)}`,600);
+
   setTimeout(()=>{
     t.textContent=`✓✓ 👀 ${t.textContent.slice(2)}`;
-    members.filter(isOnline).slice(0,3)
-      .forEach(m=>{
-        r.innerHTML+=`<img src="${m.avatar}" title="${m.name}">`;
-      });
+    [ADMIN,MOD].forEach(u=>{
+      const img=document.createElement('img');
+      img.src=u.avatar;
+      img.title=u.name;
+      r.appendChild(img);
+    });
   },1400);
- }
-
- lastMeta={sender,out,time:now};
- chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
 }
 
-/* INPUT */
-input.oninput=()=>{
- const has=input.value.trim();
- send.classList.toggle('hidden',!has);
- mic.classList.toggle('hidden',has);
- attach.classList.toggle('hidden',has);
- typing.classList.remove('hidden');
- clearTimeout(window.tt);
- window.tt=setTimeout(()=>typing.classList.add('hidden'),1200);
-};
+input.oninput=()=>send.classList.toggle('hidden',!input.value.trim());
 
 send.onclick=()=>{
- if(!input.value.trim())return;
- append(input.value,'You',true);
- input.value='';
- send.classList.add('hidden');
- mic.classList.remove('hidden');
- attach.classList.remove('hidden');
+  if(!input.value.trim())return;
+  const m={ name:'You', role:'VERIFIED', text:input.value, timestamp:Date.now(), out:true };
+  save(m);
+  render(m);
+  input.value='';
+  send.classList.add('hidden');
 };
 
-file.onchange=e=>{
- const r=new FileReader();
- r.onload=()=>append(`<img src="${r.result}" class="rounded-lg max-w-full">`,'You',true);
- r.readAsDataURL(e.target.files[0]);
-};
+chat.addEventListener('scroll',()=>{ if(chat.scrollTop===0) load(); });
 </script>
-
 </body>
 </html>
