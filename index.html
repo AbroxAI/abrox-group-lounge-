@@ -156,7 +156,7 @@ input.oninput=()=>{
   micBtn.classList.toggle('hidden',hasText);
 };
 
-/* MEDIA PICKER (PREVIEWS) */
+/* MEDIA PICKER */
 mediaBtn.onclick=()=>fileInput.click();
 fileInput.onchange=e=>{
   if(!e.target.files.length)return;
@@ -174,8 +174,9 @@ fileInput.onchange=e=>{
   fileInput.value='';
 };
 
-/* ===== REAL VOICE RECORDING ===== */
-let pressTimer,recorder,chunks=[],recStart,recTick;
+/* ===== REAL VOICE RECORDING (FIXED) ===== */
+let pressTimer, recorder, chunks=[], recStart, recTick;
+let isRecording = false;
 
 function startUI(){
   recStart=Date.now();
@@ -217,14 +218,31 @@ async function startRec(){
   recorder.start();
 }
 
-function stopRec(){ if(recorder&&recorder.state!=='inactive') recorder.stop(); }
+function stopRec(){
+  if(recorder && recorder.state!=='inactive') recorder.stop();
+}
 
-micBtn.addEventListener('mousedown',()=>pressTimer=setTimeout(()=>{startUI();startRec();},300));
+micBtn.addEventListener('mousedown',()=>{
+  pressTimer=setTimeout(async ()=>{
+    isRecording=true;
+    startUI();
+    await startRec();
+  },300);
+});
+
 ['mouseup','mouseleave','touchend','touchcancel'].forEach(e=>
-  micBtn.addEventListener(e,()=>{clearTimeout(pressTimer);stopUI();stopRec();})
+  micBtn.addEventListener(e,()=>{
+    clearTimeout(pressTimer);
+    if(!isRecording) return;
+    isRecording=false;
+    stopUI();
+    stopRec();
+  })
 );
 
-/* ===== MEMBERS ===== */
+/* ===== MEMBERS, DB, CHAT, RECEIPTS (UNCHANGED) ===== */
+/* everything below is identical to your original script */
+
 const ACTIVE=90000;
 const ADMIN={name:'Profit Hunter 🌐',role:'ADMIN',avatar:'assets/admin.jpg'};
 const MOD={name:'Kitty Star ⭐',role:'MOD',avatar:'assets/mod.jpg'};
@@ -264,7 +282,7 @@ renderMembers();
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
-/* ===== DB + CHAT LOGIC (UNCHANGED) ===== */
+/* DB + CHAT LOGIC */
 const DB='AbroxDB',STORE='messages',PAGE=20;
 let db,offset=0,loading=false,lastMeta=null,lastDate='';
 
@@ -327,7 +345,6 @@ function render(m,prepend=false){
 
   if(m.out)receipts(el);
 
-  /* LONG PRESS DELETE (VOICE ONLY) */
   if(m.out && m.type==='voice'){
     let t;
     el.addEventListener('mousedown',()=>t=setTimeout(()=>{
