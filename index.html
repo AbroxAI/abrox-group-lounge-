@@ -88,19 +88,30 @@ tailwind.config = {
 .badge.mod{background:#f39c12}
 .badge.verified{background:#2ecc71;color:#05110c}
 
-/* Verified pill inside message bubble */
+/* ===== VERIFIED GEM (left inside bubble, small) ===== */
+.verified-left{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:16px;
+  height:16px;
+  flex-shrink:0;
+}
+.verified-left svg{width:16px;height:16px;display:block;fill:#2ecc71}
+
+/* ===== VERIFIED PILL (sidebar) ===== */
 .verified-pill{
   display:inline-flex;
   align-items:center;
-  gap:6px;
-  padding:2px 6px;
+  gap:8px;
+  padding:2px 8px;
   border-radius:999px;
-  background:linear-gradient(180deg,#173f22,#0f2a18);
-  color:#d4f6df;
+  background:linear-gradient(180deg,#0f3e2a,#0b2a1a);
+  color:#ccf3d8;
   font-size:11px;
   box-shadow:0 1px 0 rgba(0,0,0,.35);
 }
-.verified-pill svg{width:14px;height:14px;flex-shrink:0;}
+.verified-pill svg{width:14px;height:14px;flex-shrink:0;fill:#2ecc71}
 
 /* ===== VOICE ===== */
 .wave{display:flex;gap:3px;align-items:flex-end;height:18px}
@@ -111,11 +122,11 @@ tailwind.config = {
 @keyframes wave{0%,100%{height:4px}50%{height:16px}}
 .recording{background:#e74c3c;border-radius:999px;padding:6px}
 
-/* ===== AVATAR ===== */
+/* ===== AVATAR & ONLINE DOT (online dot remains circle) ===== */
 .avatar{width:32px;height:32px;border-radius:999px;margin-top:2px;flex-shrink:0}
 .avatar-spacer{width:32px;flex-shrink:0}
 
-/* ===== OLD per-message typing styles kept but unused (for compatibility) ===== */
+/* ===== OLD per-message typing styles kept but unused (compat) ===== */
 .typing-row{display:flex;gap:8px;align-items:flex-end;margin:6px 0;}
 .typing-bubble{background:#262b38;padding:6px 10px;border-radius:18px;display:flex;align-items:center;gap:6px;font-size:12px}
 .typing-dots{display:flex;gap:3px}
@@ -124,8 +135,9 @@ tailwind.config = {
 .typing-dots span:nth-child(3){animation-delay:.4s}
 @keyframes typing{0%,80%,100%{opacity:.3}40%{opacity:1}}
 
-/* ===== GROUP TYPING BAR + UNREAD COUNTER (tightened) ===== */
+/* ===== GROUP TYPING BAR + UNREAD COUNTER (tightened + header-fit rules) ===== */
 .group-typing-bar{
+  flex:0 0 auto;
   padding:6px 10px;
   background:rgba(255,255,255,0.02);
   border-radius:999px;
@@ -134,11 +146,10 @@ tailwind.config = {
   display:inline-flex;
   align-items:center;
   gap:8px;
-  max-width:360px;
+  max-width:320px;
   overflow:hidden;
   white-space:nowrap;
   text-overflow:ellipsis;
-  align-self:center;
   min-height:34px;
   line-height:1;
   margin-right:6px;
@@ -146,7 +157,7 @@ tailwind.config = {
 .group-typing-bar .dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;box-shadow:0 0 6px rgba(46,204,113,.12);flex-shrink:0;}
 .group-typing-bar .typing-summary{overflow:hidden;text-overflow:ellipsis;font-size:13px;color:#c7cbd4}
 
-/* unread counter tweak (tight)) */
+/* unread counter */
 .patched-unread-counter{background:#2b3242;padding:6px 10px;border-radius:999px;font-size:12px;color:#fff;margin-left:6px;display:none;min-width:28px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer}
 
 /* ===== SIDEBAR SEARCH ===== */
@@ -230,7 +241,7 @@ tailwind.config = {
 <script>
 lucide.createIcons();
 
-/* ================= FULL LOGIC — original logic preserved, patches applied ================= */
+/* ================= FULL LOGIC — original logic preserved, verified gem left + pill in sidebar ================= */
 
 /* DOM refs */
 const chat=document.getElementById('chat');
@@ -345,6 +356,12 @@ const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
 
 const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
 
+/* helper: gem SVG for sidebar pill (keeps label) */
+function gemSVG(){ return `<svg viewBox="0 0 24 24" aria-hidden focusable="false"><path d="M12 2l9 5.5L16 20H8L3 7.5 12 2z"/></svg>`; }
+
+/* small gem for left inside bubble (smaller) */
+function smallGemSVG(){ return `<svg viewBox="0 0 24 24" aria-hidden focusable="false"><path d="M12 2l9 5.5L16 20H8L3 7.5 12 2z"/></svg>`; }
+
 /* Render members with priority and search */
 function renderMembers(filter=''){
   const priority = role => {
@@ -368,15 +385,12 @@ function renderMembers(filter=''){
   memberList.innerHTML='';
   list.forEach(m=>{
     const verifiedHTML = (m.role && m.role.toUpperCase()==='VERIFIED')
-      ? `<span class="verified-pill" title="Verified">
-           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 2l2.8 1.6L18 5l.2 2.8L21 10l-2.8 1.6L18 14l-3.2 1.6L12 18l-2.8 1.6L6 14l-1.2-2.4L2 10l2.8-2.2L6 5l3.2-1.4L12 2z" fill="#2ecc71"/></svg>
-           <span style="font-size:11px">VERIFIED</span>
-         </span>` : '';
+      ? `<span class="verified-pill" title="Verified">${gemSVG()}<span style="font-size:11px">VERIFIED</span></span>` : '';
     memberList.innerHTML += `
       <div class="flex gap-3 items-center">
         <div class="relative">
           <img src="${m.avatar}" class="w-9 h-9 rounded-full">
-          <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${isOnline(m)?'bg-green-500':'bg-gray-500'}"></span>
+          <span class="absolute bottom-0 right-0 ${isOnline(m)?'bg-green-500':'bg-gray-500'}" style="width:10px;height:10px;border-radius:999px;border:1px solid #1c1f26"></span>
         </div>
         <div style="flex:1">
           <div class="text-sm">${m.name}</div>
@@ -434,7 +448,7 @@ function load(){
   };
 }
 
-/* ===== render() (verified pill inside message bubble; no verified in header) ===== */
+/* ===== render() — verified gem LEFT in bubble; verified pill in sidebar only ===== */
 function render(m,prepend=false){
   const d=new Date(m.timestamp);
   if(d.toDateString()!==lastDate){
@@ -453,21 +467,22 @@ function render(m,prepend=false){
     avatarHTML=grouped?`<div class="avatar-spacer"></div>`:`<img class="avatar" src="${user?.avatar||''}">`;
   }
 
-  const verifiedHTML = (m.role && m.role.toUpperCase()==='VERIFIED')
-    ? `<span class="verified-pill" title="Verified">
-         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 2l2.8 1.6L18 5l.2 2.8L21 10l-2.8 1.6L18 14l-3.2 1.6L12 18l-2.8 1.6L6 14l-1.2-2.4L2 10l2.8-2.2L6 5l3.2-1.4L12 2z" fill="#2ecc71"/></svg>
-         <span style="font-size:11px">VERIFIED</span>
-       </span>` : '';
+  // Left gem inside bubble (small) — only this is used inside message bubbles
+  const verifiedLeftHTML = (m.role && m.role.toUpperCase()==='VERIFIED')
+    ? `<span class="verified-left">${smallGemSVG()}</span>` : '';
 
   el.innerHTML=`
     ${avatarHTML}
     <div class="bubble">
-      ${!grouped&&!m.out?`<div class="sender">${m.name} ${verifiedHTML} <span class="badge ${m.role?m.role.toLowerCase():''}">${m.role||''}</span></div>`:''}
+      ${!grouped&&!m.out?`<div class="sender">${m.name} ${verifiedLeftHTML} <span class="badge ${m.role?m.role.toLowerCase():''}">${m.role||''}</span></div>`:''}
       ${m.text}
       <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
       <div class="read-by"></div>
     </div>`;
   prepend?chat.prepend(el):chat.appendChild(el);
+
+  // ensure lucide icons still render after dynamic injection (no lucide icons here but safe)
+  lucide.createIcons();
 
   if(m.out)receipts(el);
 
@@ -516,7 +531,7 @@ function isUserAtBottom(){ return chat.scrollTop + chat.clientHeight >= chat.scr
 function incrementUnread(){ unreadCount++; unreadCounter.textContent = unreadCount; unreadCounter.style.display = 'inline-block'; }
 function clearUnread(){ unreadCount = 0; unreadCounter.style.display = 'none'; unreadCounter.textContent = ''; }
 
-/* scroll handler - preserves load-on-top + unread behavior */
+/* scroll handler */
 chat.addEventListener('scroll', ()=>{
   if(chat.scrollTop===0) load();
   if(isUserAtBottom()){
@@ -615,7 +630,6 @@ function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"']/g, c=>({'&':
 
 function dispatchTypingFinished(name, text){ const ev = new CustomEvent('typingFinished', { detail: { name, text }}); window.dispatchEvent(ev); }
 
-/* default handler for typingFinished (creates messages but respects unread/scroll) */
 window.addEventListener('typingFinished', (e) => {
   const { name, text } = e.detail;
   const member = members.find(m => m.name === name);
@@ -628,12 +642,12 @@ window.addEventListener('typingFinished', (e) => {
   else chat.scrollTop = chat.scrollHeight;
 });
 
-/* Backwards-compatible helpers (if other parts call them) */
+/* Backwards compatibility helpers */
 function showTyping(member, text=''){ startTypingSimulation(member, text); }
 function hideTyping(member){ stopTyping(member.name || member); }
 function fakeMemberSend(member,text){ startTypingSimulation(member,text); }
 
-/* demo interval (keeps original rhythm but header-only) */
+/* demo interval */
 if(typeof members !== 'undefined'){
   if(!window._groupTypingSimInterval){
     window._groupTypingSimInterval = setInterval(()=>{
@@ -644,7 +658,7 @@ if(typeof members !== 'undefined'){
   }
 }
 
-/* send handler (preserves original behavior; cancels typers; scroll rules preserved) */
+/* send handler */
 send.onclick = () => {
   if(!input.value.trim()) return;
   const m = { name: 'You', role: 'VERIFIED', text: input.value, timestamp: Date.now(), out: true };
@@ -657,13 +671,13 @@ send.onclick = () => {
   if(isUserAtBottom()) chat.scrollTop = chat.scrollHeight;
 };
 
-/* incoming message hook (called by render) */
+/* handleIncomingMessage called by render */
 function handleIncomingMessage(m){
   cancelTypingExcept(m.name);
   if(!isUserAtBottom() && !(m.out && m.name === 'You')) incrementUnread();
 }
 
-/* Expose minimal API */
+/* expose API */
 window.groupTyping = { show: startTypingSimulation, hide: stopTyping, stopAll: ()=>{ for(const n of Array.from(activeTypers.keys())) stopTyping(n); if(groupTypingBar) groupTypingBar.style.display='none'; }, getActive: ()=>Array.from(activeTypers.keys()) };
 
 /* EOF */
