@@ -22,6 +22,7 @@ tailwind.config = {
         muted:'#a0a6b5',
         accent:'#2ecc71',
         bubble:'#262b38',
+        bubbleOut:'#2b3242',
         send:'#3b82f6'
       }
     }
@@ -30,11 +31,9 @@ tailwind.config = {
 </script>
 
 <style>
-/* ===== CHAT LAYOUT ===== */
 .msg{display:flex;gap:8px}
 .msg.out{justify-content:flex-end}
 
-/* ===== IMPROVED CHAT BUBBLES ===== */
 .bubble{
   padding:10px 14px;
   font-size:13px;
@@ -53,8 +52,8 @@ tailwind.config = {
 
 /* outgoing */
 .msg.out .bubble{
-  background:linear-gradient(135deg,#3b82f6,#2563eb);
-  color:#fff;
+  background:#2b3242;
+  border:1px solid #343a4a;
   border-top-right-radius:6px;
 }
 
@@ -77,32 +76,26 @@ tailwind.config = {
   bottom:8px;
   width:12px;
   height:12px;
-  background:#2563eb;
+  background:#2b3242;
   border-bottom-left-radius:12px;
 }
 
-/* grouped messages */
 .grouped.in .bubble::before,
 .grouped.out .bubble::before{display:none}
 
 .grouped.in .bubble{border-top-left-radius:6px}
 .grouped.out .bubble{border-top-right-radius:6px}
 
-/* sender + meta */
 .sender{font-size:11px;font-weight:600;color:#2ecc71;margin-bottom:4px}
 .time{
   font-size:10px;
-  opacity:.75;
+  opacity:.7;
   margin-top:6px;
   display:flex;
   justify-content:flex-end;
   gap:4px;
 }
 
-.date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
-.typing{font-size:11px;color:#a0a6b5;padding:6px}
-
-/* per-user read avatars */
 .read-by{
  display:flex;
  gap:4px;
@@ -116,7 +109,9 @@ tailwind.config = {
  border:1px solid #1c1f26;
 }
 
-/* badges */
+.date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
+.typing{font-size:11px;color:#a0a6b5;padding:6px}
+
 .badge{font-size:10px;padding:2px 6px;border-radius:999px}
 .badge.admin{background:#e74c3c}
 .badge.mod{background:#f39c12}
@@ -167,17 +162,12 @@ tailwind.config = {
     <button id="attach" onclick="file.click()"><i data-lucide="paperclip"></i></button>
     <input id="file" type="file" hidden>
     <button id="mic"><i data-lucide="mic"></i></button>
-
-    <!-- BLUE SEND ICON -->
-    <button id="send" class="hidden text-send">
-      <i data-lucide="send"></i>
-    </button>
+    <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
   </div>
 </footer>
 
 </main>
 
-<!-- SIDEBAR -->
 <aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full transition-transform z-50 flex flex-col">
   <div class="p-4 border-b border-border flex items-center justify-between">
     <strong>Members</strong>
@@ -196,11 +186,9 @@ tailwind.config = {
 <script>
 lucide.createIcons();
 
-/* ===== ONLINE COUNT ===== */
 let online=132;
 setInterval(()=>{online+=Math.random()>.5?1:-1;onlineCount.textContent=online},8000);
 
-/* ===== PRESENCE ===== */
 const ACTIVE_WINDOW=90000;
 const members=[
  {name:'Sam_Admin',role:'ADMIN',avatar:'https://randomuser.me/api/portraits/men/32.jpg',lastActive:Date.now()},
@@ -215,7 +203,6 @@ setInterval(()=>{
  renderMembers();
 },20000);
 
-/* ===== SIDEBAR ===== */
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
@@ -225,7 +212,6 @@ sidebar.addEventListener('touchend',e=>{
  if(e.changedTouches[0].clientX-sx>80)sidebar.classList.add('translate-x-full');
 });
 
-/* ===== MEMBERS LIST ===== */
 function renderMembers(){
  memberList.innerHTML='';
  const q=search.value.toLowerCase();
@@ -249,7 +235,6 @@ search.oninput=renderMembers;
 setInterval(renderMembers,5000);
 renderMembers();
 
-/* ===== CHAT ===== */
 const chat=document.getElementById('chat');
 const input=document.getElementById('input');
 const send=document.getElementById('send');
@@ -264,10 +249,7 @@ function addDate(d){chat.innerHTML+=`<div class="date-sep">${d}</div>`}
 
 function append(text,sender,out=false){
  const now=new Date();
- if(now.toDateString()!==lastDate){
-  addDate(now.toDateString());
-  lastDate=now.toDateString();
- }
+ if(now.toDateString()!==lastDate){addDate(now.toDateString());lastDate=now.toDateString()}
 
  const grouped=lastMeta&&lastMeta.sender===sender&&lastMeta.out===out&&(now-lastMeta.time)<120000;
  const role=members.find(m=>m.name===sender)?.role;
@@ -299,7 +281,6 @@ function append(text,sender,out=false){
  chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
 }
 
-/* ===== INPUT ===== */
 input.oninput=()=>{
  const has=input.value.trim();
  send.classList.toggle('hidden',!has);
