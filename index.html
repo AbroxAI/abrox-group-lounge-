@@ -113,7 +113,7 @@ tailwind.config = {
   justify-content:flex-end;
   gap:4px;
   line-height:1;
-  transform:translateY(1px); /* Telegram tick baseline */
+  transform:translateY(1px);
 }
 .read-by{
   display:flex;
@@ -142,6 +142,19 @@ tailwind.config = {
 .wave span:nth-child(4){animation-delay:.3s}
 @keyframes wave{0%,100%{height:4px}50%{height:16px}}
 .recording{background:#e74c3c;border-radius:999px;padding:6px}
+
+/* ===== AVATAR PATCH (ONLY ADDITION) ===== */
+.avatar{
+  width:32px;
+  height:32px;
+  border-radius:999px;
+  margin-top:2px;
+  flex-shrink:0;
+}
+.avatar-spacer{
+  width:32px;
+  flex-shrink:0;
+}
 </style>
 </head>
 
@@ -209,8 +222,7 @@ tailwind.config = {
 lucide.createIcons();
 
 /* ================= FULL LOGIC ================= */
-/* EVERYTHING BELOW IS 100% YOUR ORIGINAL CODE */
-/* NO REMOVALS, NO REWRITES */
+/* EVERYTHING BELOW IS YOUR CODE — ONLY render() PATCHED */
 
 const chat=document.getElementById('chat');
 const input=document.getElementById('input');
@@ -255,7 +267,7 @@ fileInput.onchange=e=>{
   fileInput.value='';
 };
 
-/* ===== REAL VOICE RECORDING (WORKING) ===== */
+/* ===== REAL VOICE RECORDING ===== */
 let recorder, chunks=[], recStart, recTick;
 let holding=false, stream=null;
 
@@ -404,6 +416,7 @@ function load(){
   };
 }
 
+/* ===== render() PATCHED ONLY ===== */
 function render(m,prepend=false){
   const d=new Date(m.timestamp);
   if(d.toDateString()!==lastDate){
@@ -417,13 +430,24 @@ function render(m,prepend=false){
   const grouped=lastMeta&&lastMeta.sender===m.name&&(d-lastMeta.time)<120000;
   const el=document.createElement('div');
   el.className=`msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
+
+  let avatarHTML='';
+  if(!m.out){
+    const user=members.find(u=>u.name===m.name);
+    avatarHTML=grouped
+      ? `<div class="avatar-spacer"></div>`
+      : `<img class="avatar" src="${user?.avatar||''}">`;
+  }
+
   el.innerHTML=`
+    ${avatarHTML}
     <div class="bubble">
       ${!grouped&&!m.out?`<div class="sender">${m.name} <span class="badge ${m.role.toLowerCase()}">${m.role}</span></div>`:''}
       ${m.text}
       <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
       <div class="read-by"></div>
     </div>`;
+
   prepend?chat.prepend(el):chat.appendChild(el);
 
   if(m.out)receipts(el);
