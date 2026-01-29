@@ -16,12 +16,28 @@
 
 <style>
 /* ===== base chat visuals (preserved) ===== */
+:root{--muted:#a0a6b5;--bubble:#262b38;--bubbleOut:#2b3242;--accent:#2ecc71}
+body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
+
+/* message layout */
 .msg{display:flex;gap:8px;margin-bottom:8px}
 .grouped{margin-top:-6px}
 .msg.out{justify-content:flex-end}
-.bubble{padding:8px 14px 7px;font-size:13px;line-height:1.45;max-width:78%;position:relative;box-shadow:0 2px 8px rgba(0,0,0,.18);overflow-wrap:anywhere}
-.msg.in .bubble{background:#262b38;border-radius:6px 18px 18px 6px}
-.msg.out .bubble{background:#2b3242;border:1px solid #343a4a;border-radius:18px 6px 6px 18px}
+
+/* bubbles: lighten weight to avoid overly-bold look */
+.bubble{
+  padding:8px 14px 7px;
+  font-size:13px;
+  line-height:1.45;
+  max-width:78%;
+  position:relative;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);
+  font-weight:400;           /* reduce boldness for bubble text */
+  color:#e6eef3;
+  overflow-wrap:anywhere;
+}
+.msg.in .bubble{background:var(--bubble);border-radius:6px 18px 18px 6px}
+.msg.out .bubble{background:var(--bubbleOut);border:1px solid #343a4a;border-radius:18px 6px 6px 18px}
 .grouped.in .bubble{border-top-left-radius:18px}
 .grouped.out .bubble{border-top-right-radius:18px}
 
@@ -30,13 +46,28 @@
 .msg.out .bubble::before{content:'';position:absolute;right:-7px;bottom:6px;width:14px;height:14px;background:inherit;transform:rotate(45deg);border-bottom-left-radius:14px}
 .grouped.in .bubble::before,.grouped.out .bubble::before{display:none}
 
-/* meta */
-.sender{font-size:11px;font-weight:600;color:#c7cbd4;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+/* meta: lighter sender weight and color to reduce boldness */
+.sender{
+  font-size:11px;
+  font-weight:500;            /* reduced from 600 */
+  color:#d1d5db;              /* softer than pure white */
+  margin-bottom:4px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+/* small tweaks to sender name spacing and alignment */
+.sender .name { font-weight:550; letter-spacing:0.1px; }
+
+/* time/read area */
 .time{font-size:10px;opacity:.7;margin-top:6px;display:flex;justify-content:flex-end;gap:4px;line-height:1;transform:translateY(1px)}
 .read-by{display:flex;gap:4px;margin-top:4px;justify-content:flex-end}
 .read-by img{width:13px;height:13px;border-radius:999px;border:1px solid #1c1f26}
-.date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
-.badge{font-size:10px;padding:2px 6px;border-radius:999px}
+.date-sep{text-align:center;font-size:11px;color:var(--muted);margin:12px 0}
+
+/* badges */
+.badge{font-size:10px;padding:2px 6px;border-radius:999px;font-weight:600}
 .badge.admin{background:#e74c3c}
 .badge.mod{background:#f39c12}
 .badge.verified{background:#2ecc71;color:#05110c}
@@ -51,18 +82,26 @@
   background:linear-gradient(180deg,#0f5f3b,#0b3e2a);
   color:#c7f3d9;
   font-size:11px;
-  font-weight:700;
+  font-weight:600;
   line-height:1;
   box-shadow:0 1px 0 rgba(0,0,0,.25);
   margin-left:6px;
   vertical-align:middle;
 }
-.verified-bubble i[data-lucide="gem"]{ width:14px; height:14px; stroke:#b8f1c8; stroke-width:1.6; }
+.verified-bubble i[data-lucide="gem"]{ width:14px; height:14px; stroke:#b8f1c8; stroke-width:1.6; display:inline-block }
 
 /* ===== SIDEBAR VERIFIED PILL (text-only) ===== */
 .verified-pill-sidebar{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:linear-gradient(180deg,#2ecc71,#1e8b4a);color:#03140b;font-weight:700;font-size:11px;box-shadow:0 1px 0 rgba(0,0,0,.25)}
 
-/* ===== GROUP TYPING BAR - positioned absolute to prevent header reflow ===== */
+/* ===== AVATAR alignment fix (avoid top offset) ===== */
+.avatar{
+  width:32px;height:32px;border-radius:999px;flex-shrink:0;
+  margin:0; /* remove previous top offset */
+  display:block; /* ensures consistent alignment */
+  object-fit:cover;
+}
+
+/* ===== GROUP TYPING BAR - absolute to prevent header reflow ===== */
 header { position: relative; }
 .group-typing-bar{
   position:absolute;
@@ -82,12 +121,13 @@ header { position: relative; }
   background:rgba(255,255,255,0.02);
   border-radius:999px;
   font-size:13px;
-  color:#a0a6b5;
+  color:var(--muted);
   transition:opacity .12s ease;
   box-shadow: 0 2px 6px rgba(0,0,0,.15);
 }
-.group-typing-bar .dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;box-shadow:0 0 6px rgba(46,204,113,.14);flex-shrink:0}
-.group-typing-bar .typing-summary{overflow:hidden;text-overflow:ellipsis;display:block;color:#2ecc71;font-weight:600}
+/* make typing summary noticeable but not too heavy */
+.group-typing-bar .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px rgba(46,204,113,.14);flex-shrink:0}
+.group-typing-bar .typing-summary{overflow:hidden;text-overflow:ellipsis;display:block;color:var(--accent);font-weight:500}
 @media (max-width:420px){ .group-typing-bar{ max-width:58%; font-size:12px; right:48px; } }
 
 /* hide header members line when typing active (prevents reflow) */
@@ -111,7 +151,7 @@ header > .flex:first-child { min-width:0; }
       <div class="flex gap-3 items-start" id="headerLeft">
         <img src="assets/logo.png" class="w-8 h-8" alt="logo">
         <div style="min-width:0">
-          <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
+          <div class="text-sm font-semibold" style="font-weight:600;color:#fff">Abrox Binary Bot – Private Lounge</div>
           <div class="flex items-center gap-1 text-xs text-muted">
             <i data-lucide="lock" class="w-3 h-3"></i>
             <span>Private Group</span>
@@ -461,174 +501,4 @@ const MAX_VISIBLE_NAMES = 3;
 /* unread */
 let unreadCount = 0;
 function isUserAtBottom(){ return chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 10; }
-function incrementUnread(){ unreadCount++; unreadCounter.textContent = unreadCount; unreadCounter.style.display = 'inline-block'; }
-function clearUnread(){ unreadCount = 0; unreadCounter.style.display = 'none'; unreadCounter.textContent = ''; }
-
-/* scroll handler */
-chat.addEventListener('scroll', ()=>{
-  if(chat.scrollTop===0) load();
-  if(isUserAtBottom()){
-    resumeTypingAfterPause();
-    clearUnread();
-  } else {
-    pauseTypingForContextChange();
-  }
-});
-unreadCounter.addEventListener('click', ()=>{ chat.scrollTop = chat.scrollHeight; clearUnread(); });
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden) pauseTypingForContextChange(); else resumeTypingAfterPause(); });
-
-function isNightTime(){ const hr=new Date().getHours(); return (hr<7 || hr>=22); }
-
-function startTypingSimulation(member, text='', options={}){
-  if(activeTypers.has(member.name)) return;
-  const role=(member.role||'').toUpperCase();
-  const isAdmin = ADMIN_ROLES.has(role);
-
-  const entry = { member, state:'starting', timers: [], paused: false, originalText: text, startedAt: Date.now(), urgent: !!options.urgent };
-  activeTypers.set(member.name, entry);
-  updateTypingHeader();
-
-  const wordCount = (text && text.trim()) ? text.trim().split(/\s+/).length : Math.max(1, Math.floor(Math.random()*8)+1);
-  let wpm = TYPING_BASE_WPM;
-  if(/[!?]{2,}/.test(text)) wpm *= 1.15;
-  if(text && text.includes('http')) wpm *= 0.9;
-  if(options.urgent) wpm *= 1.5;
-  if(isNightTime()) wpm /= NIGHT_SLOW_FACTOR;
-  if(isAdmin) wpm /= ADMIN_PAUSE_MULTIPLIER;
-
-  const minutes = wordCount / wpm;
-  const totalMs = Math.max(400, Math.floor(minutes * 60 * 1000));
-  let elapsed = 0;
-
-  const startDelay = 200 + Math.random()*900;
-  entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, startDelay));
-  elapsed += startDelay;
-
-  const chunks = 2 + Math.floor(Math.random()*3);
-  for(let i=0;i<chunks;i++){
-    const chunkMs = Math.floor(totalMs/chunks * (0.7 + Math.random()*0.6));
-    entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, elapsed));
-    elapsed += chunkMs;
-
-    if(i < chunks-1){
-      const pauseMs = 150 + Math.random()*(isAdmin?900:500);
-      entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='paused'; updateTypingHeader();
-        setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, 150 + Math.random()*400);
-      }, elapsed));
-      elapsed += pauseMs;
-    }
-  }
-
-  const typoChance = isAdmin?0.35:0.12;
-  if(Math.random() < typoChance){
-    const typoDelay = Math.max(200, Math.min(totalMs-100, 300 + Math.random()*(totalMs-300)));
-    entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='typo'; updateTypingHeader();
-      setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, 250 + Math.random()*500);
-    }, typoDelay));
-  }
-
-  let finishDelay = 150 + Math.random()*600;
-  if(text && text.includes('http')) finishDelay += 400 + Math.random()*800;
-
-  entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='sending'; updateTypingHeader(); dispatchTypingFinished(member.name, text); setTimeout(()=>{ stopTyping(member.name); }, 300 + Math.random()*500); }, elapsed + finishDelay));
-
-  updateTypingHeader();
-}
-
-/* stop/pause/resume helpers */
-function stopTyping(name){ const entry = activeTypers.get(name); if(!entry) return; entry.timers.forEach(t=>clearTimeout(t)); activeTypers.delete(name); updateTypingHeader(); }
-function cancelTypingExcept(keepName=null){ for(const name of Array.from(activeTypers.keys())){ if(name !== keepName) stopTyping(name); } }
-function pauseTypingForContextChange(){ for(const [name, entry] of activeTypers.entries()){ if(!entry.paused){ entry.paused = true; entry.timers.forEach(t=>clearTimeout(t)); entry.timers = []; } } if(groupTypingBar) groupTypingBar.style.display = 'none'; mainHeader.classList.remove('typing-active'); }
-function resumeTypingAfterPause(){ for(const [name, entry] of activeTypers.entries()){ if(entry.paused){ entry.paused = false; entry.state = 'typing'; updateTypingHeader(); const resumeDelay = 150 + Math.random()*600; const t = setTimeout(()=>{ dispatchTypingFinished(name, entry.originalText); stopTyping(name); }, resumeDelay); entry.timers.push(t); } } if(activeTypers.size && groupTypingBar) groupTypingBar.style.display = ''; }
-
-/* throttle DOM updates to stop header reflow/glitch */
-let headerRaf = null;
-function updateTypingHeader(){
-  if(!groupTypingBar) return;
-  if(headerRaf) cancelAnimationFrame(headerRaf);
-  headerRaf = requestAnimationFrame(()=>{
-    const typers = Array.from(activeTypers.values()).map(e=>e.member);
-    if(typers.length === 0){
-      groupTypingBar.style.display = 'none';
-      groupTypingBar.innerHTML = `<div class="dot"></div><div class="typing-summary"></div>`;
-      mainHeader.classList.remove('typing-active');
-      return;
-    }
-
-    // admins first
-    typers.sort((a,b)=>{
-      const pa = ADMIN_ROLES.has((a.role||'').toUpperCase())?0:1;
-      const pb = ADMIN_ROLES.has((b.role||'').toUpperCase())?0:1;
-      if(pa!==pb) return pa-pb;
-      return 0;
-    });
-
-    const buildName = m => `<strong class="typing-name">${escapeHtml(m.name)}</strong>`;
-    let html = '';
-    if(typers.length === 1) html = `${buildName(typers[0])} is typing…`;
-    else if(typers.length <= MAX_VISIBLE_NAMES) html = `${typers.map(buildName).join(', ')} are typing…`;
-    else html = `${typers.length} people are typing…`;
-
-    groupTypingBar.innerHTML = `<div class="dot"></div><div class="typing-summary">${html}</div>`;
-    groupTypingBar.style.display = '';
-    // hide only the members/online line while typing is visible (prevents glitching/shift)
-    mainHeader.classList.add('typing-active');
-  });
-}
-
-/* dispatch finished -> render message */
-function dispatchTypingFinished(name, text){ const ev = new CustomEvent('typingFinished', { detail: { name, text }}); window.dispatchEvent(ev); }
-window.addEventListener('typingFinished', (e) => {
-  const { name, text } = e.detail;
-  const member = members.find(m => m.name === name);
-  if(!member){ stopTyping(name); return; }
-  cancelTypingExcept(name);
-  const m = { name: member.name, role: member.role, text: text || '…', timestamp: Date.now(), out: false };
-  save(m); render(m);
-  if(!isUserAtBottom()) incrementUnread();
-  else chat.scrollTop = chat.scrollHeight;
-});
-
-/* backwards-compatible show/hide typing helpers */
-function showTyping(member, text=''){ startTypingSimulation(member, text); }
-function hideTyping(member){ stopTyping(member.name || member); }
-function fakeMemberSend(member,text){ startTypingSimulation(member,text); }
-
-/* demo simulation interval (keeps original behavior) */
-if(typeof members !== 'undefined'){
-  if(!window._groupTypingSimInterval){
-    window._groupTypingSimInterval = setInterval(()=>{
-      if(!members || members.length === 0) return;
-      const m = members[Math.floor(Math.random()*members.length)];
-      startTypingSimulation(m, 'Typing indicator now works per-group ✅');
-    }, 16000);
-  }
-}
-
-/* SEND handler (unchanged) */
-send.onclick = ()=>{
-  if(!input.value.trim())return;
-  const m={name:'You',role:'VERIFIED',text:input.value,timestamp:Date.now(),out:true};
-  save(m);render(m);
-  input.value='';
-  send.classList.add('hidden');
-  mediaBtn.classList.remove('hidden');
-  micBtn.classList.remove('hidden');
-  cancelTypingExcept('You');
-  if(isUserAtBottom()) chat.scrollTop = chat.scrollHeight;
-};
-
-/* handle incoming message: stops typing for that member and increments unread if user not at bottom */
-function handleIncomingMessage(m){
-  cancelTypingExcept(m.name);
-  if(!isUserAtBottom() && !(m.out && m.name === 'You')) incrementUnread();
-}
-
-/* helper */
-function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>'"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-/* final icon render for static items */
-lucide.createIcons();
-</script>
-</body>
-</html>
+function incremen
