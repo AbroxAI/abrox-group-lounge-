@@ -1,195 +1,310 @@
-<!DOCTYPE html>  <html lang="en">  
-<head>  
-<meta charset="UTF-8" />  
-<title>Abrox – Private Lounge (fixed)</title>  
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">  
-<meta name="theme-color" content="#1c1f26">  
-<meta name="apple-mobile-web-app-capable" content="yes">  
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">  
-<link rel="manifest" href="manifest.json">  <script src="https://cdn.tailwindcss.com"></script>  <script>  
-tailwind.config = {  
-  theme: {  
-    extend: {  
-      colors: {  
-        bg:'#1c1f26',  
-        panel:'#232833',  
-        border:'#343a4a',  
-        muted:'#a0a6b5',  
-        accent:'#2ecc71',  
-        admin:'#f1c40f',  
-        bubble:'#262b38'  
-      }  
-    }  
-  }  
-}  
-</script>  <style>  
-html, body { height:100%; width:100%; }  
-#chatMessages { scroll-behavior:smooth; }  
-.caret-accent { caret-color:#2ecc71; }  
-  
-/* Telegram-style chat bubbles */  
-.msg { display:flex; gap:8px; align-items:flex-end; }  
-.msg.outgoing { justify-content:flex-end; }  
-.msg.outgoing .bubble { background:rgba(46,204,113,0.12); border-radius:14px 14px 4px 14px; }  
-.msg.incoming { justify-content:flex-start; }  
-.msg.incoming .bubble { background:var(--bubble,#262b38); border-radius:14px 14px 14px 4px; }  
-.msg .bubble { padding:10px 12px; font-size:13px; line-height:1.25; max-width:80%; position:relative; }  
-.msg .time { font-size:10px; color:var(--muted,#a0a6b5); position:absolute; right:8px; bottom:4px; }  
-  
-/* Telegram-style pinned/system message */  
-.system-wrap { width:100%; display:flex; justify-content:center; padding:8px 0; }  
-.system { max-width:92%; text-align:center; color:var(--muted,#a0a6b5); }  
-.system .title { color:var(--admin,#f1c40f); font-weight:600; margin-bottom:4px; }  
-.system-divider { height:1px; background:transparent; border-bottom:1px solid #30353f; margin:6px auto 0; }  
-.lucide { display:inline-block; }  
-</style>  <script src="https://unpkg.com/lucide@latest"></script>  </head>  <body class="bg-bg text-white min-h-[100dvh]">  
-<div class="flex h-[100dvh] overflow-hidden">  <!-- MAIN CHAT -->  <main class="flex flex-col flex-1 min-h-0 border-r border-border">    <!-- HEADER -->    <header class="bg-panel border-b border-border px-4 py-3 shrink-0">  
-    <div class="flex justify-between items-start">  
-      <div class="flex gap-4">  
-        <i data-lucide="arrow-left" class="w-5 h-5 text-muted mt-1"></i>  
-        <img src="assets/logo.png" class="w-10 h-10 rounded-full" />  
-        <div class="space-y-1">  
-          <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>  
-          <div class="text-xs text-muted flex items-center gap-1">  
-            <i data-lucide="lock" class="w-3.5 h-3.5 text-muted inline-block"></i>  
-            <span>Private Group</span>  
-          </div>  
-          <div class="text-xs text-muted">  
-            Members: 4,872 • Online: <span id="onlineCount">132</span>  
-          </div>  
-        </div>  
-      </div>  
-    </div>  
-  </header>    <!-- CHAT -->    <section id="chatMessages" class="flex-1 min-h-0 px-3 sm:px-4 overflow-y-auto space-y-4 py-4 pb-32"></section>    <!-- INPUT -->    <footer class="bg-panel border-t border-border px-3 py-3 pb-[env(safe-area-inset-bottom)] sticky bottom-0 z-50">  
-    <div class="flex items-center gap-3 bg-bg rounded-xl px-4 py-2 min-h-[48px]">  
-      <!-- Emoji -->  
-      <button class="text-muted"><i data-lucide="smile" class="w-5 h-5"></i></button>  
-      <!-- Input -->  
-      <input id="chatInput" class="flex-1 bg-transparent outline-none text-sm caret-accent" placeholder="Message">  
-      <!-- Attach -->  
-      <button class="text-muted"><i data-lucide="paperclip" class="w-5 h-5"></i></button>  
-      <!-- Camera -->  
-      <button class="text-muted"><i data-lucide="camera" class="w-5 h-5"></i></button>  
-      <!-- Mic / Send -->  
-      <div class="relative w-10 h-10 shrink-0">  
-        <button id="micBtn" class="absolute inset-0 rounded-full bg-white text-bg flex items-center justify-center">  
-          <i data-lucide="mic" class="w-5 h-5"></i>  
-        </button>  
-        <button id="sendBtn" class="absolute inset-0 hidden rounded-full bg-accent text-white flex items-center justify-center">  
-          <i data-lucide="send" class="w-5 h-5"></i>  
-        </button>  
-      </div>  
-    </div>  
-  </footer>  </main>  <!-- DESKTOP SIDEBAR -->  <aside class="hidden md:block w-80 bg-panel px-4 py-5 border-l border-border">  
-  <div class="text-xs text-muted mb-3">ADMINS</div>  
-  <div class="flex items-center gap-3 mb-3">  
-    <img src="https://i.pravatar.cc/32?img=12" class="w-8 h-8 rounded-full">  
-    <div class="text-sm">Sam_Admin</div>  
-    <span class="ml-auto w-2 h-2 bg-accent rounded-full"></span>  
-  </div>  
-  <div class="flex items-center gap-3">  
-    <img src="https://i.pravatar.cc/32?img=24" class="w-8 h-8 rounded-full">  
-    <div class="text-sm">Alex_Admin</div>  
-    <span class="ml-auto w-2 h-2 bg-muted rounded-full"></span>  
-  </div>  
-</aside>  </div>  <!-- INSTALL BANNERS -->  <div id="installBanner" class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 bg-panel border border-border px-4 py-2 rounded-xl flex items-center gap-3 z-50">  
-  <span class="text-sm">📲 Install Abrox App</span>  
-  <button id="installBtn" class="bg-accent text-bg text-xs px-3 py-1 rounded-lg">Install</button>  
-</div>  <div id="iosInstall" class="hidden fixed inset-0 bg-black/70 z-50 flex items-end justify-center">  
-  <div class="bg-panel rounded-t-xl p-4 w-full max-w-md">  
-    <div class="text-sm mb-2 font-semibold">Install Abrox App</div>  
-    <p class="text-xs text-muted mb-3">Tap <b>Share</b> then <b>Add to Home Screen</b></p>  
-    <button onclick="closeIOSInstall()" class="w-full bg-accent text-bg py-2 rounded-lg text-sm">Got it</button>  
-  </div>  
-</div>  <script>  
-document.addEventListener('DOMContentLoaded', ()=>{  
-  lucide.createIcons();  
-    
-  const chat = document.getElementById('chatMessages');  
-  const input = document.getElementById('chatInput');  
-  const sendBtn = document.getElementById('sendBtn');  
-  const micBtn = document.getElementById('micBtn');  
-  const installBanner = document.getElementById('installBanner');  
-  const installBtn = document.getElementById('installBtn');  
-  const iosInstall = document.getElementById('iosInstall');  
-  const onlineCount = document.getElementById('onlineCount');  
-  
-  let online = parseInt(onlineCount.textContent)||0;  
-  setInterval(()=>{online+=Math.random()>.5?1:-1; onlineCount.textContent=online;},8000);  
-  
-  /* Telegram-style pinned/system message */  
-  (function(){  
-    const r = document.createElement('div');  
-    r.className = 'system-wrap';  
-    r.innerHTML = `  
-      <div class="system">  
-        <div class="title">📌 Group Rules</div>  
-        <div>New members are read-only until verified</div>  
-        <div>Admins DM individually</div>  
-        <div>No screenshots in chat</div>  
-        <div>Ignore unsolicited messages</div>  
-        <div class="system-divider"></div>  
-      </div>`;  
-    chat.appendChild(r);  
-  })();  
-  
-  /* Mic / Send toggle */  
-  function updateSend(){  
-    const hasText = input.value.trim().length > 0;  
-    micBtn.classList.toggle('hidden', hasText);  
-    sendBtn.classList.toggle('hidden', !hasText);  
-  }  
-  input.addEventListener('input', updateSend);  
-  input.addEventListener('focus', updateSend);  
-  input.addEventListener('keydown', (e)=>{  
-    if(e.key==='Enter' && !e.shiftKey){  
-      e.preventDefault();  
-      if(!sendBtn.classList.contains('hidden')) sendBtn.click();  
-    }  
-  });  
-  
-  sendBtn.addEventListener('click', ()=>{  
-    if(!input.value.trim()) return;  
-    const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});  
-    const d = document.createElement('div');  
-    d.className = 'msg outgoing';  
-    d.innerHTML = `<div class="bubble"><div class="content">${escapeHtml(input.value)}</div><span class="time">${time}</span></div>`;  
-    chat.appendChild(d);  
-    input.value=''; updateSend(); chat.scrollTop=chat.scrollHeight;  
-    if(window.lucide && lucide.createIcons) lucide.createIcons();  
-  });  
-  
-  /* Android install */  
-  let deferredPrompt = null;  
-  window.addEventListener('beforeinstallprompt', e=>{  
-    e.preventDefault(); deferredPrompt=e; installBanner.classList.remove('hidden');  
-  });  
-  installBtn.addEventListener('click', async ()=>{  
-    if(!deferredPrompt) return;  
-    deferredPrompt.prompt();  
-    await deferredPrompt.userChoice;  
-    installBanner.classList.add('hidden');  
-    deferredPrompt=null;  
-  });  
-  
-  /* iOS install overlay */  
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;  
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);  
-  if(isIOS && !isStandalone && iosInstall){ setTimeout(()=>iosInstall.classList.remove('hidden'), 2000); }  
-  window.closeIOSInstall = function(){ iosInstall.classList.add('hidden'); }  
-  
-  /* Service Worker */  
-  if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }  
-  
-  /* Utility: escape HTML */  
-  function escapeHtml(str){  
-    return String(str)  
-      .replace(/&/g,'&amp;')  
-      .replace(/</g,'&lt;')  
-      .replace(/>/g,'&gt;')  
-      .replace(/"/g,'&quot;')  
-      .replace(/'/g,'&#039;');  
-  }  
-});  
-</script>  </body>  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Abrox – Private Lounge</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c1f26">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Abrox">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="emoji-pack.js" defer></script>
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        bg:'#1c1f26',
+        panel:'#232833',
+        border:'#343a4a',
+        muted:'#a0a6b5',
+        accent:'#2ecc71',
+        bubble:'#262b38',
+        bubbleOut:'#2b3242',
+        send:'#3b82f6'
+      }
+    }
+  }
+}
+</script>
+
+<style>
+.msg{display:flex;gap:8px}
+.msg.out{justify-content:flex-end}
+.bubble{padding:10px 14px;font-size:13px;line-height:1.45;max-width:78%;border-radius:16px;position:relative;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.msg.in .bubble{background:#262b38;border-top-left-radius:6px}
+.msg.out .bubble{background:#2b3242;border:1px solid #343a4a;border-top-right-radius:6px}
+.msg.in .bubble::before{content:'';position:absolute;left:-6px;bottom:8px;width:12px;height:12px;background:#262b38;border-bottom-right-radius:12px}
+.msg.out .bubble::before{content:'';position:absolute;right:-6px;bottom:8px;width:12px;height:12px;background:#2b3242;border-bottom-left-radius:12px}
+.grouped.in .bubble::before,.grouped.out .bubble::before{display:none}
+.grouped.in .bubble{border-top-left-radius:6px}
+.grouped.out .bubble{border-top-right-radius:6px}
+.sender{font-size:11px;font-weight:600;color:#2ecc71;margin-bottom:4px}
+.time{font-size:10px;opacity:.7;margin-top:6px;display:flex;justify-content:flex-end;gap:4px}
+.read-by{display:flex;gap:4px;margin-top:4px;justify-content:flex-end}
+.read-by img{width:13px;height:13px;border-radius:999px;border:1px solid #1c1f26}
+.date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
+.typing{font-size:11px;color:#a0a6b5;padding:6px}
+.badge{font-size:10px;padding:2px 6px;border-radius:999px}
+.badge.admin{background:#e74c3c}
+.badge.mod{background:#f39c12}
+.badge.verified{background:#2ecc71}
+</style>
+</head>
+
+<body class="bg-bg text-white h-[100dvh] overflow-hidden">
+<div class="flex h-full">
+
+<main class="flex flex-col flex-1 border-r border-border">
+
+<header class="bg-panel border-b border-border px-4 py-3 flex items-center justify-between">
+  <div class="flex gap-3 items-center">
+    <img src="assets/logo.png" class="w-8 h-8">
+    <div>
+      <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
+      <div class="flex items-center gap-1 text-xs text-muted">
+        <i data-lucide="lock" class="w-3 h-3"></i>
+        <span>Private Group</span>
+      </div>
+      <div class="text-xs text-muted">
+        Members: 4,872 • Online: <span id="onlineCount">132</span><br>
+        Demo discussion · Verification required
+      </div>
+    </div>
+  </div>
+  <button id="membersBtn"><i data-lucide="users"></i></button>
+</header>
+
+<section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-2 scroll-smooth">
+  <div class="text-center text-muted text-sm">
+    📌 <strong>Group Rules</strong><br>
+    New members are read-only until verified<br>
+    Admins DM individually<br>
+    No screenshots in chat<br>
+    Ignore unsolicited messages
+  </div>
+</section>
+
+<div id="typing" class="typing hidden">Someone is typing…</div>
+
+<footer class="bg-panel border-t border-border px-4 py-3">
+  <div class="flex items-center bg-bg rounded-full px-3 py-2 gap-2">
+
+    <!-- EMOJI (LEFT) -->
+    <button id="emojiBtn">
+      <i data-lucide="smile"></i>
+    </button>
+
+    <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
+
+    <!-- MEDIA (RIGHT) -->
+    <button id="mediaBtn">
+      <i data-lucide="paperclip"></i>
+    </button>
+
+    <!-- MIC (RIGHT) -->
+    <button id="micBtn">
+      <i data-lucide="mic"></i>
+    </button>
+
+    <!-- SEND -->
+    <button id="send" class="hidden text-send">
+      <i data-lucide="send"></i>
+    </button>
+
+  </div>
+</footer>
+
+</main>
+
+<aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full transition-transform z-50 flex flex-col">
+  <div class="p-4 border-b border-border flex items-center justify-between">
+    <strong>Members</strong>
+    <button id="closeSidebar"><i data-lucide="x"></i></button>
+  </div>
+  <div id="memberList" class="flex-1 p-3 space-y-4 overflow-y-auto"></div>
+</aside>
+
+</div>
+
+<script>
+lucide.createIcons();
+
+/* ================= FULL LOGIC ================= */
+
+const chat=document.getElementById('chat');
+const input=document.getElementById('input');
+const send=document.getElementById('send');
+const emojiBtn=document.getElementById('emojiBtn');
+const mediaBtn=document.getElementById('mediaBtn');
+const micBtn=document.getElementById('micBtn');
+const sidebar=document.getElementById('sidebar');
+const membersBtn=document.getElementById('membersBtn');
+const closeSidebar=document.getElementById('closeSidebar');
+const memberList=document.getElementById('memberList');
+const onlineCount=document.getElementById('onlineCount');
+
+/* EMOJI */
+emojiBtn.onclick=()=>EmojiPack.openPicker(input);
+
+/* INPUT UI TOGGLE */
+input.oninput=()=>{
+  const hasText = input.value.trim().length > 0;
+  send.classList.toggle('hidden', !hasText);
+  mediaBtn.classList.toggle('hidden', hasText);
+  micBtn.classList.toggle('hidden', hasText);
+};
+
+/* MEMBERS */
+const ACTIVE=90000;
+
+const ADMIN={ name:'Profit Hunter 🌐', role:'ADMIN', avatar:'assets/admin.jpg' };
+const MOD={ name:'Kitty Star ⭐', role:'MOD', avatar:'assets/mod.jpg' };
+
+const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
+  name:`Member_${i+1}`,
+  role:'VERIFIED',
+  avatar:`https://randomuser.me/api/portraits/men/${i+20}.jpg`,
+  lastActive:Date.now()-Math.random()*120000
+}))];
+
+const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
+
+function renderMembers(){
+  memberList.innerHTML='';
+  members.forEach(m=>{
+    memberList.innerHTML+=`
+    <div class="flex gap-3 items-center">
+      <div class="relative">
+        <img src="${m.avatar}" class="w-9 h-9 rounded-full">
+        <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${isOnline(m)?'bg-green-500':'bg-gray-500'}"></span>
+      </div>
+      <div>
+        <div class="text-sm">${m.name}</div>
+        <span class="badge ${m.role.toLowerCase()}">${m.role}</span>
+      </div>
+    </div>`;
+  });
+  onlineCount.textContent=members.filter(isOnline).length;
+}
+
+setInterval(()=>{
+  members[Math.floor(Math.random()*members.length)].lastActive=Date.now();
+  renderMembers();
+},8000);
+
+renderMembers();
+
+membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
+closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
+
+/* DB */
+const DB='AbroxDB',STORE='messages',PAGE=20;
+let db,offset=0,loading=false,lastMeta=null,lastDate='';
+
+indexedDB.open(DB,1).onupgradeneeded=e=>{
+  e.target.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});
+};
+
+indexedDB.open(DB,1).onsuccess=e=>{
+  db=e.target.result;
+  seed();
+  load();
+};
+
+function save(m){
+  db.transaction(STORE,'readwrite').objectStore(STORE).add(m);
+}
+
+function seed(){
+  const st=db.transaction(STORE).objectStore(STORE);
+  st.count().onsuccess=e=>{
+    if(e.target.result) return;
+    [
+      {...ADMIN,text:'Welcome to Abrox Private Lounge.',timestamp:Date.now()-86400000,out:false},
+      {...MOD,text:'Please read pinned rules before chatting.',timestamp:Date.now()-86300000,out:false}
+    ].forEach(save);
+  };
+}
+
+function load(){
+  if(loading) return;
+  loading=true;
+  db.transaction(STORE).objectStore(STORE).getAll().onsuccess=e=>{
+    const all=e.target.result.sort((a,b)=>a.timestamp-b.timestamp);
+    const slice=all.slice(Math.max(0,all.length-offset-PAGE),all.length-offset);
+    slice.forEach(m=>render(m,true));
+    offset+=PAGE;
+    loading=false;
+  };
+}
+
+function render(m,prepend=false){
+  const d=new Date(m.timestamp);
+
+  if(d.toDateString()!==lastDate){
+    const sep=document.createElement('div');
+    sep.className='date-sep';
+    sep.textContent=d.toDateString();
+    prepend?chat.prepend(sep):chat.appendChild(sep);
+    lastDate=d.toDateString();
+  }
+
+  const grouped=lastMeta&&lastMeta.sender===m.name&&(d-lastMeta.time)<120000;
+
+  const el=document.createElement('div');
+  el.className=`msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
+  el.innerHTML=`
+  <div class="bubble">
+    ${!grouped&&!m.out?`<div class="sender">${m.name} <span class="badge ${m.role.toLowerCase()}">${m.role}</span></div>`:''}
+    ${m.text}
+    <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+    <div class="read-by"></div>
+  </div>`;
+
+  prepend?chat.prepend(el):chat.appendChild(el);
+  if(m.out) receipts(el);
+
+  lastMeta={sender:m.name,time:d};
+}
+
+function receipts(el){
+  const t=el.querySelector('.time');
+  const r=el.querySelector('.read-by');
+
+  setTimeout(()=>t.textContent=`✓✓ ${t.textContent.slice(2)}`,600);
+
+  setTimeout(()=>{
+    t.textContent=`✓✓ 👀 ${t.textContent.slice(2)}`;
+    [ADMIN,MOD].forEach(u=>{
+      const img=document.createElement('img');
+      img.src=u.avatar;
+      img.title=u.name;
+      r.appendChild(img);
+    });
+  },1400);
+}
+
+send.onclick=()=>{
+  if(!input.value.trim())return;
+  const m={ name:'You', role:'VERIFIED', text:input.value, timestamp:Date.now(), out:true };
+  save(m);
+  render(m);
+  input.value='';
+  send.classList.add('hidden');
+  mediaBtn.classList.remove('hidden');
+  micBtn.classList.remove('hidden');
+};
+
+chat.addEventListener('scroll',()=>{ if(chat.scrollTop===0) load(); });
+</script>
+</body>
 </html>
