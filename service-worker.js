@@ -7,7 +7,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
 
-<!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -99,21 +98,15 @@ tailwind.config = {
   <div class="flex items-center bg-bg rounded-full px-3 py-2 gap-2">
 
     <!-- EMOJI (LEFT) -->
-    <button id="emojiBtn">
-      <i data-lucide="smile"></i>
-    </button>
+    <button id="emojiBtn"><i data-lucide="smile"></i></button>
 
     <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
 
-    <!-- MEDIA (RIGHT) -->
-    <button id="mediaBtn">
-      <i data-lucide="paperclip"></i>
-    </button>
-
-    <!-- MIC (RIGHT) -->
-    <button id="micBtn">
-      <i data-lucide="mic"></i>
-    </button>
+    <!-- RIGHT ACTIONS (MEDIA + MIC) -->
+    <div id="rightActions" class="flex items-center gap-2">
+      <button id="mediaBtn"><i data-lucide="paperclip"></i></button>
+      <button id="micBtn"><i data-lucide="mic"></i></button>
+    </div>
 
     <!-- SEND -->
     <button id="send" class="hidden text-send">
@@ -144,6 +137,7 @@ const chat=document.getElementById('chat');
 const input=document.getElementById('input');
 const send=document.getElementById('send');
 const emojiBtn=document.getElementById('emojiBtn');
+const rightActions=document.getElementById('rightActions');
 const mediaBtn=document.getElementById('mediaBtn');
 const micBtn=document.getElementById('micBtn');
 const sidebar=document.getElementById('sidebar');
@@ -155,12 +149,11 @@ const onlineCount=document.getElementById('onlineCount');
 /* EMOJI */
 emojiBtn.onclick=()=>EmojiPack.openPicker(input);
 
-/* INPUT UI TOGGLE */
+/* INPUT UI TOGGLE (FIXED) */
 input.oninput=()=>{
   const hasText = input.value.trim().length > 0;
   send.classList.toggle('hidden', !hasText);
-  mediaBtn.classList.toggle('hidden', hasText);
-  micBtn.classList.toggle('hidden', hasText);
+  rightActions.classList.toggle('hidden', hasText);
 };
 
 /* MEMBERS */
@@ -206,7 +199,7 @@ renderMembers();
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
-/* DB */
+/* DB + CHAT LOGIC (UNCHANGED) */
 const DB='AbroxDB',STORE='messages',PAGE=20;
 let db,offset=0,loading=false,lastMeta=null,lastDate='';
 
@@ -249,7 +242,6 @@ function load(){
 
 function render(m,prepend=false){
   const d=new Date(m.timestamp);
-
   if(d.toDateString()!==lastDate){
     const sep=document.createElement('div');
     sep.className='date-sep';
@@ -259,35 +251,29 @@ function render(m,prepend=false){
   }
 
   const grouped=lastMeta&&lastMeta.sender===m.name&&(d-lastMeta.time)<120000;
-
   const el=document.createElement('div');
   el.className=`msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
   el.innerHTML=`
-  <div class="bubble">
-    ${!grouped&&!m.out?`<div class="sender">${m.name} <span class="badge ${m.role.toLowerCase()}">${m.role}</span></div>`:''}
-    ${m.text}
-    <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
-    <div class="read-by"></div>
-  </div>`;
-
+    <div class="bubble">
+      ${!grouped&&!m.out?`<div class="sender">${m.name} <span class="badge ${m.role.toLowerCase()}">${m.role}</span></div>`:''}
+      ${m.text}
+      <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+      <div class="read-by"></div>
+    </div>`;
   prepend?chat.prepend(el):chat.appendChild(el);
   if(m.out) receipts(el);
-
   lastMeta={sender:m.name,time:d};
 }
 
 function receipts(el){
   const t=el.querySelector('.time');
   const r=el.querySelector('.read-by');
-
   setTimeout(()=>t.textContent=`✓✓ ${t.textContent.slice(2)}`,600);
-
   setTimeout(()=>{
     t.textContent=`✓✓ 👀 ${t.textContent.slice(2)}`;
     [ADMIN,MOD].forEach(u=>{
       const img=document.createElement('img');
       img.src=u.avatar;
-      img.title=u.name;
       r.appendChild(img);
     });
   },1400);
@@ -300,8 +286,7 @@ send.onclick=()=>{
   render(m);
   input.value='';
   send.classList.add('hidden');
-  mediaBtn.classList.remove('hidden');
-  micBtn.classList.remove('hidden');
+  rightActions.classList.remove('hidden');
 };
 
 chat.addEventListener('scroll',()=>{ if(chat.scrollTop===0) load(); });
