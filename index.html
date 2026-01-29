@@ -41,21 +41,35 @@
 .badge.mod{background:#f39c12}
 .badge.verified{background:#2ecc71;color:#05110c}
 
-/* ===== VERIFIED (left inside bubble) - Lucide gem (small) ===== */
-.verified-left{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;margin-left:4px}
-.verified-left svg{width:14px;height:14px;stroke:#2ecc71;fill:none;stroke-width:1.6}
+/* ===== VERIFIED pill inside bubble (distinct from sidebar) ===== */
+.verified-bubble{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:3px 8px;
+  border-radius:999px;
+  background:linear-gradient(180deg,#0f5f3b,#0b3e2a);
+  color:#c7f3d9;
+  font-size:11px;
+  font-weight:700;
+  line-height:1;
+  box-shadow:0 1px 0 rgba(0,0,0,.25);
+  margin-left:6px;
+  vertical-align:middle;
+}
+.verified-bubble i[data-lucide="gem"]{ width:14px; height:14px; stroke:#b8f1c8; stroke-width:1.6; }
 
 /* ===== SIDEBAR VERIFIED PILL (text-only) ===== */
-.verified-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:linear-gradient(180deg,#2ecc71,#1e8b4a);color:#03140b;font-weight:700;font-size:11px;box-shadow:0 1px 0 rgba(0,0,0,.25)}
+.verified-pill-sidebar{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:linear-gradient(180deg,#2ecc71,#1e8b4a);color:#03140b;font-weight:700;font-size:11px;box-shadow:0 1px 0 rgba(0,0,0,.25)}
 
 /* ===== GROUP TYPING BAR - positioned absolute to prevent header reflow ===== */
-header { position: relative; } /* allow absolute positioning inside header */
+header { position: relative; }
 .group-typing-bar{
   position:absolute;
   right:56px;
   top:50%;
   transform:translateY(-50%);
-  z-index:5;
+  z-index:50;
   display:inline-flex;
   gap:8px;
   align-items:center;
@@ -69,13 +83,18 @@ header { position: relative; } /* allow absolute positioning inside header */
   border-radius:999px;
   font-size:13px;
   color:#a0a6b5;
+  transition:opacity .12s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
 }
-.group-typing-bar .dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;box-shadow:0 0 6px rgba(46,204,113,.12);flex-shrink:0}
-.group-typing-bar .typing-summary{overflow:hidden;text-overflow:ellipsis;display:block;color:#c7cbd4}
+.group-typing-bar .dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;box-shadow:0 0 6px rgba(46,204,113,.14);flex-shrink:0}
+.group-typing-bar .typing-summary{overflow:hidden;text-overflow:ellipsis;display:block;color:#2ecc71;font-weight:600}
 @media (max-width:420px){ .group-typing-bar{ max-width:58%; font-size:12px; right:48px; } }
 
+/* hide header members line when typing active (prevents reflow) */
+header.typing-active #headerMetaMembers{ display:none; }
+
 /* unread counter */
-.patched-unread-counter{position:absolute; right:12px; top:50%; transform:translateY(-50%); background:#2b3242;padding:6px 10px;border-radius:999px;font-size:12px;color:#fff;display:none;min-width:28px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer; z-index:6}
+.patched-unread-counter{position:absolute; right:12px; top:50%; transform:translateY(-50%); background:#2b3242;padding:6px 10px;border-radius:999px;font-size:12px;color:#fff;display:none;min-width:28px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer; z-index:60}
 
 /* ensure left column shrinks gracefully */
 header > .flex:first-child { min-width:0; }
@@ -88,8 +107,8 @@ header > .flex:first-child { min-width:0; }
 <div class="flex h-full">
   <main class="flex flex-col flex-1 border-r border-border">
 
-    <header class="bg-panel border-b border-border px-4 py-3 flex items-start justify-between">
-      <div class="flex gap-3 items-start">
+    <header class="bg-panel border-b border-border px-4 py-3 flex items-start justify-between" id="mainHeader">
+      <div class="flex gap-3 items-start" id="headerLeft">
         <img src="assets/logo.png" class="w-8 h-8" alt="logo">
         <div style="min-width:0">
           <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
@@ -97,21 +116,24 @@ header > .flex:first-child { min-width:0; }
             <i data-lucide="lock" class="w-3 h-3"></i>
             <span>Private Group</span>
           </div>
-          <div class="text-xs text-muted">
-            Members: 4,872 • Online: <span id="onlineCount">132</span><br>
+          <!-- Members/Online line: will hide while typing -->
+          <div class="text-xs text-muted" id="headerMetaMembers">
+            Members: 4,872 • Online: <span id="onlineCount">132</span>
+          </div>
+          <!-- Demo/discussion line: always visible -->
+          <div class="text-xs text-muted" id="headerMetaDemo">
             Demo discussion · Verification required
           </div>
         </div>
       </div>
 
-      <!-- typing pill is absolute, so it will never push the left column -->
       <div style="position:relative;min-width:120px;">
         <div id="group-typing-bar" class="group-typing-bar" style="display:none">
           <div class="dot"></div>
           <div class="typing-summary">Someone is typing…</div>
         </div>
         <div id="unread-counter" class="patched-unread-counter" style="display:none">0</div>
-        <button id="membersBtn" style="position:relative;z-index:7"><i data-lucide="users" class="w-5 h-5"></i></button>
+        <button id="membersBtn" style="position:relative;z-index:70"><i data-lucide="users" class="w-5 h-5"></i></button>
       </div>
     </header>
 
@@ -154,10 +176,10 @@ header > .flex:first-child { min-width:0; }
 </div>
 
 <script>
-/* Ensure lucide icons loaded initially */
+/* ensure lucide icons */
 lucide.createIcons();
 
-/* ================= keep your original logic, with verified-sidebar text-only fix ================= */
+/* ================= FULL LOGIC (kept intact) ================= */
 
 /* DOM refs */
 const chat=document.getElementById('chat');
@@ -176,6 +198,8 @@ const onlineCount=document.getElementById('onlineCount');
 const groupTypingBar = document.getElementById('group-typing-bar');
 const unreadCounter = document.getElementById('unread-counter');
 const memberSearch = document.getElementById('memberSearch');
+const mainHeader = document.getElementById('mainHeader');
+const headerMetaMembers = document.getElementById('headerMetaMembers');
 
 /* EMOJI */
 emojiBtn.onclick=()=>EmojiPack.openPicker(input);
@@ -204,7 +228,7 @@ fileInput.onchange=e=>{
   fileInput.value='';
 };
 
-/* ===== VOICE RECORDING (unchanged) ===== */
+/* ===== VOICE RECORDING ===== */
 let recorder,chunks=[],recStart,recTick;
 let holding=false,stream=null;
 
@@ -244,7 +268,14 @@ async function startRecording(){
 function stopRecording(){
   if(recorder&&recorder.state==='recording')recorder.stop();
 }
-micBtn.addEventListener('pointerdown',async e=>{ e.preventDefault(); holding=true; await startRecording(); setTimeout(()=>{if(holding)startUI();},300); });
+
+/* POINTER EVENTS */
+micBtn.addEventListener('pointerdown',async e=>{
+  e.preventDefault();
+  holding=true;
+  await startRecording();
+  setTimeout(()=>{if(holding)startUI();},300);
+});
 micBtn.addEventListener('pointerup',()=>{if(!holding)return;holding=false;stopUI();stopRecording();});
 micBtn.addEventListener('pointerleave',()=>{if(!holding)return;holding=false;stopUI();stopRecording();});
 
@@ -261,9 +292,7 @@ const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
 
 const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
 
-/* Render members with priority and search */
-/* Sidebar now displays ONLY the green rounded VERIFIED pill (text-only) for VERIFIED members.
-   Admin/Mod show their role badge (no duplicate VERIFIED pill). */
+/* Render members (sidebar) — sidebar shows only text-only verified pill (no gem) */
 function renderMembers(filter=''){
   const priority = role => {
     const r=(role||'').toUpperCase();
@@ -272,56 +301,48 @@ function renderMembers(filter=''){
     if(r.includes('VERIFIED')) return 2;
     return 3;
   };
-  const q = (filter||'').trim().toLowerCase();
+  const q=(filter||'').trim().toLowerCase();
   const list = members
     .filter(m => !q || m.name.toLowerCase().includes(q))
     .sort((a,b)=>{
-      const pa = priority(a.role), pb = priority(b.role);
+      const pa=priority(a.role), pb=priority(b.role);
       if(pa!==pb) return pa-pb;
-      const oa = isOnline(a)?0:1, ob = isOnline(b)?0:1;
+      const oa=isOnline(a)?0:1, ob=isOnline(b)?0:1;
       if(oa!==ob) return oa-ob;
       return a.name.localeCompare(b.name);
     });
 
   memberList.innerHTML='';
   list.forEach(m=>{
-    // For sidebar: if VERIFIED -> show verified pill only; else if ADMIN/MOD show role badge
     let rightHTML = '';
     const roleUpper = (m.role||'').toUpperCase();
     if(roleUpper === 'VERIFIED'){
-      rightHTML = `<span class="verified-pill" title="Verified">VERIFIED</span>`;
+      rightHTML = `<span class="verified-pill-sidebar" title="Verified">VERIFIED</span>`;
     } else if(roleUpper.includes('ADMIN') || roleUpper.includes('MOD')){
-      // admin/mod: display role badge
       rightHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
     } else if(m.role){
       rightHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
     }
 
     memberList.innerHTML += `
-      <div class="flex gap-3 items-center">
-        <div class="relative">
-          <img src="${m.avatar}" class="w-9 h-9 rounded-full">
-          <span class="absolute bottom-0 right-0 ${isOnline(m)?'bg-green-500':'bg-gray-500'}" style="width:10px;height:10px;border-radius:999px;border:1px solid #1c1f26"></span>
+    <div class="flex gap-3 items-center">
+      <div class="relative">
+        <img src="${m.avatar}" class="w-9 h-9 rounded-full">
+        <span class="absolute bottom-0 right-0 ${isOnline(m)?'bg-green-500':'bg-gray-500'}" style="width:10px;height:10px;border-radius:999px;border:1px solid #1c1f26"></span>
+      </div>
+      <div style="flex:1">
+        <div class="text-sm">${m.name}</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+          ${rightHTML}
         </div>
-        <div style="flex:1">
-          <div class="text-sm">${m.name}</div>
-          <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
-            ${rightHTML}
-          </div>
-        </div>
-      </div>`;
+      </div>
+    </div>`;
   });
   onlineCount.textContent = members.filter(isOnline).length;
-  lucide.createIcons();
 }
 memberSearch.addEventListener('input', e => { renderMembers(e.target.value); });
-setInterval(()=>{
-  members[Math.floor(Math.random()*members.length)].lastActive=Date.now();
-  renderMembers(memberSearch.value);
-},8000);
+setInterval(()=>{ members[Math.floor(Math.random()*members.length)].lastActive=Date.now(); renderMembers(memberSearch.value); },8000);
 renderMembers();
-
-/* sidebar toggles */
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
@@ -334,9 +355,7 @@ indexedDB.open(DB,1).onupgradeneeded=e=>{
 indexedDB.open(DB,1).onsuccess=e=>{
   db=e.target.result;seed();load();
 };
-function save(m){
-  db.transaction(STORE,'readwrite').objectStore(STORE).add(m);
-}
+function save(m){ db.transaction(STORE,'readwrite').objectStore(STORE).add(m); }
 function seed(){
   const st=db.transaction(STORE).objectStore(STORE);
   st.count().onsuccess=e=>{
@@ -359,7 +378,7 @@ function load(){
   };
 }
 
-/* ===== render() — chat bubble shows only small left gem for VERIFIED, admins/mods keep their badge (no duplicated VERIFIED pill) ===== */
+/* ===== render() — bubble now shows verified-bubble (gem inside rounded pill) for VERIFIED members (distinct from sidebar) ===== */
 function render(m,prepend=false){
   const d=new Date(m.timestamp);
   if(d.toDateString()!==lastDate){
@@ -378,42 +397,42 @@ function render(m,prepend=false){
     avatarHTML=grouped?`<div class="avatar-spacer"></div>`:`<img class="avatar" src="${user?.avatar||''}">`;
   }
 
-  // small gem inside bubble only when VERIFIED
-  const roleUpper = (m.role||'').toUpperCase();
-  const verifiedLeftHTML = roleUpper === 'VERIFIED' ? `<span class="verified-left"><i data-lucide="gem"></i></span>` : '';
-  // show role badge only for ADMIN/MOD/others (but NOT show the VERIFIED rounded pill inside bubble)
+  const roleUpper=(m.role||'').toUpperCase();
+  // bubble verified pill (small gem inside pill) — only inside chat bubble
+  const verifiedBubbleHTML = roleUpper==='VERIFIED' ? `<span class="verified-bubble"><i data-lucide="gem"></i><span style="font-size:11px">VERIFIED</span></span>` : '';
+  // role badges for ADMIN/MOD shown in bubble
   let roleBadgeHTML = '';
-  if(roleUpper.includes('ADMIN') || roleUpper.includes('MOD')){
-    roleBadgeHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
-  } else if(roleUpper !== 'VERIFIED' && m.role){
-    roleBadgeHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
-  }
+  if(roleUpper.includes('ADMIN') || roleUpper.includes('MOD')) roleBadgeHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
 
   el.innerHTML=`
     ${avatarHTML}
     <div class="bubble">
-      ${!grouped&&!m.out?`<div class="sender">${m.name} ${verifiedLeftHTML} ${roleBadgeHTML}</div>`:''}
+      ${!grouped&&!m.out?`<div class="sender">${m.name} ${verifiedBubbleHTML} ${roleBadgeHTML}</div>`:''}
       ${m.text}
       <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
       <div class="read-by"></div>
     </div>`;
   prepend?chat.prepend(el):chat.appendChild(el);
 
+  // ensure Lucide icons render for dynamic inserts
   lucide.createIcons();
 
   if(m.out)receipts(el);
-
   if(m.out&&m.type==='voice'){
     let t;
     el.addEventListener('mousedown',()=>t=setTimeout(()=>{
       el.remove();
       const tx=db.transaction(STORE,'readwrite').objectStore(STORE);
-      tx.getAll().onsuccess=e=>{ e.target.result.forEach(r=>{if(r.timestamp===m.timestamp)tx.delete(r.id);}); };
+      tx.getAll().onsuccess=e=>{
+        e.target.result.forEach(r=>{if(r.timestamp===m.timestamp)tx.delete(r.id);});
+      };
     },800));
     ['mouseup','mouseleave'].forEach(ev=>el.addEventListener(ev,()=>clearTimeout(t)));
   }
 
+  // cancel typing and manage unread
   handleIncomingMessage(m);
+
   lastMeta={sender:m.name,time:d};
 }
 function receipts(el){
@@ -430,7 +449,7 @@ function receipts(el){
   },1400);
 }
 
-/* ===== TYPING ENGINE & GROUP-HEADER LOGIC (unchanged logic but header glitches fixed by position + RAF) ===== */
+/* ===== TYPING ENGINE & GROUP-HEADER LOGIC (human-like) ===== */
 
 const activeTypers = new Map();
 const ADMIN_ROLES = new Set(['ADMIN','ADMINISTRATOR','OWNER']);
@@ -439,7 +458,7 @@ const NIGHT_SLOW_FACTOR = 1.6;
 const ADMIN_PAUSE_MULTIPLIER = 1.4;
 const MAX_VISIBLE_NAMES = 3;
 
-/* unread helpers */
+/* unread */
 let unreadCount = 0;
 function isUserAtBottom(){ return chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 10; }
 function incrementUnread(){ unreadCount++; unreadCounter.textContent = unreadCount; unreadCounter.style.display = 'inline-block'; }
@@ -469,7 +488,6 @@ function startTypingSimulation(member, text='', options={}){
   activeTypers.set(member.name, entry);
   updateTypingHeader();
 
-  // compute duration
   const wordCount = (text && text.trim()) ? text.trim().split(/\s+/).length : Math.max(1, Math.floor(Math.random()*8)+1);
   let wpm = TYPING_BASE_WPM;
   if(/[!?]{2,}/.test(text)) wpm *= 1.15;
@@ -482,7 +500,6 @@ function startTypingSimulation(member, text='', options={}){
   const totalMs = Math.max(400, Math.floor(minutes * 60 * 1000));
   let elapsed = 0;
 
-  // random start delay
   const startDelay = 200 + Math.random()*900;
   entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, startDelay));
   elapsed += startDelay;
@@ -518,12 +535,13 @@ function startTypingSimulation(member, text='', options={}){
   updateTypingHeader();
 }
 
+/* stop/pause/resume helpers */
 function stopTyping(name){ const entry = activeTypers.get(name); if(!entry) return; entry.timers.forEach(t=>clearTimeout(t)); activeTypers.delete(name); updateTypingHeader(); }
 function cancelTypingExcept(keepName=null){ for(const name of Array.from(activeTypers.keys())){ if(name !== keepName) stopTyping(name); } }
-function pauseTypingForContextChange(){ for(const [name, entry] of activeTypers.entries()){ if(!entry.paused){ entry.paused = true; entry.timers.forEach(t=>clearTimeout(t)); entry.timers = []; } } if(groupTypingBar) groupTypingBar.style.display = 'none'; }
+function pauseTypingForContextChange(){ for(const [name, entry] of activeTypers.entries()){ if(!entry.paused){ entry.paused = true; entry.timers.forEach(t=>clearTimeout(t)); entry.timers = []; } } if(groupTypingBar) groupTypingBar.style.display = 'none'; mainHeader.classList.remove('typing-active'); }
 function resumeTypingAfterPause(){ for(const [name, entry] of activeTypers.entries()){ if(entry.paused){ entry.paused = false; entry.state = 'typing'; updateTypingHeader(); const resumeDelay = 150 + Math.random()*600; const t = setTimeout(()=>{ dispatchTypingFinished(name, entry.originalText); stopTyping(name); }, resumeDelay); entry.timers.push(t); } } if(activeTypers.size && groupTypingBar) groupTypingBar.style.display = ''; }
 
-/* throttle DOM updates to prevent header reflow/glitch */
+/* throttle DOM updates to stop header reflow/glitch */
 let headerRaf = null;
 function updateTypingHeader(){
   if(!groupTypingBar) return;
@@ -533,21 +551,28 @@ function updateTypingHeader(){
     if(typers.length === 0){
       groupTypingBar.style.display = 'none';
       groupTypingBar.innerHTML = `<div class="dot"></div><div class="typing-summary"></div>`;
+      mainHeader.classList.remove('typing-active');
       return;
     }
+
+    // admins first
     typers.sort((a,b)=>{
       const pa = ADMIN_ROLES.has((a.role||'').toUpperCase())?0:1;
       const pb = ADMIN_ROLES.has((b.role||'').toUpperCase())?0:1;
       if(pa!==pb) return pa-pb;
       return 0;
     });
+
     const buildName = m => `<strong class="typing-name">${escapeHtml(m.name)}</strong>`;
     let html = '';
     if(typers.length === 1) html = `${buildName(typers[0])} is typing…`;
     else if(typers.length <= MAX_VISIBLE_NAMES) html = `${typers.map(buildName).join(', ')} are typing…`;
     else html = `${typers.length} people are typing…`;
+
     groupTypingBar.innerHTML = `<div class="dot"></div><div class="typing-summary">${html}</div>`;
     groupTypingBar.style.display = '';
+    // hide only the members/online line while typing is visible (prevents glitching/shift)
+    mainHeader.classList.add('typing-active');
   });
 }
 
@@ -559,18 +584,17 @@ window.addEventListener('typingFinished', (e) => {
   if(!member){ stopTyping(name); return; }
   cancelTypingExcept(name);
   const m = { name: member.name, role: member.role, text: text || '…', timestamp: Date.now(), out: false };
-  save(m);
-  render(m);
+  save(m); render(m);
   if(!isUserAtBottom()) incrementUnread();
   else chat.scrollTop = chat.scrollHeight;
 });
 
-/* Backwards compatibility helpers */
+/* backwards-compatible show/hide typing helpers */
 function showTyping(member, text=''){ startTypingSimulation(member, text); }
 function hideTyping(member){ stopTyping(member.name || member); }
 function fakeMemberSend(member,text){ startTypingSimulation(member,text); }
 
-/* demo interval */
+/* demo simulation interval (keeps original behavior) */
 if(typeof members !== 'undefined'){
   if(!window._groupTypingSimInterval){
     window._groupTypingSimInterval = setInterval(()=>{
@@ -581,12 +605,12 @@ if(typeof members !== 'undefined'){
   }
 }
 
-/* send handler */
-send.onclick = () => {
-  if(!input.value.trim()) return;
-  const m = { name: 'You', role: 'VERIFIED', text: input.value, timestamp: Date.now(), out: true };
-  save(m); render(m);
-  input.value = '';
+/* SEND handler (unchanged) */
+send.onclick = ()=>{
+  if(!input.value.trim())return;
+  const m={name:'You',role:'VERIFIED',text:input.value,timestamp:Date.now(),out:true};
+  save(m);render(m);
+  input.value='';
   send.classList.add('hidden');
   mediaBtn.classList.remove('hidden');
   micBtn.classList.remove('hidden');
@@ -594,16 +618,16 @@ send.onclick = () => {
   if(isUserAtBottom()) chat.scrollTop = chat.scrollHeight;
 };
 
-/* handleIncomingMessage called by render */
+/* handle incoming message: stops typing for that member and increments unread if user not at bottom */
 function handleIncomingMessage(m){
   cancelTypingExcept(m.name);
   if(!isUserAtBottom() && !(m.out && m.name === 'You')) incrementUnread();
 }
 
-/* helpers */
-function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"]"'/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* helper */
+function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>'"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-/* ensure lucide icons for any static icons (initial) */
+/* final icon render for static items */
 lucide.createIcons();
 </script>
 </body>
