@@ -7,6 +7,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
 
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Abrox">
+
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="emoji-pack.js" defer></script>
@@ -44,20 +50,17 @@ tailwind.config = {
   box-shadow:0 2px 8px rgba(0,0,0,.18);
 }
 
-/* incoming */
 .msg.in .bubble{
   background:#262b38;
   border-top-left-radius:6px;
 }
 
-/* outgoing */
 .msg.out .bubble{
   background:#2b3242;
   border:1px solid #343a4a;
   border-top-right-radius:6px;
 }
 
-/* tails */
 .msg.in .bubble::before{
   content:'';
   position:absolute;
@@ -86,7 +89,13 @@ tailwind.config = {
 .grouped.in .bubble{border-top-left-radius:6px}
 .grouped.out .bubble{border-top-right-radius:6px}
 
-.sender{font-size:11px;font-weight:600;color:#2ecc71;margin-bottom:4px}
+.sender{
+  font-size:11px;
+  font-weight:600;
+  color:#2ecc71;
+  margin-bottom:4px;
+}
+
 .time{
   font-size:10px;
   opacity:.7;
@@ -109,10 +118,24 @@ tailwind.config = {
  border:1px solid #1c1f26;
 }
 
-.date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
-.typing{font-size:11px;color:#a0a6b5;padding:6px}
+.date-sep{
+  text-align:center;
+  font-size:11px;
+  color:#a0a6b5;
+  margin:12px 0
+}
 
-.badge{font-size:10px;padding:2px 6px;border-radius:999px}
+.typing{
+  font-size:11px;
+  color:#a0a6b5;
+  padding:6px
+}
+
+.badge{
+  font-size:10px;
+  padding:2px 6px;
+  border-radius:999px
+}
 .badge.admin{background:#e74c3c}
 .badge.mod{background:#f39c12}
 .badge.verified{background:#2ecc71}
@@ -157,12 +180,18 @@ tailwind.config = {
 
 <footer class="bg-panel border-t border-border px-4 py-3">
   <div class="flex gap-2 items-center bg-bg rounded-full px-3 py-2">
-    <button onclick="EmojiPack.openPicker(input)"><i data-lucide="smile"></i></button>
+    <button onclick="EmojiPack.openPicker(input)">
+      <i data-lucide="smile"></i>
+    </button>
     <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-    <button id="attach" onclick="file.click()"><i data-lucide="paperclip"></i></button>
+    <button id="attach" onclick="file.click()">
+      <i data-lucide="paperclip"></i>
+    </button>
     <input id="file" type="file" hidden>
     <button id="mic"><i data-lucide="mic"></i></button>
-    <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
+    <button id="send" class="hidden text-send">
+      <i data-lucide="send"></i>
+    </button>
   </div>
 </footer>
 
@@ -186,9 +215,21 @@ tailwind.config = {
 <script>
 lucide.createIcons();
 
-let online=132;
-setInterval(()=>{online+=Math.random()>.5?1:-1;onlineCount.textContent=online},8000);
+/* PWA SERVICE WORKER */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
 
+/* ONLINE COUNT */
+let online=132;
+setInterval(()=>{
+  online+=Math.random()>.5?1:-1;
+  onlineCount.textContent=online;
+},8000);
+
+/* PRESENCE */
 const ACTIVE_WINDOW=90000;
 const members=[
  {name:'Sam_Admin',role:'ADMIN',avatar:'https://randomuser.me/api/portraits/men/32.jpg',lastActive:Date.now()},
@@ -203,15 +244,18 @@ setInterval(()=>{
  renderMembers();
 },20000);
 
+/* SIDEBAR */
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
 let sx=0;
 sidebar.addEventListener('touchstart',e=>sx=e.touches[0].clientX);
 sidebar.addEventListener('touchend',e=>{
- if(e.changedTouches[0].clientX-sx>80)sidebar.classList.add('translate-x-full');
+ if(e.changedTouches[0].clientX-sx>80)
+  sidebar.classList.add('translate-x-full');
 });
 
+/* MEMBERS */
 function renderMembers(){
  memberList.innerHTML='';
  const q=search.value.toLowerCase();
@@ -235,6 +279,7 @@ search.oninput=renderMembers;
 setInterval(renderMembers,5000);
 renderMembers();
 
+/* CHAT */
 const chat=document.getElementById('chat');
 const input=document.getElementById('input');
 const send=document.getElementById('send');
@@ -245,11 +290,16 @@ const file=document.getElementById('file');
 
 let lastMeta=null,lastDate='';
 
-function addDate(d){chat.innerHTML+=`<div class="date-sep">${d}</div>`}
+function addDate(d){
+ chat.innerHTML+=`<div class="date-sep">${d}</div>`;
+}
 
 function append(text,sender,out=false){
  const now=new Date();
- if(now.toDateString()!==lastDate){addDate(now.toDateString());lastDate=now.toDateString()}
+ if(now.toDateString()!==lastDate){
+  addDate(now.toDateString());
+  lastDate=now.toDateString();
+ }
 
  const grouped=lastMeta&&lastMeta.sender===sender&&lastMeta.out===out&&(now-lastMeta.time)<120000;
  const role=members.find(m=>m.name===sender)?.role;
@@ -273,7 +323,9 @@ function append(text,sender,out=false){
   setTimeout(()=>{
     t.textContent=`✓✓ 👀 ${t.textContent.slice(2)}`;
     members.filter(isOnline).slice(0,3)
-      .forEach(m=>r.innerHTML+=`<img src="${m.avatar}" title="${m.name}">`);
+      .forEach(m=>{
+        r.innerHTML+=`<img src="${m.avatar}" title="${m.name}">`;
+      });
   },1400);
  }
 
@@ -281,6 +333,7 @@ function append(text,sender,out=false){
  chat.scrollTo({top:chat.scrollHeight,behavior:'smooth'});
 }
 
+/* INPUT */
 input.oninput=()=>{
  const has=input.value.trim();
  send.classList.toggle('hidden',!has);
