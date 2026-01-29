@@ -103,7 +103,7 @@ tailwind.config = {
     <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
 
     <!-- RIGHT ACTIONS (MEDIA + MIC) -->
-    <div id="rightActions" class="flex items-center gap-2">
+    <div id="rightActions" class="flex items-center gap-2 ml-auto"> <!-- ✅ FIX -->
       <button id="mediaBtn"><i data-lucide="paperclip"></i></button>
       <button id="micBtn"><i data-lucide="mic"></i></button>
     </div>
@@ -149,18 +149,18 @@ const onlineCount=document.getElementById('onlineCount');
 /* EMOJI */
 emojiBtn.onclick=()=>EmojiPack.openPicker(input);
 
-/* INPUT UI TOGGLE (FIXED) */
+/* INPUT UI TOGGLE */
 input.oninput=()=>{
-  const hasText = input.value.trim().length > 0;
-  send.classList.toggle('hidden', !hasText);
-  rightActions.classList.toggle('hidden', hasText);
+  const hasText=input.value.trim().length>0;
+  send.classList.toggle('hidden',!hasText);
+  rightActions.classList.toggle('hidden',hasText);
 };
 
 /* MEMBERS */
 const ACTIVE=90000;
 
-const ADMIN={ name:'Profit Hunter 🌐', role:'ADMIN', avatar:'assets/admin.jpg' };
-const MOD={ name:'Kitty Star ⭐', role:'MOD', avatar:'assets/mod.jpg' };
+const ADMIN={name:'Profit Hunter 🌐',role:'ADMIN',avatar:'assets/admin.jpg'};
+const MOD={name:'Kitty Star ⭐',role:'MOD',avatar:'assets/mod.jpg'};
 
 const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
   name:`Member_${i+1}`,
@@ -199,7 +199,7 @@ renderMembers();
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
-/* DB + CHAT LOGIC (UNCHANGED) */
+/* DB + CHAT LOGIC */
 const DB='AbroxDB',STORE='messages',PAGE=20;
 let db,offset=0,loading=false,lastMeta=null,lastDate='';
 
@@ -220,7 +220,7 @@ function save(m){
 function seed(){
   const st=db.transaction(STORE).objectStore(STORE);
   st.count().onsuccess=e=>{
-    if(e.target.result) return;
+    if(e.target.result)return;
     [
       {...ADMIN,text:'Welcome to Abrox Private Lounge.',timestamp:Date.now()-86400000,out:false},
       {...MOD,text:'Please read pinned rules before chatting.',timestamp:Date.now()-86300000,out:false}
@@ -229,7 +229,7 @@ function seed(){
 }
 
 function load(){
-  if(loading) return;
+  if(loading)return;
   loading=true;
   db.transaction(STORE).objectStore(STORE).getAll().onsuccess=e=>{
     const all=e.target.result.sort((a,b)=>a.timestamp-b.timestamp);
@@ -261,7 +261,7 @@ function render(m,prepend=false){
       <div class="read-by"></div>
     </div>`;
   prepend?chat.prepend(el):chat.appendChild(el);
-  if(m.out) receipts(el);
+  if(m.out)receipts(el);
   lastMeta={sender:m.name,time:d};
 }
 
@@ -281,7 +281,7 @@ function receipts(el){
 
 send.onclick=()=>{
   if(!input.value.trim())return;
-  const m={ name:'You', role:'VERIFIED', text:input.value, timestamp:Date.now(), out:true };
+  const m={name:'You',role:'VERIFIED',text:input.value,timestamp:Date.now(),out:true};
   save(m);
   render(m);
   input.value='';
@@ -289,7 +289,7 @@ send.onclick=()=>{
   rightActions.classList.remove('hidden');
 };
 
-chat.addEventListener('scroll',()=>{ if(chat.scrollTop===0) load(); });
+chat.addEventListener('scroll',()=>{if(chat.scrollTop===0)load();});
 </script>
 </body>
 </html>
