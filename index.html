@@ -88,7 +88,7 @@ tailwind.config = {
 .grouped.in .bubble{border-top-left-radius:6px}
 .grouped.out .bubble{border-top-right-radius:6px}
 
-/* meta */
+/* sender + meta */
 .sender{font-size:11px;font-weight:600;color:#2ecc71;margin-bottom:4px}
 .time{
   font-size:10px;
@@ -167,7 +167,11 @@ tailwind.config = {
     <button id="attach" onclick="file.click()"><i data-lucide="paperclip"></i></button>
     <input id="file" type="file" hidden>
     <button id="mic"><i data-lucide="mic"></i></button>
-    <button id="send" class="hidden"><i data-lucide="send"></i></button>
+
+    <!-- BLUE SEND ICON -->
+    <button id="send" class="hidden text-send">
+      <i data-lucide="send"></i>
+    </button>
   </div>
 </footer>
 
@@ -260,7 +264,10 @@ function addDate(d){chat.innerHTML+=`<div class="date-sep">${d}</div>`}
 
 function append(text,sender,out=false){
  const now=new Date();
- if(now.toDateString()!==lastDate){addDate(now.toDateString());lastDate=now.toDateString()}
+ if(now.toDateString()!==lastDate){
+  addDate(now.toDateString());
+  lastDate=now.toDateString();
+ }
 
  const grouped=lastMeta&&lastMeta.sender===sender&&lastMeta.out===out&&(now-lastMeta.time)<120000;
  const role=members.find(m=>m.name===sender)?.role;
