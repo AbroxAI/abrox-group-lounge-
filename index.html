@@ -45,15 +45,14 @@
 .verified-left{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex-shrink:0;margin-left:4px}
 .verified-left svg{width:14px;height:14px;stroke:#2ecc71;fill:none;stroke-width:1.6}
 
-/* ===== SIDEBAR VERIFIED PILL (gem + label) - Lucide gem ===== */
-.verified-pill{display:inline-flex;align-items:center;gap:8px;padding:2px 8px;border-radius:999px;background:linear-gradient(180deg,#0f3e2a,#0b2a1a);color:#ccf3d8;font-size:11px;box-shadow:0 1px 0 rgba(0,0,0,.35)}
-.verified-pill svg{width:14px;height:14px;stroke:#2ecc71;fill:none;stroke-width:1.8}
+/* ===== SIDEBAR VERIFIED PILL (text-only) ===== */
+.verified-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:linear-gradient(180deg,#2ecc71,#1e8b4a);color:#03140b;font-weight:700;font-size:11px;box-shadow:0 1px 0 rgba(0,0,0,.25)}
 
 /* ===== GROUP TYPING BAR - positioned absolute to prevent header reflow ===== */
 header { position: relative; } /* allow absolute positioning inside header */
 .group-typing-bar{
   position:absolute;
-  right:56px;               /* sits left of the members icon */
+  right:56px;
   top:50%;
   transform:translateY(-50%);
   z-index:5;
@@ -65,7 +64,7 @@ header { position: relative; } /* allow absolute positioning inside header */
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  max-width:46vw;           /* shrink on narrow screens */
+  max-width:46vw;
   background:rgba(255,255,255,0.02);
   border-radius:999px;
   font-size:13px;
@@ -158,7 +157,7 @@ header > .flex:first-child { min-width:0; }
 /* Ensure lucide icons loaded initially */
 lucide.createIcons();
 
-/* ================= keep your original logic, with Lucide gem green applied ================= */
+/* ================= keep your original logic, with verified-sidebar text-only fix ================= */
 
 /* DOM refs */
 const chat=document.getElementById('chat');
@@ -263,7 +262,8 @@ const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
 const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
 
 /* Render members with priority and search */
-/* Uses Lucide gem icon (data-lucide="gem") for sidebar verified pill */
+/* Sidebar now displays ONLY the green rounded VERIFIED pill (text-only) for VERIFIED members.
+   Admin/Mod show their role badge (no duplicate VERIFIED pill). */
 function renderMembers(filter=''){
   const priority = role => {
     const r=(role||'').toUpperCase();
@@ -285,8 +285,18 @@ function renderMembers(filter=''){
 
   memberList.innerHTML='';
   list.forEach(m=>{
-    const verifiedHTML = (m.role && m.role.toUpperCase()==='VERIFIED')
-      ? `<span class="verified-pill" title="Verified"><i data-lucide="gem"></i><span style="font-size:11px">VERIFIED</span></span>` : '';
+    // For sidebar: if VERIFIED -> show verified pill only; else if ADMIN/MOD show role badge
+    let rightHTML = '';
+    const roleUpper = (m.role||'').toUpperCase();
+    if(roleUpper === 'VERIFIED'){
+      rightHTML = `<span class="verified-pill" title="Verified">VERIFIED</span>`;
+    } else if(roleUpper.includes('ADMIN') || roleUpper.includes('MOD')){
+      // admin/mod: display role badge
+      rightHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
+    } else if(m.role){
+      rightHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
+    }
+
     memberList.innerHTML += `
       <div class="flex gap-3 items-center">
         <div class="relative">
@@ -296,14 +306,12 @@ function renderMembers(filter=''){
         <div style="flex:1">
           <div class="text-sm">${m.name}</div>
           <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
-            <span class="badge ${m.role.toLowerCase()}">${m.role}</span>
-            ${verifiedHTML}
+            ${rightHTML}
           </div>
         </div>
       </div>`;
   });
   onlineCount.textContent = members.filter(isOnline).length;
-  /* convert inserted data-lucide icons to SVG */
   lucide.createIcons();
 }
 memberSearch.addEventListener('input', e => { renderMembers(e.target.value); });
@@ -351,7 +359,7 @@ function load(){
   };
 }
 
-/* ===== render() — uses Lucide gem small on left inside bubble only ===== */
+/* ===== render() — chat bubble shows only small left gem for VERIFIED, admins/mods keep their badge (no duplicated VERIFIED pill) ===== */
 function render(m,prepend=false){
   const d=new Date(m.timestamp);
   if(d.toDateString()!==lastDate){
@@ -370,21 +378,27 @@ function render(m,prepend=false){
     avatarHTML=grouped?`<div class="avatar-spacer"></div>`:`<img class="avatar" src="${user?.avatar||''}">`;
   }
 
-  // left gem inside bubble (Lucide) — only this appears in chat bubbles
-  const verifiedLeftHTML = (m.role && m.role.toUpperCase()==='VERIFIED')
-    ? `<span class="verified-left"><i data-lucide="gem"></i></span>` : '';
+  // small gem inside bubble only when VERIFIED
+  const roleUpper = (m.role||'').toUpperCase();
+  const verifiedLeftHTML = roleUpper === 'VERIFIED' ? `<span class="verified-left"><i data-lucide="gem"></i></span>` : '';
+  // show role badge only for ADMIN/MOD/others (but NOT show the VERIFIED rounded pill inside bubble)
+  let roleBadgeHTML = '';
+  if(roleUpper.includes('ADMIN') || roleUpper.includes('MOD')){
+    roleBadgeHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
+  } else if(roleUpper !== 'VERIFIED' && m.role){
+    roleBadgeHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
+  }
 
   el.innerHTML=`
     ${avatarHTML}
     <div class="bubble">
-      ${!grouped&&!m.out?`<div class="sender">${m.name} ${verifiedLeftHTML} <span class="badge ${m.role?m.role.toLowerCase():''}">${m.role||''}</span></div>`:''}
+      ${!grouped&&!m.out?`<div class="sender">${m.name} ${verifiedLeftHTML} ${roleBadgeHTML}</div>`:''}
       ${m.text}
       <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
       <div class="read-by"></div>
     </div>`;
   prepend?chat.prepend(el):chat.appendChild(el);
 
-  /* convert inserted data-lucide icons to SVG */
   lucide.createIcons();
 
   if(m.out)receipts(el);
@@ -394,15 +408,12 @@ function render(m,prepend=false){
     el.addEventListener('mousedown',()=>t=setTimeout(()=>{
       el.remove();
       const tx=db.transaction(STORE,'readwrite').objectStore(STORE);
-      tx.getAll().onsuccess=e=>{
-        e.target.result.forEach(r=>{if(r.timestamp===m.timestamp)tx.delete(r.id);});
-      };
+      tx.getAll().onsuccess=e=>{ e.target.result.forEach(r=>{if(r.timestamp===m.timestamp)tx.delete(r.id);}); };
     },800));
     ['mouseup','mouseleave'].forEach(ev=>el.addEventListener(ev,()=>clearTimeout(t)));
   }
 
   handleIncomingMessage(m);
-
   lastMeta={sender:m.name,time:d};
 }
 function receipts(el){
@@ -419,7 +430,7 @@ function receipts(el){
   },1400);
 }
 
-/* ===== TYPING ENGINE & GROUP-HEADER LOGIC (patched to avoid header reflow/glitch) ===== */
+/* ===== TYPING ENGINE & GROUP-HEADER LOGIC (unchanged logic but header glitches fixed by position + RAF) ===== */
 
 const activeTypers = new Map();
 const ADMIN_ROLES = new Set(['ADMIN','ADMINISTRATOR','OWNER']);
@@ -428,13 +439,13 @@ const NIGHT_SLOW_FACTOR = 1.6;
 const ADMIN_PAUSE_MULTIPLIER = 1.4;
 const MAX_VISIBLE_NAMES = 3;
 
-/* unread counter helpers */
+/* unread helpers */
 let unreadCount = 0;
 function isUserAtBottom(){ return chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 10; }
 function incrementUnread(){ unreadCount++; unreadCounter.textContent = unreadCount; unreadCounter.style.display = 'inline-block'; }
 function clearUnread(){ unreadCount = 0; unreadCounter.style.display = 'none'; unreadCounter.textContent = ''; }
 
-/* handle scroll: preserve existing load-on-top; additional unread & typing pause/resume */
+/* scroll handler */
 chat.addEventListener('scroll', ()=>{
   if(chat.scrollTop===0) load();
   if(isUserAtBottom()){
@@ -590,7 +601,7 @@ function handleIncomingMessage(m){
 }
 
 /* helpers */
-function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"]"'/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ensure lucide icons for any static icons (initial) */
 lucide.createIcons();
