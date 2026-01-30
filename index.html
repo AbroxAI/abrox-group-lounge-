@@ -87,34 +87,45 @@ tailwind.config = {
 .badge.mod{background:#f39c12}
 .badge.verified{background:#2ecc71}
 
-/* Verified pill inside chat bubble (gem + text) - thinner, smaller, less bold */
+/* Verified pill inside chat bubble (gem + text) - thinner, smaller, desaturated */
 .verified-bubble{
   display:inline-flex;
   align-items:center;
   gap:6px;
   padding:3px 8px;
   border-radius:999px;
-  background:linear-gradient(180deg,#0f5f3b,#0b3e2a);
-  color:#c7f3d9;
+  background:linear-gradient(180deg,#185f3b,#134a2c); /* darker, more realistic */
+  color:#d8f6e2;
   font-size:11px;
   font-weight:600;
   line-height:1;
-  box-shadow:0 1px 0 rgba(0,0,0,.25);
+  box-shadow:0 1px 0 rgba(0,0,0,.18);
   margin-left:6px;
   vertical-align:middle;
 }
 .verified-bubble i[data-lucide="gem"]{
-  width:11px;height:11px;
+  width:10px;height:10px; /* smaller */
   display:inline-block;
-  stroke:#9ff0b8;
-  stroke-width:0.9;
+  stroke:#74c79a;     /* slightly desaturated */
+  stroke-width:0.7;   /* thinner stroke */
   fill:none;
   opacity:0.95;
-  transform:translateY(1px);
+  transform:translateY(0.6px);
 }
 
-/* Sidebar verified pill (text-only) - no gem, used only in sidebar */
-.verified-pill-sidebar{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:linear-gradient(180deg,#2ecc71,#1e8b4a);color:#03140b;font-weight:700;font-size:11px;box-shadow:0 1px 0 rgba(0,0,0,.25)}
+/* Sidebar verified pill (text-only) - toned down gradient and look more 'real' */
+.verified-pill-sidebar{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:5px 10px;
+  border-radius:999px;
+  background:linear-gradient(180deg,#2a9a64,#1f7a4a); /* darker, less neon */
+  color:#f5fff7;
+  font-weight:700;
+  font-size:11px;
+  box-shadow:0 1px 0 rgba(0,0,0,.18);
+}
 
 /* ===== VOICE ===== */
 .wave{display:flex;gap:3px;align-items:flex-end;height:18px}
@@ -176,21 +187,23 @@ header{position:relative}
   font-size:13px;
   color:#a0a6b5;
   transition:opacity .12s ease;
-  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+  box-shadow: 0 2px 6px rgba(0,0,0,.12);
 }
-.group-typing-bar .dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;box-shadow:0 0 6px rgba(46,204,113,.14);flex-shrink:0}
+.group-typing-bar .dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;box-shadow:0 0 6px rgba(46,204,113,.12);flex-shrink:0}
 .group-typing-bar .typing-summary{overflow:hidden;text-overflow:ellipsis;display:block;color:#2ecc71;font-weight:600}
 
-/* hide only the 'members' line - demo text remains visible */
+/* hide only the Members line while typing; keep lock + demo visible */
 .header-members{display:block}
 .header-demo{display:block}
 header.typing-active .header-members{display:none}
 
-/* unread counter - placed immediately left of members button */
+/* unread counter (small bubble) - immediately left of members button */
 .header-controls{position:relative;min-width:120px;display:flex;align-items:center;gap:8px}
-.patched-unread-counter{background:#2b3242;padding:6px 10px;border-radius:999px;font-size:12px;color:#fff;display:none;min-width:28px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer;z-index:70}
+.patched-unread-counter{
+  background:#2b3242;padding:6px 10px;border-radius:999px;font-size:12px;color:#fff;display:none;min-width:28px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer;z-index:70
+}
 
-/* minimal responsive tweaks */
+/* responsive */
 @media (max-width:420px){ .group-typing-bar{ max-width:58%; right:48px; font-size:12px; } }
 </style>
 </head>
@@ -208,7 +221,6 @@ header.typing-active .header-members{display:none}
         <i data-lucide="lock" class="w-3 h-3"></i>
         <span>Private Group</span>
       </div>
-      <!-- split members vs demo so we can hide only members line when typing -->
       <div class="text-xs text-muted header-members">
         Members: 4,872 • Online: <span id="onlineCount">132</span>
       </div>
@@ -219,9 +231,7 @@ header.typing-active .header-members{display:none}
   </div>
 
   <div class="header-controls" id="headerControls">
-    <!-- unread counter -->
     <div id="unread-counter" class="patched-unread-counter" style="display:none">0</div>
-    <!-- typing bar is absolutely positioned but we align it to the members line via JS -->
     <div id="group-typing-bar" class="group-typing-bar" style="display:none">
       <div class="dot"></div>
       <div class="typing-summary">Someone is typing…</div>
@@ -274,9 +284,8 @@ header.typing-active .header-members{display:none}
 <script>
 lucide.createIcons();
 
-/* ================= FULL LOGIC (keeps original structure) ================= */
+/* ================= FULL LOGIC (with header overlay, gem scale & sidebar pill tone) ================= */
 
-/* DOM refs */
 const chat=document.getElementById('chat');
 const input=document.getElementById('input');
 const send=document.getElementById('send');
@@ -290,13 +299,12 @@ const membersBtn=document.getElementById('membersBtn');
 const closeSidebar=document.getElementById('closeSidebar');
 const memberList=document.getElementById('memberList');
 const onlineCount=document.getElementById('onlineCount');
-const groupTypingBar = document.getElementById('group-typing-bar');
-const unreadCounter = document.getElementById('unread-counter');
-const memberSearch = document.getElementById('memberSearch');
-const headerMembers = document.querySelector('.header-members');
-const headerDemo = document.querySelector('.header-demo');
-const headerControls = document.getElementById('headerControls');
-const mainHeader = document.getElementById('mainHeader');
+const groupTypingBar=document.getElementById('group-typing-bar');
+const unreadCounter=document.getElementById('unread-counter');
+const memberSearch=document.getElementById('memberSearch');
+const headerMembers=document.querySelector('.header-members');
+const headerDemo=document.querySelector('.header-demo');
+const mainHeader=document.getElementById('mainHeader');
 
 /* EMOJI */
 emojiBtn.onclick=()=>EmojiPack.openPicker(input);
@@ -439,18 +447,21 @@ memberSearch.addEventListener('input', e => { renderMembers(e.target.value); });
 setInterval(()=>{ members[Math.floor(Math.random()*members.length)].lastActive=Date.now(); renderMembers(memberSearch.value); },8000);
 renderMembers();
 
-/* when members button clicked: toggle sidebar and hide unread counter while sidebar open */
+/* Sidebar toggle behaviour: show/hide sidebar and unread circle properly */
+function openSidebar(){
+  sidebar.classList.remove('translate-x-full');
+  // when sidebar open, hide online/unread small bubble
+  unreadCounter.style.display = 'none';
+}
+function closeSidebarFn(){
+  sidebar.classList.add('translate-x-full');
+  // when closed restore only if unread present
+  if(unreadCount>0) unreadCounter.style.display='inline-block';
+}
 membersBtn.onclick = () => {
-  const opened = sidebar.classList.toggle('translate-x-full') === false; // false means now visible
-  if(opened){
-    // hide unread counter while sidebar open
-    unreadCounter.style.display = 'none';
-  }
-  // when closed, unread counter display stays as-is (if unreadCount>0)
+  if(sidebar.classList.contains('translate-x-full')) openSidebar(); else closeSidebarFn();
 };
-
-/* close button */
-closeSidebar.onclick=()=>{ sidebar.classList.add('translate-x-full'); };
+closeSidebar.onclick = closeSidebarFn;
 
 /* ===== DB ===== */
 const DB='AbroxDB',STORE='messages',PAGE=20;
@@ -505,10 +516,9 @@ function render(m,prepend=false){
     avatarHTML=grouped?`<div class="avatar-spacer"></div>`:`<img class="avatar" src="${user?.avatar||''}">`;
   }
 
-  // only show gem-verified inside chat bubble; sidebar uses text-only pill
+  // show gem verified inside bubble only for VERIFIED role; sidebar uses text-only pill
   const roleUpper=(m.role||'').toUpperCase();
   const verifiedBubbleHTML = roleUpper==='VERIFIED' ? `<span class="verified-bubble"><i data-lucide="gem"></i><span style="font-size:11px">VERIFIED</span></span>` : '';
-  // only show role badge if not VERIFIED (prevents duplicate green pill)
   const roleBadgeHTML = (roleUpper && roleUpper!=='VERIFIED') ? `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>` : '';
 
   el.innerHTML=`
@@ -521,7 +531,7 @@ function render(m,prepend=false){
     </div>`;
   prepend?chat.prepend(el):chat.appendChild(el);
 
-  // render lucide icons (gem)
+  // render any lucide icons inside the new element (gem)
   lucide.createIcons();
 
   if(m.out)receipts(el);
@@ -556,7 +566,7 @@ function receipts(el){
   },1400);
 }
 
-/* ===== TYPING ENGINE & GROUP-HEADER LOGIC (human-like) ===== */
+/* ===== TYPING ENGINE & GROUP-HEADER LOGIC (human-like + header overlay) ===== */
 
 /* Active typers map */
 const activeTypers = new Map();
@@ -568,7 +578,7 @@ const NIGHT_SLOW_FACTOR = 1.6;
 const ADMIN_PAUSE_MULTIPLIER = 1.4;
 const MAX_VISIBLE_NAMES = 3;
 
-/* unread counter helpers */
+/* unread count helpers */
 let unreadCount = 0;
 function isUserAtBottom(){
   return chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 10;
@@ -584,7 +594,7 @@ function clearUnread(){
   unreadCounter.textContent = '';
 }
 
-/* handle scroll: existing load on top behavior preserved; additional unread & typing pause/resume */
+/* handle scroll: preserve load on top and manage typing pause/resume */
 chat.addEventListener('scroll', ()=>{
   if(chat.scrollTop===0) load();
   if(isUserAtBottom()){
@@ -600,7 +610,7 @@ document.addEventListener('visibilitychange', ()=>{ if(document.hidden) pauseTyp
 /* helper: time-of-day */
 function isNightTime(){ const hr=new Date().getHours(); return (hr<7 || hr>=22); }
 
-/* position typing bar vertically to match headerMembers — prevents misalignment */
+/* align the typing pill vertically to the Members line to avoid reflow */
 function positionTypingBar(){
   if(!groupTypingBar || !headerMembers) return;
   const headerRect = mainHeader.getBoundingClientRect();
@@ -609,7 +619,7 @@ function positionTypingBar(){
   groupTypingBar.style.top = `${Math.max(8, topWithinHeader)}px`;
 }
 
-/* start typing simulation for a member (human-like) */
+/* start typing simulation for a member */
 function startTypingSimulation(member, text='', options={}){
   if(activeTypers.has(member.name)) return;
   const role=(member.role||'').toUpperCase();
@@ -713,7 +723,7 @@ function updateTypingHeader(){
 
     groupTypingBar.innerHTML = `<div class="dot"></div><div class="typing-summary">${html}</div>`;
     groupTypingBar.style.display = '';
-    // show typing pill in header and hide only the members line (demo remains)
+    // show typing pill and hide only the members line (demo remains)
     mainHeader.classList.add('typing-active');
     positionTypingBar();
   });
@@ -732,12 +742,12 @@ window.addEventListener('typingFinished', (e) => {
   else chat.scrollTop = chat.scrollHeight;
 });
 
-/* helper wrappers to keep old API compatible */
+/* expose old API names */
 function showTyping(member, text=''){ startTypingSimulation(member, text); }
 function hideTyping(member){ stopTyping(member.name || member); }
 function fakeMemberSend(member,text){ startTypingSimulation(member,text); }
 
-/* simulate members typing (keeps original pace) */
+/* simulate members typing */
 if(typeof members !== 'undefined'){
   if(!window._groupTypingSimInterval){
     window._groupTypingSimInterval = setInterval(()=>{
@@ -748,7 +758,7 @@ if(typeof members !== 'undefined'){
   }
 }
 
-/* SEND handler (unchanged) */
+/* SEND handler (preserves original behavior) */
 send.onclick=()=>{
   if(!input.value.trim())return;
   const m={name:'You',role:'VERIFIED',text:input.value,timestamp:Date.now(),out:true};
@@ -761,19 +771,19 @@ send.onclick=()=>{
   if(isUserAtBottom()) chat.scrollTop = chat.scrollHeight;
 };
 
-/* handle incoming message: stops typing for that member and increments unread if user is scrolled up */
+/* handle incoming message: stop typing for that member and manage unread counter */
 function handleIncomingMessage(m){
   cancelTypingExcept(m.name);
   if(!isUserAtBottom() && !(m.out && m.name === 'You')) incrementUnread();
 }
 
-/* escape util */
+/* small util */
 function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>'"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-/* render lucide icons for initial icons and any dynamic gem icons */
+/* render initial lucide icons */
 lucide.createIcons();
 
-/* legacy per-message typing rows kept for backwards compatibility (not used for header) */
+/* legacy per-message typing rows (kept for compatibility) */
 const typingMap=new Map();
 function legacy_showTyping(member){
   if(typingMap.has(member.name))return;
@@ -793,31 +803,12 @@ function legacy_hideTyping(member){
   const row=typingMap.get(member.name);
   if(row){row.remove();typingMap.delete(member.name);}
 }
-
-/* expose compatibility names used previously */
 window.showTyping = showTyping;
 window.hideTyping = hideTyping;
 window.fakeMemberSend = fakeMemberSend;
 
-/* reposition typing bar when window resizes to keep alignment with header-members */
+/* keep typing bar positioned on resize */
 window.addEventListener('resize', ()=>{ setTimeout(positionTypingBar, 0); });
-
-/* when sidebar opens/closes ensure unreadCounter visibility is correct:
-   unread counter shows only when sidebar is closed (so it doesn't duplicate while sidebar visible) */
-membersBtn.addEventListener('click', ()=>{
-  // compute whether sidebar will be open after toggle
-  const willOpen = sidebar.classList.contains('translate-x-full');
-  if(willOpen){
-    // hide unread counter while sidebar open
-    unreadCounter.style.display = 'none';
-  } else {
-    // sidebar closing -> show unread counter if there are unread messages
-    if(unreadCount>0) unreadCounter.style.display = 'inline-block';
-  }
-});
-closeSidebar.addEventListener('click', ()=>{
-  if(unreadCount>0) unreadCounter.style.display = 'inline-block';
-});
 </script>
 </body>
 </html>
