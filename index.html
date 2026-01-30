@@ -77,7 +77,7 @@ tailwind.config = {
 
 /* ===== META ===== */
 .sender{font-size:11px;font-weight:600;color:#2ecc71;margin-bottom:4px}
-.time{font-size:10px;opacity:.7;margin-top:6px;display:flex;justify-content:flex-end;gap:4px;line-height:1;transform:translateY(1px)}
+.time{font-size:10px;opacity:.7;margin-top:6px;display:flex;justify-content:flex-end;gap:4px}
 .read-by{display:flex;gap:4px;margin-top:4px;justify-content:flex-end}
 .read-by img{width:13px;height:13px;border-radius:999px;border:1px solid #1c1f26}
 .date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
@@ -87,132 +87,93 @@ tailwind.config = {
 .badge.mod{background:#f39c12}
 .badge.verified{background:#2ecc71}
 
-/* Verified pill inside chat bubble (gem + text) - softened + smaller gem */
+/* ===== VERIFIED GEM (SURGICAL SCALE FIX) ===== */
 .verified-bubble{
   display:inline-flex;
   align-items:center;
   gap:6px;
   padding:3px 8px;
   border-radius:999px;
-  background:linear-gradient(180deg,#1b6d46,#125034); /* toned, less neon */
+  background:linear-gradient(180deg,#1b6d46,#125034);
   color:#d8f6e2;
   font-size:11px;
   font-weight:500;
-  line-height:1;
-  box-shadow:0 1px 0 rgba(0,0,0,.14);
-  margin-left:6px;
-  vertical-align:middle;
 }
 .verified-bubble i[data-lucide="gem"]{
-  width:8px;height:8px; /* reduced ~8% from previous 9px */
-  display:inline-block;
-  stroke:#6fbf98;     /* slightly desaturated */
-  stroke-width:0.45;   /* thinner stroke (reduced) */
-  fill:none;
-  opacity:0.95;
-  transform:translateY(0.6px);
+  width:8px;height:8px;
+  stroke-width:0.45;
+  opacity:.95;
 }
 
-/* Sidebar verified pill (text-only) - toned look */
-.verified-pill-sidebar{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:5px 10px;
-  border-radius:999px;
-  background:linear-gradient(180deg,#2a9a64,#1f7a4a); /* darker, less neon */
-  color:#f5fff7;
-  font-weight:700;
-  font-size:11px;
-  box-shadow:0 1px 0 rgba(0,0,0,.18);
-}
-
-/* ===== VOICE ===== */
-.wave{display:flex;gap:3px;align-items:flex-end;height:18px}
-.wave span{width:3px;background:#fff;border-radius:2px;animation:wave 1s infinite ease-in-out}
-.wave span:nth-child(2){animation-delay:.1s}
-.wave span:nth-child(3){animation-delay:.2s}
-.wave span:nth-child(4){animation-delay:.3s}
-@keyframes wave{0%,100%{height:4px}50%{height:16px}}
-.recording{background:#e74c3c;border-radius:999px;padding:6px}
-
-/* ===== AVATAR ===== */
-.avatar{width:32px;height:32px;border-radius:999px;margin-top:2px;flex-shrink:0}
-.avatar-spacer{width:32px;flex-shrink:0}
-
-/* ===== PATCH 2: PER-MEMBER TYPING (legacy kept) ===== */
-.typing-row{
-  display:flex;
-  gap:8px;
-  align-items:flex-end;
-  margin:6px 0;
-}
-.typing-bubble{
-  background:#262b38;
-  padding:6px 10px;
-  border-radius:18px;
-  display:flex;
-  align-items:center;
-  gap:6px;
-  font-size:12px;
-}
-.typing-dots{display:flex;gap:3px}
-.typing-dots span{
-  width:4px;height:4px;
-  background:#a0a6b5;
-  border-radius:50%;
-  animation:typing 1.4s infinite ease-in-out;
-}
-.typing-dots span:nth-child(2){animation-delay:.2s}
-.typing-dots span:nth-child(3){animation-delay:.4s}
-@keyframes typing{0%,80%,100%{opacity:.3}40%{opacity:1}}
-
-/* ===== GROUP TYPING BAR + UNREAD COUNTER ===== */
+/* ===== GROUP TYPING BAR ===== */
 header{position:relative}
+.header-controls{position:relative;display:flex;align-items:center;gap:8px}
 
-/* header-controls is the container on the right; we position the typing pill relative to it.
-   This keeps the pill anchored and vertically centered next to the members/controls without reflow. */
-.header-controls{position:relative;min-width:120px;display:flex;align-items:center;gap:8px}
-
-/* group typing pill positioned absolutely inside header-controls (left of controls)
-   Nudged 6px left by reducing the right offset (previously +8px -> now +2px) */
 .group-typing-bar{
   position:absolute;
-  right:calc(100% + 2px); /* moved left by ~6px compared to prior +8px */
+  right:calc(100% + 2px);
   top:50%;
   transform:translateY(-50%);
-  z-index:50;
-  display:inline-flex;
-  gap:8px;
+  display:none;
   align-items:center;
+  gap:8px;
   padding:6px 10px;
-  min-height:34px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  max-width:40vw;
-  background:rgba(255,255,255,0.02);
   border-radius:999px;
+  background:rgba(255,255,255,.03);
   font-size:13px;
   color:#a0a6b5;
-  transition:opacity .12s ease;
-  box-shadow: 0 2px 6px rgba(0,0,0,.12);
 }
-.group-typing-bar .dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;box-shadow:0 0 6px rgba(46,204,113,.12);flex-shrink:0}
-.group-typing-bar .typing-summary{overflow:hidden;text-overflow:ellipsis;display:block;color:#2ecc71;font-weight:600}
+.group-typing-bar .dot{
+  width:8px;height:8px;
+  border-radius:50%;
+  background:#2ecc71;
+}
+.group-typing-bar .typing-summary{
+  color:#2ecc71;
+  font-weight:600;
+}
 
-/* hide only the Members line while typing; keep lock + demo lines visible */
 .header-members{display:block}
-.header-demo{display:block}
 header.typing-active .header-members{display:none}
 
-/* unread counter (small bubble) - immediate left of members button */
+/* ===== UNREAD COUNTER ===== */
 .patched-unread-counter{
-  background:#2b3242;padding:6px 10px;border-radius:999px;font-size:12px;color:#fff;display:none;min-width:28px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer;z-index:70
+  background:#2b3242;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  display:none;
 }
 
-/* responsive */
-@media (max-width:420px){ .group-typing-bar{ max-width:58%; right:calc(100% + 0px); font-size:12px; } }
+/* small extras */
+.verified-pill-sidebar{
+  background:linear-gradient(180deg,#1b6d46,#125034);
+  color:#d8f6e2;
+  padding:2px 6px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:600;
+}
+
+/* mic recording UI */
+.recording { position: relative; }
+.wave { display:inline-flex; gap:4px; align-items:center; }
+.wave span { width:4px; height:12px; display:inline-block; background:currentColor; opacity:.8; border-radius:2px; transform-origin:center bottom; animation:wave 800ms infinite; }
+.wave span:nth-child(2){ animation-delay:100ms; animation-duration:760ms; }
+.wave span:nth-child(3){ animation-delay:200ms; animation-duration:720ms; }
+.wave span:nth-child(4){ animation-delay:300ms; animation-duration:700ms; }
+@keyframes wave { 0% { transform:scaleY(.4);} 50%{transform:scaleY(1);} 100%{transform:scaleY(.4);} }
+
+.avatar{ width:32px; height:32px; border-radius:999px; }
+.avatar-spacer{ width:32px; height:32px; display:inline-block; }
+
+.typing-row{ display:flex; gap:8px; margin:6px 0; align-items:center; }
+.typing-bubble{ background:rgba(255,255,255,0.03); padding:8px; border-radius:12px; }
+.typing-dots span{ display:inline-block; width:6px; height:6px; background:#a0a6b5; margin-right:4px; border-radius:50%; opacity:.7; animation:dot 1s infinite; }
+.typing-dots span:nth-child(2){ animation-delay:120ms; }
+.typing-dots span:nth-child(3){ animation-delay:240ms; }
+@keyframes dot { 0%{ transform:translateY(0);} 50%{ transform:translateY(-4px);} 100%{ transform:translateY(0);} }
+
 </style>
 </head>
 
@@ -238,9 +199,9 @@ header.typing-active .header-members{display:none}
     </div>
   </div>
 
-  <div class="header-controls" id="headerControls">
-    <div id="unread-counter" class="patched-unread-counter" style="display:none">0</div>
-    <div id="group-typing-bar" class="group-typing-bar" style="display:none">
+  <div class="header-controls">
+    <div id="unread-counter" class="patched-unread-counter">0</div>
+    <div id="group-typing-bar" class="group-typing-bar">
       <div class="dot"></div>
       <div class="typing-summary">Someone is typing…</div>
     </div>
@@ -280,9 +241,13 @@ header.typing-active .header-members{display:none}
     <strong>Members</strong>
     <button id="closeSidebar"><i data-lucide="x"></i></button>
   </div>
-  <div style="padding:0 12px 8px 12px">
-    <input id="memberSearch" placeholder="Search members..." />
+
+  <div class="px-3 pb-2">
+    <input id="memberSearch"
+           class="w-full bg-bg border border-border rounded px-3 py-2 text-sm outline-none"
+           placeholder="Search members...">
   </div>
+
   <div id="memberList" class="flex-1 p-3 space-y-4 overflow-y-auto"></div>
 </aside>
 
@@ -290,280 +255,236 @@ header.typing-active .header-members{display:none}
 </div>
 
 <script>
+/* ================= CORE STATE ================= */
 lucide.createIcons();
 
-/* ================= FULL LOGIC (anchored header pill + softened gem - micro tweaks applied) ================= */
+const chat = document.getElementById('chat');
+const input = document.getElementById('input');
+const send = document.getElementById('send');
+const emojiBtn = document.getElementById('emojiBtn');
+const mediaBtn = document.getElementById('mediaBtn');
+const micBtn = document.getElementById('micBtn');
+const fileInput = document.getElementById('fileInput');
+const recordTimer = document.getElementById('recordTimer');
+const sidebar = document.getElementById('sidebar');
+const membersBtn = document.getElementById('membersBtn');
+const closeSidebar = document.getElementById('closeSidebar');
+const memberList = document.getElementById('memberList');
+const onlineCount = document.getElementById('onlineCount');
+const groupTypingBar = document.getElementById('group-typing-bar');
+const unreadCounter = document.getElementById('unread-counter');
+const memberSearch = document.getElementById('memberSearch');
+const mainHeader = document.getElementById('mainHeader');
 
-const chat=document.getElementById('chat');
-const input=document.getElementById('input');
-const send=document.getElementById('send');
-const emojiBtn=document.getElementById('emojiBtn');
-const mediaBtn=document.getElementById('mediaBtn');
-const micBtn=document.getElementById('micBtn');
-const fileInput=document.getElementById('fileInput');
-const recordTimer=document.getElementById('recordTimer');
-const sidebar=document.getElementById('sidebar');
-const membersBtn=document.getElementById('membersBtn');
-const closeSidebar=document.getElementById('closeSidebar');
-const memberList=document.getElementById('memberList');
-const onlineCount=document.getElementById('onlineCount');
-const groupTypingBar=document.getElementById('group-typing-bar');
-const unreadCounter=document.getElementById('unread-counter');
-const memberSearch=document.getElementById('memberSearch');
-const headerMembers=document.querySelector('.header-members');
-const headerDemo=document.querySelector('.header-demo');
-const mainHeader=document.getElementById('mainHeader');
+/* ===== EMOJI ===== */
+emojiBtn.onclick = () => { if(window.EmojiPack) EmojiPack.openPicker(input); };
 
-/* EMOJI */
-emojiBtn.onclick=()=>EmojiPack.openPicker(input);
-
-/* INPUT UI TOGGLE */
-input.oninput=()=>{
-  const hasText=input.value.trim().length>0;
-  send.classList.toggle('hidden',!hasText);
-  mediaBtn.classList.toggle('hidden',hasText);
-  micBtn.classList.toggle('hidden',hasText);
+/* ===== INPUT TOGGLE ===== */
+input.oninput = () => {
+  const hasText = input.value.trim().length > 0;
+  send.classList.toggle('hidden', !hasText);
+  mediaBtn.classList.toggle('hidden', hasText);
+  micBtn.classList.toggle('hidden', hasText);
 };
 
-/* MEDIA PICKER */
-mediaBtn.onclick=()=>fileInput.click();
-fileInput.onchange=e=>{
-  if(!e.target.files.length)return;
-  const f=e.target.files[0];
-  const url=URL.createObjectURL(f);
+/* ===== MEDIA PICKER ===== */
+mediaBtn.onclick = () => fileInput.click();
+fileInput.onchange = e => {
+  if (!e.target.files.length) return;
+  const f = e.target.files[0];
+  const url = URL.createObjectURL(f);
   let html;
-  if(f.type.startsWith('image/')) html=`<img src="${url}" class="rounded-lg max-w-full">`;
-  else if(f.type.startsWith('video/')) html=`<video src="${url}" controls class="rounded-lg max-w-full"></video>`;
-  else if(f.type.startsWith('audio/')) html=`<audio src="${url}" controls></audio>`;
-  else html=`📎 ${f.name}`;
-  const m={name:'You',role:'VERIFIED',text:html,timestamp:Date.now(),out:true};
+  if (f.type.startsWith('image/')) html = `<img src="${url}" class="rounded-lg max-w-full">`;
+  else if (f.type.startsWith('video/')) html = `<video src="${url}" controls class="rounded-lg max-w-full"></video>`;
+  else if (f.type.startsWith('audio/')) html = `<audio src="${url}" controls></audio>`;
+  else html = `📎 ${f.name}`;
+  const m = { name:'You', role:'VERIFIED', text: html, timestamp: Date.now(), out:true };
   save(m); render(m);
-  fileInput.value='';
+  fileInput.value = '';
 };
 
 /* ===== VOICE RECORDING ===== */
-let recorder,chunks=[],recStart,recTick;
-let holding=false,stream=null;
+let recorder, chunks = [], recStart, recTick;
+let holding = false, stream = null;
 
 function startUI(){
-  recStart=Date.now();
+  recStart = Date.now();
   recordTimer.classList.remove('hidden');
-  recTick=setInterval(()=>{
-    const s=Math.floor((Date.now()-recStart)/1000);
-    recordTimer.textContent=`● ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  recTick = setInterval(()=>{
+    const s = Math.floor((Date.now()-recStart)/1000);
+    recordTimer.textContent = `● ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
   },1000);
   micBtn.classList.add('recording');
-  micBtn.innerHTML=`<div class="wave"><span></span><span></span><span></span><span></span></div>`;
+  micBtn.innerHTML = `<div class="wave"><span></span><span></span><span></span><span></span></div>`;
 }
 function stopUI(){
   clearInterval(recTick);
   recordTimer.classList.add('hidden');
   micBtn.classList.remove('recording');
-  micBtn.innerHTML='<i data-lucide="mic"></i>';
+  micBtn.innerHTML = '<i data-lucide="mic"></i>';
   lucide.createIcons();
 }
+
 async function startRecording(){
-  try { stream=await navigator.mediaDevices.getUserMedia({audio:true}); }
-  catch(err){ console.warn('Microphone access denied or unavailable',err); return; }
-  recorder=new MediaRecorder(stream);
-  chunks=[];
-  recorder.ondataavailable=e=>chunks.push(e.data);
-  recorder.onstop=()=>{
-    const blob=new Blob(chunks,{type:'audio/webm'});
-    const url=URL.createObjectURL(blob);
-    const m={name:'You',role:'VERIFIED',out:true,type:'voice',timestamp:Date.now(),text:`<audio controls src="${url}"></audio>`};
-    save(m);render(m);
+  try { stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ return; }
+  recorder = new MediaRecorder(stream);
+  chunks = [];
+  recorder.ondataavailable = e => chunks.push(e.data);
+  recorder.onstop = () => {
+    const blob = new Blob(chunks,{type:'audio/webm'});
+    const url = URL.createObjectURL(blob);
+    const m = {
+      name:'You', role:'VERIFIED', out:true, type:'voice',
+      timestamp:Date.now(), text:`<audio controls src="${url}"></audio>`
+    };
+    save(m); render(m);
     stream.getTracks().forEach(t=>t.stop());
     stream=null;
   };
   recorder.start();
 }
 function stopRecording(){
-  if(recorder&&recorder.state==='recording')recorder.stop();
+  if(recorder && recorder.state==='recording') recorder.stop();
 }
 
 /* POINTER EVENTS */
-micBtn.addEventListener('pointerdown',async e=>{
+micBtn.addEventListener('pointerdown', async e=>{
   e.preventDefault();
   holding=true;
   await startRecording();
-  setTimeout(()=>{if(holding)startUI();},300);
+  setTimeout(()=>{ if(holding) startUI(); },300);
 });
-micBtn.addEventListener('pointerup',()=>{if(!holding)return;holding=false;stopUI();stopRecording();});
-micBtn.addEventListener('pointerleave',()=>{if(!holding)return;holding=false;stopUI();stopRecording();});
+micBtn.addEventListener('pointerup', ()=>{ if(!holding) return; holding=false; stopUI(); stopRecording(); });
+micBtn.addEventListener('pointerleave', ()=>{ if(!holding) return; holding=false; stopUI(); stopRecording(); });
 
 /* ===== MEMBERS ===== */
-const ACTIVE=90000;
-const ADMIN={name:'Profit Hunter 🌐',role:'ADMIN',avatar:'assets/admin.jpg'};
-const MOD={name:'Kitty Star ⭐',role:'MOD',avatar:'assets/mod.jpg'};
-const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
-  name:`Member_${i+1}`,
-  role:'VERIFIED',
-  avatar:`https://randomuser.me/api/portraits/men/${i+20}.jpg`,
-  lastActive:Date.now()-Math.random()*120000
-}))];
+const ACTIVE = 90000;
+const ADMIN = { name:'Profit Hunter 🌐', role:'ADMIN', avatar:'assets/admin.jpg' };
+const MOD   = { name:'Kitty Star ⭐', role:'MOD', avatar:'assets/mod.jpg' };
 
-const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
+const members = [
+  ADMIN, MOD,
+  ...Array.from({length:25},(_,i)=>({
+    name:`Member_${i+1}`,
+    role:'VERIFIED',
+    avatar:`https://randomuser.me/api/portraits/men/${i+20}.jpg`,
+    lastActive:Date.now()-Math.random()*120000
+  }))
+];
 
-/* Render members (sidebar): text-only verified pill, priority ordering */
+const isOnline = m => Date.now()-m.lastActive < ACTIVE;
+
 function renderMembers(filter=''){
-  const priority = role => {
-    const r=(role||'').toUpperCase();
-    if(r.includes('ADMIN')) return 0;
-    if(r.includes('MOD')) return 1;
-    if(r.includes('VERIFIED')) return 2;
-    return 3;
-  };
-  const q=(filter||'').trim().toLowerCase();
-  const list = members
-    .filter(m => !q || m.name.toLowerCase().includes(q))
-    .sort((a,b)=>{
-      const pa=priority(a.role), pb=priority(b.role);
-      if(pa!==pb) return pa-pb;
-      const oa=isOnline(a)?0:1, ob=isOnline(b)?0:1;
-      if(oa!==ob) return oa-ob;
-      return a.name.localeCompare(b.name);
-    });
-
+  const q = filter.toLowerCase();
   memberList.innerHTML='';
-  list.forEach(m=>{
-    let rightHTML = '';
-    const roleUpper = (m.role||'').toUpperCase();
-    if(roleUpper === 'VERIFIED'){
-      rightHTML = `<span class="verified-pill-sidebar" title="Verified">VERIFIED</span>`;
-    } else if(roleUpper.includes('ADMIN') || roleUpper.includes('MOD')){
-      rightHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
-    } else if(m.role){
-      rightHTML = `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`;
-    }
-
-    memberList.innerHTML += `
-    <div class="flex gap-3 items-center">
-      <div class="relative">
-        <img src="${m.avatar}" class="w-9 h-9 rounded-full">
-        <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${isOnline(m)?'bg-green-500':'bg-gray-500'}"></span>
-      </div>
-      <div>
-        <div class="text-sm">${m.name}</div>
-        <div style="margin-top:6px">${rightHTML}</div>
-      </div>
-    </div>`;
-  });
-  onlineCount.textContent=members.filter(isOnline).length;
+  members
+    .filter(m=>!q||m.name.toLowerCase().includes(q))
+    .sort((a,b)=> (isOnline(b)-isOnline(a)) || a.name.localeCompare(b.name))
+    .forEach(m=>{
+      memberList.innerHTML += `
+      <div class="flex gap-3 items-center">
+        <div class="relative">
+          <img src="${m.avatar}" class="w-9 h-9 rounded-full">
+          <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${isOnline(m)?'bg-green-500':'bg-gray-500'}"></span>
+        </div>
+        <div>
+          <div class="text-sm">${m.name}</div>
+          ${m.role==='VERIFIED'
+            ? `<span class="verified-pill-sidebar">VERIFIED</span>`
+            : `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`
+          }
+        </div>
+      </div>`;
+    });
+  onlineCount.textContent = members.filter(isOnline).length;
 }
-memberSearch.addEventListener('input', e => { renderMembers(e.target.value); });
-setInterval(()=>{ members[Math.floor(Math.random()*members.length)].lastActive=Date.now(); renderMembers(memberSearch.value); },8000);
+
+memberSearch.addEventListener('input', e=>renderMembers(e.target.value));
+setInterval(()=>{
+  members[Math.floor(Math.random()*members.length)].lastActive = Date.now();
+  renderMembers(memberSearch.value);
+},8000);
 renderMembers();
 
-/* Sidebar toggle behaviour: show/hide sidebar and hide unread bubble while open */
-function openSidebar(){
-  sidebar.classList.remove('translate-x-full');
-  unreadCounter.style.display = 'none';
-}
-function closeSidebarFn(){
-  sidebar.classList.add('translate-x-full');
-  if(unreadCount>0) unreadCounter.style.display='inline-block';
-}
-membersBtn.onclick = () => {
-  if(sidebar.classList.contains('translate-x-full')) openSidebar(); else closeSidebarFn();
-};
-closeSidebar.onclick = closeSidebarFn;
+/* ===== RENDER ===== */
+let lastMeta=null, lastDate='';
 
-/* ===== DB ===== */
-const DB='AbroxDB',STORE='messages',PAGE=20;
-let db,offset=0,loading=false,lastMeta=null,lastDate='';
-indexedDB.open(DB,1).onupgradeneeded=e=>{
-  e.target.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});
-};
-indexedDB.open(DB,1).onsuccess=e=>{
-  db=e.target.result;seed();load();
-};
-function save(m){
-  db.transaction(STORE,'readwrite').objectStore(STORE).add(m);
-}
-function seed(){
-  const st=db.transaction(STORE).objectStore(STORE);
-  st.count().onsuccess=e=>{
-    if(e.target.result)return;
-    [
-      {...ADMIN,text:'Welcome to Abrox Private Lounge.',timestamp:Date.now()-86400000,out:false},
-      {...MOD,text:'Please read pinned rules before chatting.',timestamp:Date.now()-86300000,out:false}
-    ].forEach(save);
-  };
-}
-function load(){
-  if(loading)return;
-  loading=true;
-  db.transaction(STORE).objectStore(STORE).getAll().onsuccess=e=>{
-    const all=e.target.result.sort((a,b)=>a.timestamp-b.timestamp);
-    const slice=all.slice(Math.max(0,all.length-offset-PAGE),all.length-offset);
-    slice.forEach(m=>render(m,true));
-    offset+=PAGE;
-    loading=false;
-  };
+function formatTime(ts){
+  const d=new Date(ts);
+  return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
 }
 
-/* ===== render() ===== */
-function render(m,prepend=false){
-  const d=new Date(m.timestamp);
-  if(d.toDateString()!==lastDate){
-    const sep=document.createElement('div');
-    sep.className='date-sep';
-    sep.textContent=d.toDateString();
-    prepend?chat.prepend(sep):chat.appendChild(sep);
-    lastDate=d.toDateString();
+function render(m, prepend=false){
+  const d = new Date(m.timestamp);
+
+  if(d.toDateString() !== lastDate){
+    const sep = document.createElement('div');
+    sep.className = 'date-sep';
+    sep.textContent = d.toDateString();
+    prepend ? chat.prepend(sep) : chat.appendChild(sep);
+    lastDate = d.toDateString();
   }
-  const grouped=lastMeta&&lastMeta.sender===m.name&&(d-lastMeta.time)<120000;
-  const el=document.createElement('div');
-  el.className=`msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
-  let avatarHTML='';
+
+  const grouped = lastMeta &&
+    lastMeta.sender === m.name &&
+    (d - lastMeta.time) < 120000;
+
+  const el = document.createElement('div');
+  el.className = `msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
+
+  let avatarHTML = '';
   if(!m.out){
-    const user=members.find(u=>u.name===m.name);
-    avatarHTML=grouped?`<div class="avatar-spacer"></div>`:`<img class="avatar" src="${user?.avatar||''}">`;
+    const u = members.find(x=>x.name===m.name);
+    avatarHTML = grouped
+      ? `<div class="avatar-spacer"></div>`
+      : `<img class="avatar" src="${u?.avatar||''}">`;
+  } else {
+    // for outgoing messages, show avatar on right (handled in CSS + innerHTML below)
   }
 
-  // show gem verified inside bubble only for VERIFIED role; sidebar uses text-only pill
-  const roleUpper=(m.role||'').toUpperCase();
-  const verifiedBubbleHTML = roleUpper==='VERIFIED' ? `<span class="verified-bubble"><i data-lucide="gem"></i><span style="font-size:11px">VERIFIED</span></span>` : '';
-  const roleBadgeHTML = (roleUpper && roleUpper!=='VERIFIED') ? `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>` : '';
+  const roleUpper = (m.role||'').toUpperCase();
+  const verifiedBubbleHTML =
+    roleUpper==='VERIFIED'
+      ? `<span class="verified-bubble">
+           <i data-lucide="gem"></i>
+           <span>VERIFIED</span>
+         </span>`
+      : '';
+  const roleBadgeHTML =
+    roleUpper && roleUpper!=='VERIFIED'
+      ? `<span class="badge ${m.role.toLowerCase()}">${m.role}</span>`
+      : '';
 
-  el.innerHTML=`
-    ${avatarHTML}
+  el.innerHTML = `
+    ${!m.out ? avatarHTML : ''}
     <div class="bubble">
-      ${!grouped&&!m.out?`<div class="sender">${m.name} ${verifiedBubbleHTML} ${roleBadgeHTML}</div>`:''}
-      ${m.text}
+      ${!grouped && !m.out
+        ? `<div class="sender">${m.name} ${verifiedBubbleHTML} ${roleBadgeHTML}</div>`
+        : ''}
+      ${m.text || ''}
       <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
       <div class="read-by"></div>
-    </div>`;
-  prepend?chat.prepend(el):chat.appendChild(el);
+    </div>
+    ${m.out ? `<img class="avatar" src="${(m.avatar||'https://api.dicebear.com/6.x/identicon/svg?seed='+encodeURIComponent(m.name||'you'))}">` : ''}
+  `;
 
-  // render any lucide icons inside the new element (gem)
+  prepend ? chat.prepend(el) : chat.appendChild(el);
   lucide.createIcons();
 
-  if(m.out)receipts(el);
-  if(m.out&&m.type==='voice'){
-    let t;
-    el.addEventListener('mousedown',()=>t=setTimeout(()=>{
-      el.remove();
-      const tx=db.transaction(STORE,'readwrite').objectStore(STORE);
-      tx.getAll().onsuccess=e=>{
-        e.target.result.forEach(r=>{if(r.timestamp===m.timestamp)tx.delete(r.id);});
-      };
-    },800));
-    ['mouseup','mouseleave'].forEach(e=>el.addEventListener(e,()=>clearTimeout(t)));
-  }
-
-  // when an incoming message is rendered, cancel typing (ghost typing prevention) and manage unread.
+  if(m.out) receipts(el);
   handleIncomingMessage(m);
 
-  lastMeta={sender:m.name,time:d};
+  lastMeta = { sender:m.name, time:d };
 }
+
+/* ===== READ RECEIPTS ===== */
 function receipts(el){
-  const t=el.querySelector('.time');
-  const r=el.querySelector('.read-by');
-  setTimeout(()=>t.textContent=`✓✓ ${t.textContent.slice(2)}`,600);
+  const t = el.querySelector('.time');
+  const r = el.querySelector('.read-by');
+  setTimeout(()=> t.textContent = `✓✓ ${t.textContent.slice(2)}`,600);
   setTimeout(()=>{
-    t.textContent=`✓✓ 👀 ${t.textContent.slice(2)}`;
+    t.textContent = `✓✓ 👀 ${t.textContent.slice(2)}`;
     [ADMIN,MOD].forEach(u=>{
       const img=document.createElement('img');
       img.src=u.avatar;
@@ -572,19 +493,7 @@ function receipts(el){
   },1400);
 }
 
-/* ===== TYPING ENGINE & GROUP-HEADER LOGIC (human-like + header overlay) ===== */
-
-/* Active typers map */
-const activeTypers = new Map();
-
-/* config */
-const ADMIN_ROLES = new Set(['ADMIN','ADMINISTRATOR','OWNER']);
-const TYPING_BASE_WPM = 40;
-const NIGHT_SLOW_FACTOR = 1.6;
-const ADMIN_PAUSE_MULTIPLIER = 1.4;
-const MAX_VISIBLE_NAMES = 3;
-
-/* unread count helpers */
+/* ===== UNREAD COUNTER ===== */
 let unreadCount = 0;
 function isUserAtBottom(){
   return chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 10;
@@ -597,210 +506,167 @@ function incrementUnread(){
 function clearUnread(){
   unreadCount = 0;
   unreadCounter.style.display = 'none';
-  unreadCounter.textContent = '';
 }
+unreadCounter.onclick = ()=>{
+  chat.scrollTop = chat.scrollHeight;
+  clearUnread();
+};
 
-/* handle scroll: preserve load on top and manage typing pause/resume */
-chat.addEventListener('scroll', ()=>{
-  if(chat.scrollTop===0) load();
-  if(isUserAtBottom()){
-    resumeTypingAfterPause();
-    clearUnread();
-  } else {
-    pauseTypingForContextChange();
-  }
-});
-unreadCounter.addEventListener('click', ()=>{ chat.scrollTop = chat.scrollHeight; clearUnread(); });
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden) pauseTypingForContextChange(); else resumeTypingAfterPause(); });
+/* ===== GROUP TYPING HEADER ===== */
+const activeTypers = new Map();
 
-/* helper: time-of-day */
-function isNightTime(){ const hr=new Date().getHours(); return (hr<7 || hr>=22); }
-
-/* start typing simulation for a member */
-function startTypingSimulation(member, text='', options={}){
-  if(activeTypers.has(member.name)) return;
-  const role=(member.role||'').toUpperCase();
-  const isAdmin = ADMIN_ROLES.has(role);
-
-  const entry = {
-    member,
-    state:'starting',
-    timers: [],
-    paused: false,
-    originalText: text,
-    startedAt: Date.now(),
-    urgent: !!options.urgent
-  };
-  activeTypers.set(member.name, entry);
-  updateTypingHeader();
-
-  // compute duration
-  const wordCount = (text && text.trim()) ? text.trim().split(/\s+/).length : Math.max(1, Math.floor(Math.random()*8)+1);
-  let wpm = TYPING_BASE_WPM;
-  if(/[!?]{2,}/.test(text)) wpm *= 1.15;
-  if(text && text.includes('http')) wpm *= 0.9;
-  if(options.urgent) wpm *= 1.5;
-  if(isNightTime()) wpm /= NIGHT_SLOW_FACTOR;
-  if(isAdmin) wpm /= ADMIN_PAUSE_MULTIPLIER;
-
-  const minutes = wordCount / wpm;
-  const totalMs = Math.max(400, Math.floor(minutes * 60 * 1000));
-  let elapsed = 0;
-
-  // random start delay
-  const startDelay = 200 + Math.random()*900;
-  entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, startDelay));
-  elapsed += startDelay;
-
-  const chunks = 2 + Math.floor(Math.random()*3);
-  for(let i=0;i<chunks;i++){
-    const chunkMs = Math.floor(totalMs/chunks * (0.7 + Math.random()*0.6));
-    entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, elapsed));
-    elapsed += chunkMs;
-
-    if(i < chunks-1){
-      const pauseMs = 150 + Math.random()*(isAdmin?900:500);
-      entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='paused'; updateTypingHeader();
-        setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, 150 + Math.random()*400);
-      }, elapsed));
-      elapsed += pauseMs;
-    }
-  }
-
-  const typoChance = isAdmin?0.35:0.12;
-  if(Math.random() < typoChance){
-    const typoDelay = Math.max(200, Math.min(totalMs-100, 300 + Math.random()*(totalMs-300)));
-    entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='typo'; updateTypingHeader();
-      setTimeout(()=>{ if(entry.paused) return; entry.state='typing'; updateTypingHeader(); }, 250 + Math.random()*500);
-    }, typoDelay));
-  }
-
-  let finishDelay = 150 + Math.random()*600;
-  if(text && text.includes('http')) finishDelay += 400 + Math.random()*800;
-
-  entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='sending'; updateTypingHeader(); dispatchTypingFinished(member.name, text); setTimeout(()=>{ stopTyping(member.name); }, 300 + Math.random()*500); }, elapsed + finishDelay));
-
-  updateTypingHeader();
-}
-
-/* stop/pause/resume helpers */
-function stopTyping(name){ const entry = activeTypers.get(name); if(!entry) return; entry.timers.forEach(t=>clearTimeout(t)); activeTypers.delete(name); updateTypingHeader(); }
-function cancelTypingExcept(keepName=null){ for(const name of Array.from(activeTypers.keys())){ if(name !== keepName) stopTyping(name); } }
-function pauseTypingForContextChange(){ for(const [name, entry] of activeTypers.entries()){ if(!entry.paused){ entry.paused = true; entry.timers.forEach(t=>clearTimeout(t)); entry.timers = []; } } if(groupTypingBar) groupTypingBar.style.display = 'none'; mainHeader.classList.remove('typing-active'); }
-function resumeTypingAfterPause(){ for(const [name, entry] of activeTypers.entries()){ if(entry.paused){ entry.paused = false; entry.state = 'typing'; updateTypingHeader(); const resumeDelay = 150 + Math.random()*600; const t = setTimeout(()=>{ dispatchTypingFinished(name, entry.originalText); stopTyping(name); }, resumeDelay); entry.timers.push(t); } } if(activeTypers.size && groupTypingBar) groupTypingBar.style.display = ''; }
-
-/* throttle header updates to avoid glitch/reflow */
-let headerRaf = null;
 function updateTypingHeader(){
-  if(!groupTypingBar) return;
-  if(headerRaf) cancelAnimationFrame(headerRaf);
-  headerRaf = requestAnimationFrame(()=>{
-    const typers = Array.from(activeTypers.values()).map(e=>e.member);
-    if(typers.length === 0){
-      groupTypingBar.style.display = 'none';
-      groupTypingBar.innerHTML = `<div class="dot"></div><div class="typing-summary"></div>`;
-      mainHeader.classList.remove('typing-active');
-      return;
-    }
-
-    // admins first
-    typers.sort((a,b)=>{
-      const pa = ADMIN_ROLES.has((a.role||'').toUpperCase())?0:1;
-      const pb = ADMIN_ROLES.has((b.role||'').toUpperCase())?0:1;
-      if(pa!==pb) return pa-pb;
-      return 0;
-    });
-
-    const buildName = m => `<strong class="typing-name" style="font-weight:600">${escapeHtml(m.name)}</strong>`;
-    let html = '';
-    if(typers.length === 1) html = `${buildName(typers[0])} is typing…`;
-    else if(typers.length <= MAX_VISIBLE_NAMES) html = `${typers.map(buildName).join(', ')} are typing…`;
-    else html = `${typers.length} people are typing…`;
-
-    groupTypingBar.innerHTML = `<div class="dot"></div><div class="typing-summary">${html}</div>`;
-    groupTypingBar.style.display = '';
-    // show typing pill and hide only the members line (demo remains)
-    mainHeader.classList.add('typing-active');
-  });
-}
-
-/* finished typing -> emit to render message */
-function dispatchTypingFinished(name, text){ const ev = new CustomEvent('typingFinished', { detail: { name, text }}); window.dispatchEvent(ev); }
-window.addEventListener('typingFinished', (e) => {
-  const { name, text } = e.detail;
-  const member = members.find(m => m.name === name);
-  if(!member){ stopTyping(name); return; }
-  cancelTypingExcept(name);
-  const m = { name: member.name, role: member.role, text: text || '…', timestamp: Date.now(), out: false };
-  save(m); render(m);
-  if(!isUserAtBottom()) incrementUnread();
-  else chat.scrollTop = chat.scrollHeight;
-});
-
-/* expose old API names */
-function showTyping(member, text=''){ startTypingSimulation(member, text); }
-function hideTyping(member){ stopTyping(member.name || member); }
-function fakeMemberSend(member,text){ startTypingSimulation(member,text); }
-
-/* simulate members typing */
-if(typeof members !== 'undefined'){
-  if(!window._groupTypingSimInterval){
-    window._groupTypingSimInterval = setInterval(()=>{
-      if(!members || members.length === 0) return;
-      const m = members[Math.floor(Math.random()*members.length)];
-      startTypingSimulation(m, 'Typing indicator now works per-member ✅');
-    },16000);
+  if(activeTypers.size === 0){
+    groupTypingBar.style.display = 'none';
+    mainHeader.classList.remove('typing-active');
+    return;
   }
+  const names = [...activeTypers.keys()].slice(0,3);
+  const label =
+    names.length === 1
+      ? `${names[0]} is typing…`
+      : `${names.join(', ')} are typing…`;
+  groupTypingBar.querySelector('.typing-summary').textContent = label;
+  groupTypingBar.style.display = 'inline-flex';
+  mainHeader.classList.add('typing-active');
 }
 
-/* SEND handler (preserves original behavior) */
-send.onclick=()=>{
-  if(!input.value.trim())return;
-  const m={name:'You',role:'VERIFIED',text:input.value,timestamp:Date.now(),out:true};
-  save(m);render(m);
+function stopTyping(name){
+  activeTypers.delete(name);
+  updateTypingHeader();
+}
+function cancelTypingExcept(name){
+  [...activeTypers.keys()].forEach(k=>{
+    if(k!==name) activeTypers.delete(k);
+  });
+  updateTypingHeader();
+}
+
+/* ===== INCOMING MESSAGE HANDLER ===== */
+function handleIncomingMessage(m){
+  stopTyping(m.name);
+  if(!isUserAtBottom() && !m.out) incrementUnread();
+  else chat.scrollTop = chat.scrollHeight;
+}
+
+/* ===== SEND ===== */
+send.addEventListener('click', ()=>{
+  if(!input.value.trim()) return;
+  const m = {
+    name:'You',
+    role:'VERIFIED',
+    text:input.value,
+    timestamp:Date.now(),
+    out:true
+  };
+  save(m); render(m);
   input.value='';
   send.classList.add('hidden');
   mediaBtn.classList.remove('hidden');
   micBtn.classList.remove('hidden');
-  cancelTypingExcept('You');
-  if(isUserAtBottom()) chat.scrollTop = chat.scrollHeight;
-};
+  chat.scrollTop = chat.scrollHeight;
+});
+input.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && !e.shiftKey){
+    e.preventDefault();
+    send.click();
+  }
+});
 
-/* handle incoming message: stop typing for that member and manage unread counter */
-function handleIncomingMessage(m){
-  cancelTypingExcept(m.name);
-  if(!isUserAtBottom() && !(m.out && m.name === 'You')) incrementUnread();
-}
-
-/* small util */
-function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>'"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-/* render initial lucide icons */
-lucide.createIcons();
-
-/* legacy per-message typing rows (kept for compatibility) */
-const typingMap=new Map();
+/* ===== LEGACY TYPING (COMPAT) ===== */
+const typingMap = new Map();
 function legacy_showTyping(member){
-  if(typingMap.has(member.name))return;
-  const row=document.createElement('div');
+  if(typingMap.has(member.name)) return;
+  const row = document.createElement('div');
   row.className='typing-row';
-  row.innerHTML=`
+  row.innerHTML = `
     <img class="avatar" src="${member.avatar}">
     <div class="typing-bubble">
       <strong>${member.name}</strong>
       <div class="typing-dots"><span></span><span></span><span></span></div>
     </div>`;
   chat.appendChild(row);
-  chat.scrollTop=chat.scrollHeight;
   typingMap.set(member.name,row);
 }
 function legacy_hideTyping(member){
-  const row=typingMap.get(member.name);
-  if(row){row.remove();typingMap.delete(member.name);}
+  const row = typingMap.get(member.name);
+  if(row){ row.remove(); typingMap.delete(member.name); }
 }
-window.showTyping = showTyping;
-window.hideTyping = hideTyping;
-window.fakeMemberSend = fakeMemberSend;
+
+/* expose APIs */
+window.showTyping = m=>{ activeTypers.set(m.name,m); updateTypingHeader(); };
+window.hideTyping = m=>stopTyping(m.name||m);
+window.fakeMemberSend = (m,t)=>{ activeTypers.set(m.name,m); updateTypingHeader(); };
+
+/* ===== INDEXED DB ===== */
+const DB='AbroxDB', STORE='messages';
+let db;
+const openReq = indexedDB.open(DB,1);
+openReq.onupgradeneeded=e=>{
+  try {
+    e.target.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});
+  } catch(err){}
+};
+openReq.onsuccess=e=>{
+  db=e.target.result;
+  seed(); load();
+};
+openReq.onerror = e => { console.warn('IndexedDB open error', e); };
+
+function save(m){
+  try {
+    if(!db) {
+      // if DB isn't ready yet, still render locally and queue isn't implemented; best-effort
+      console.warn('DB not ready, rendering without save');
+      return;
+    }
+    db.transaction(STORE,'readwrite').objectStore(STORE).add(m);
+  } catch (err) {
+    console.warn('DB save failed', err);
+  }
+}
+function seed(){
+  try {
+    const s=db.transaction(STORE).objectStore(STORE);
+    s.count().onsuccess=e=>{
+      if(e.target.result) return;
+      [
+        {...ADMIN,text:'Welcome to Abrox Private Lounge.',timestamp:Date.now()-86400000,out:false},
+        {...MOD,text:'Please read pinned rules before chatting.',timestamp:Date.now()-86300000,out:false}
+      ].forEach(msg=>{ db.transaction(STORE,'readwrite').objectStore(STORE).add(msg); });
+    };
+  } catch(err){ console.warn('Seed failed', err); }
+}
+function load(){
+  try {
+    db.transaction(STORE).objectStore(STORE).getAll().onsuccess=e=>{
+      (e.target.result||[]).sort((a,b)=>a.timestamp-b.timestamp).forEach(render);
+    };
+  } catch(err){ console.warn('Load failed', err); }
+}
+
+/* ===== DEMO: simulate external messages ===== */
+setInterval(()=>{
+  if(Math.random() < 0.25){
+    const m = {
+      name: members[Math.floor(Math.random()*members.length)].name,
+      role: 'VERIFIED',
+      text: ['Nice!', 'Confirmed ✅', 'Check this out', 'On it', 'Lol'][Math.floor(Math.random()*5)],
+      timestamp: Date.now(), out:false
+    };
+    // try to save if DB ready
+    if(db) save(m);
+    render(m);
+    unreadCounter.style.display = '';
+    unreadCounter.textContent = Number(unreadCounter.textContent||0) + 1;
+    setTimeout(()=>{ unreadCounter.style.display = 'none'; unreadCounter.textContent = 0; }, 3000);
+  }
+}, 7000);
+
+/* ===== SIDEBAR ===== */
+membersBtn.onclick = ()=> sidebar.classList.toggle('translate-x-full');
+closeSidebar.onclick = ()=> sidebar.classList.add('translate-x-full');
+
 </script>
 </body>
 </html>
