@@ -87,33 +87,33 @@ tailwind.config = {
 .badge.mod{background:#f39c12}
 .badge.verified{background:#2ecc71}
 
-/* Verified pill inside chat bubble (gem + text) - thinner, smaller, desaturated */
+/* Verified pill inside chat bubble (gem + text) - softened */
 .verified-bubble{
   display:inline-flex;
   align-items:center;
   gap:6px;
   padding:3px 8px;
   border-radius:999px;
-  background:linear-gradient(180deg,#185f3b,#134a2c); /* darker, more realistic */
+  background:linear-gradient(180deg,#1b6d46,#125034); /* toned, less neon */
   color:#d8f6e2;
   font-size:11px;
-  font-weight:600;
+  font-weight:500;
   line-height:1;
-  box-shadow:0 1px 0 rgba(0,0,0,.18);
+  box-shadow:0 1px 0 rgba(0,0,0,.14);
   margin-left:6px;
   vertical-align:middle;
 }
 .verified-bubble i[data-lucide="gem"]{
-  width:10px;height:10px; /* smaller */
+  width:9px;height:9px; /* smaller than before */
   display:inline-block;
-  stroke:#74c79a;     /* slightly desaturated */
-  stroke-width:0.7;   /* thinner stroke */
+  stroke:#6fbf98;     /* slightly desaturated */
+  stroke-width:0.6;   /* thinner stroke */
   fill:none;
   opacity:0.95;
   transform:translateY(0.6px);
 }
 
-/* Sidebar verified pill (text-only) - toned down gradient and look more 'real' */
+/* Sidebar verified pill (text-only) - toned look */
 .verified-pill-sidebar{
   display:inline-flex;
   align-items:center;
@@ -169,9 +169,17 @@ tailwind.config = {
 
 /* ===== GROUP TYPING BAR + UNREAD COUNTER ===== */
 header{position:relative}
+
+/* header-controls is the container on the right; we position the typing pill relative to it.
+   This keeps the pill anchored and vertically centered next to the members/controls without reflow. */
+.header-controls{position:relative;min-width:120px;display:flex;align-items:center;gap:8px}
+
+/* group typing pill positioned absolutely inside header-controls (left of controls) */
 .group-typing-bar{
   position:absolute;
-  right:56px;
+  right:calc(100% + 8px); /* sit just left of the controls block */
+  top:50%;
+  transform:translateY(-50%);
   z-index:50;
   display:inline-flex;
   gap:8px;
@@ -192,19 +200,18 @@ header{position:relative}
 .group-typing-bar .dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;box-shadow:0 0 6px rgba(46,204,113,.12);flex-shrink:0}
 .group-typing-bar .typing-summary{overflow:hidden;text-overflow:ellipsis;display:block;color:#2ecc71;font-weight:600}
 
-/* hide only the Members line while typing; keep lock + demo visible */
+/* hide only the Members line while typing; keep lock + demo lines visible */
 .header-members{display:block}
 .header-demo{display:block}
 header.typing-active .header-members{display:none}
 
-/* unread counter (small bubble) - immediately left of members button */
-.header-controls{position:relative;min-width:120px;display:flex;align-items:center;gap:8px}
+/* unread counter (small bubble) - immediate left of members button */
 .patched-unread-counter{
   background:#2b3242;padding:6px 10px;border-radius:999px;font-size:12px;color:#fff;display:none;min-width:28px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer;z-index:70
 }
 
 /* responsive */
-@media (max-width:420px){ .group-typing-bar{ max-width:58%; right:48px; font-size:12px; } }
+@media (max-width:420px){ .group-typing-bar{ max-width:58%; right:calc(100% + 6px); font-size:12px; } }
 </style>
 </head>
 
@@ -284,7 +291,7 @@ header.typing-active .header-members{display:none}
 <script>
 lucide.createIcons();
 
-/* ================= FULL LOGIC (with header overlay, gem scale & sidebar pill tone) ================= */
+/* ================= FULL LOGIC (anchored header pill + softened gem) ================= */
 
 const chat=document.getElementById('chat');
 const input=document.getElementById('input');
@@ -447,15 +454,13 @@ memberSearch.addEventListener('input', e => { renderMembers(e.target.value); });
 setInterval(()=>{ members[Math.floor(Math.random()*members.length)].lastActive=Date.now(); renderMembers(memberSearch.value); },8000);
 renderMembers();
 
-/* Sidebar toggle behaviour: show/hide sidebar and unread circle properly */
+/* Sidebar toggle behaviour: show/hide sidebar and hide unread bubble while open */
 function openSidebar(){
   sidebar.classList.remove('translate-x-full');
-  // when sidebar open, hide online/unread small bubble
   unreadCounter.style.display = 'none';
 }
 function closeSidebarFn(){
   sidebar.classList.add('translate-x-full');
-  // when closed restore only if unread present
   if(unreadCount>0) unreadCounter.style.display='inline-block';
 }
 membersBtn.onclick = () => {
@@ -610,15 +615,6 @@ document.addEventListener('visibilitychange', ()=>{ if(document.hidden) pauseTyp
 /* helper: time-of-day */
 function isNightTime(){ const hr=new Date().getHours(); return (hr<7 || hr>=22); }
 
-/* align the typing pill vertically to the Members line to avoid reflow */
-function positionTypingBar(){
-  if(!groupTypingBar || !headerMembers) return;
-  const headerRect = mainHeader.getBoundingClientRect();
-  const membersRect = headerMembers.getBoundingClientRect();
-  const topWithinHeader = membersRect.top - headerRect.top + (headerMembers.offsetHeight - groupTypingBar.offsetHeight)/2;
-  groupTypingBar.style.top = `${Math.max(8, topWithinHeader)}px`;
-}
-
 /* start typing simulation for a member */
 function startTypingSimulation(member, text='', options={}){
   if(activeTypers.has(member.name)) return;
@@ -684,14 +680,13 @@ function startTypingSimulation(member, text='', options={}){
   entry.timers.push(setTimeout(()=>{ if(entry.paused) return; entry.state='sending'; updateTypingHeader(); dispatchTypingFinished(member.name, text); setTimeout(()=>{ stopTyping(member.name); }, 300 + Math.random()*500); }, elapsed + finishDelay));
 
   updateTypingHeader();
-  setTimeout(positionTypingBar, 0);
 }
 
 /* stop/pause/resume helpers */
 function stopTyping(name){ const entry = activeTypers.get(name); if(!entry) return; entry.timers.forEach(t=>clearTimeout(t)); activeTypers.delete(name); updateTypingHeader(); }
 function cancelTypingExcept(keepName=null){ for(const name of Array.from(activeTypers.keys())){ if(name !== keepName) stopTyping(name); } }
 function pauseTypingForContextChange(){ for(const [name, entry] of activeTypers.entries()){ if(!entry.paused){ entry.paused = true; entry.timers.forEach(t=>clearTimeout(t)); entry.timers = []; } } if(groupTypingBar) groupTypingBar.style.display = 'none'; mainHeader.classList.remove('typing-active'); }
-function resumeTypingAfterPause(){ for(const [name, entry] of activeTypers.entries()){ if(entry.paused){ entry.paused = false; entry.state = 'typing'; updateTypingHeader(); const resumeDelay = 150 + Math.random()*600; const t = setTimeout(()=>{ dispatchTypingFinished(name, entry.originalText); stopTyping(name); }, resumeDelay); entry.timers.push(t); } } if(activeTypers.size && groupTypingBar) groupTypingBar.style.display = ''; positionTypingBar(); }
+function resumeTypingAfterPause(){ for(const [name, entry] of activeTypers.entries()){ if(entry.paused){ entry.paused = false; entry.state = 'typing'; updateTypingHeader(); const resumeDelay = 150 + Math.random()*600; const t = setTimeout(()=>{ dispatchTypingFinished(name, entry.originalText); stopTyping(name); }, resumeDelay); entry.timers.push(t); } } if(activeTypers.size && groupTypingBar) groupTypingBar.style.display = ''; }
 
 /* throttle header updates to avoid glitch/reflow */
 let headerRaf = null;
@@ -725,7 +720,6 @@ function updateTypingHeader(){
     groupTypingBar.style.display = '';
     // show typing pill and hide only the members line (demo remains)
     mainHeader.classList.add('typing-active');
-    positionTypingBar();
   });
 }
 
@@ -806,9 +800,6 @@ function legacy_hideTyping(member){
 window.showTyping = showTyping;
 window.hideTyping = hideTyping;
 window.fakeMemberSend = fakeMemberSend;
-
-/* keep typing bar positioned on resize */
-window.addEventListener('resize', ()=>{ setTimeout(positionTypingBar, 0); });
 </script>
 </body>
 </html>
