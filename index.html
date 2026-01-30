@@ -1,17 +1,3 @@
-<!--
-Merge helper for your scripts.
-Instructions:
-1) Paste your PART 1 content between the markers below exactly as received (do NOT alter markers).
-2) Paste your PART 2 content between the PART 2 markers.
-3) After both parts are pasted, either:
-   - change READY_TO_MERGE to true, OR
-   - reply in chat: "Merge now"
-
-I will then produce a single combined script (keeps everything intact) and place it in the MERGED OUTPUT section below.
--->
-
-<!-- === PART 1 START (paste here) === -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -45,7 +31,7 @@ tailwind.config = {
 
 <style>
 /* === TELEGRAM RHYTHM === */
-.msg{display:flex;gap:8px;margin-bottom:8px}
+.msg{display:flex;gap:4px;margin-bottom:8px}
 .msg.out{justify-content:flex-end}
 .grouped{margin-top:-6px}
 
@@ -58,10 +44,25 @@ tailwind.config = {
   position:relative;
   box-shadow:0 2px 8px rgba(0,0,0,.18);
 }
-.msg.in .bubble{background:#262b38;border-radius:6px 18px 18px 6px}
-.msg.out .bubble{background:#2b3242;border:1px solid #343a4a;border-radius:18px 6px 6px 18px}
-.grouped.in .bubble{border-top-left-radius:18px}
-.grouped.out .bubble{border-top-right-radius:18px}
+.msg.in .bubble{
+  background:#262b38;
+  border-radius:6px 18px 18px 6px;
+  margin-left:-2px;
+}
+.msg.out .bubble{
+  background:#2b3242;
+  border:1px solid #343a4a;
+  border-radius:18px 6px 6px 18px;
+  margin-right:-2px;
+}
+.grouped.in .bubble{
+  margin-left:0;
+  border-top-left-radius:18px;
+}
+.grouped.out .bubble{
+  margin-right:0;
+  border-top-right-radius:18px;
+}
 
 /* === META === */
 .sender{
@@ -72,490 +73,47 @@ tailwind.config = {
   display:flex;
   align-items:center;
   gap:6px;
+  white-space:nowrap;
 }
-.time{font-size:10px;opacity:.7;margin-top:6px;display:flex;justify-content:flex-end;gap:4px}
-.read-by{display:flex;gap:4px;margin-top:4px;justify-content:flex-end}
-.read-by img{width:13px;height:13px;border-radius:999px;border:1px solid #1c1f26}
-.date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
+.time{
+  font-size:10px;
+  opacity:.7;
+  margin-top:6px;
+  display:flex;
+  justify-content:flex-end;
+  gap:4px;
+}
+.read-by{
+  display:flex;
+  gap:4px;
+  margin-top:4px;
+  justify-content:flex-end;
+}
+.read-by img{
+  width:13px;
+  height:13px;
+  border-radius:999px;
+  border:1px solid #1c1f26;
+}
+.date-sep{
+  text-align:center;
+  font-size:11px;
+  color:#a0a6b5;
+  margin:12px 0;
+}
 
-/* === VERIFIED GEM (SUBTLE) === */
+/* === VERIFIED GEM (SUBTLE, INLINE) === */
 .verified-bubble{
   display:inline-flex;
   align-items:center;
   gap:4px;
-  padding:1px 5px;
+  padding:1px 4px;
   border-radius:999px;
   background:linear-gradient(180deg,#1b6d46,#125034);
   color:#d8f6e2;
-  font-size:9.5px;
-  font-weight:400;
-}
-.verified-bubble i{
-  width:6px;height:6px;stroke-width:.4;opacity:.85;
-}
-
-/* === HEADER / TYPING === */
-header{position:relative}
-.group-typing-bar{
-  position:absolute;
-  right:calc(100% + 6px);
-  top:50%;
-  transform:translateY(-50%);
-  display:flex;
-  gap:8px;
-  padding:6px 10px;
-  border-radius:999px;
-  background:rgba(255,255,255,.03);
-  font-size:13px;
-  color:#6bdba7;
-  opacity:0;
-  transition:opacity .18s ease;
-}
-.group-typing-bar.active{opacity:1}
-.header-members{transition:opacity .18s ease}
-header.typing-active .header-members{opacity:0}
-
-/* === AVATARS === */
-.avatar{width:32px;height:32px;border-radius:999px}
-
-/* === MIC WAVE === */
-.recording{position:relative}
-.wave{display:inline-flex;gap:4px}
-.wave span{
-  width:4px;height:12px;background:currentColor;
-  border-radius:2px;opacity:.8;
-  animation:wave 800ms infinite;
-}
-.wave span:nth-child(2){animation-delay:100ms}
-.wave span:nth-child(3){animation-delay:200ms}
-.wave span:nth-child(4){animation-delay:300ms}
-@keyframes wave{0%{transform:scaleY(.4)}50%{transform:scaleY(1)}100%{transform:scaleY(.4)}}
-</style>
-</head>
-
-<body class="bg-bg text-white h-[100dvh] overflow-hidden">
-<div class="flex h-full">
-<main class="flex flex-col flex-1 border-r border-border">
-
-<header id="mainHeader" class="bg-panel border-b border-border px-4 py-3 flex justify-between items-center">
-  <div class="flex gap-3 items-center">
-    <img src="assets/logo.png" class="w-8 h-8">
-    <div>
-      <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-      <div class="flex items-center gap-1 text-xs text-muted">
-        <i data-lucide="lock" class="w-3 h-3"></i><span>Private Group</span>
-      </div>
-      <div class="text-xs text-muted header-members">
-        Members: 4,872 • Online: <span id="onlineCount">132</span>
-      </div>
-      <div class="text-xs text-muted">Demo discussion · Verification required</div>
-    </div>
-  </div>
-
-  <div class="flex items-center gap-2 relative">
-    <div id="unread-counter" class="hidden px-3 py-1 rounded-full bg-bubbleOut text-xs"></div>
-    <div id="group-typing-bar" class="group-typing-bar">
-      <span class="w-2 h-2 rounded-full bg-accent"></span>
-      <span class="typing-summary">Someone is typing…</span>
-    </div>
-    <button id="membersBtn"><i data-lucide="users"></i></button>
-  </div>
-</header>
-
-<section id="chat" class="flex-1 overflow-y-auto px-4 py-4">
-  <div class="text-center text-muted text-sm mb-4">
-    📌 <strong>Group Rules</strong><br>
-    New members are read-only until verified<br>
-    Admins DM individually<br>
-    No screenshots in chat<br>
-    Ignore unsolicited messages
-  </div>
-</section>
-
-<!-- === PART 1 END === -->
-
-<!-- === PART 2 START (paste here) === -->
-
-<footer class="bg-panel border-t border-border px-4 py-3">
-  <div id="recordTimer" class="hidden text-center text-red-500 text-xs">● 0:00</div>
-  <div class="flex items-center bg-bg rounded-full px-3 py-2 gap-2">
-    <button id="emojiBtn"><i data-lucide="smile"></i></button>
-    <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-    <div class="flex items-center gap-2 ml-auto">
-      <button id="mediaBtn"><i data-lucide="paperclip"></i></button>
-      <button id="micBtn"><i data-lucide="mic"></i></button>
-      <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
-    </div>
-  </div>
-</footer>
-
-</main>
-
-<!-- SIDEBAR -->
-<aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full transition-transform z-50 flex flex-col">
-  <div class="p-4 border-b border-border flex items-center justify-between">
-    <strong>Members</strong>
-    <button id="closeSidebar"><i data-lucide="x"></i></button>
-  </div>
-
-  <div class="px-3 pb-3">
-    <input id="memberSearch"
-      class="w-full bg-bg border border-border rounded-full px-4 py-2 text-sm outline-none"
-      placeholder="Search members…">
-  </div>
-
-  <div id="memberList" class="flex-1 p-3 space-y-4 overflow-y-auto"></div>
-</aside>
-
-<input type="file" id="fileInput" class="hidden">
-</div>
-
-<script>
-lucide.createIcons();
-
-/* ================= CORE ================= */
-const chat = document.getElementById('chat');
-const input = document.getElementById('input');
-const send = document.getElementById('send');
-const emojiBtn = document.getElementById('emojiBtn');
-const mediaBtn = document.getElementById('mediaBtn');
-const micBtn = document.getElementById('micBtn');
-const fileInput = document.getElementById('fileInput');
-const recordTimer = document.getElementById('recordTimer');
-const sidebar = document.getElementById('sidebar');
-const membersBtn = document.getElementById('membersBtn');
-const closeSidebar = document.getElementById('closeSidebar');
-const memberList = document.getElementById('memberList');
-const onlineCount = document.getElementById('onlineCount');
-const groupTypingBar = document.getElementById('group-typing-bar');
-const memberSearch = document.getElementById('memberSearch');
-const mainHeader = document.getElementById('mainHeader');
-
-/* ================= INPUT ================= */
-input.oninput = () => {
-  const has = input.value.trim().length > 0;
-  send.classList.toggle('hidden', !has);
-  mediaBtn.classList.toggle('hidden', has);
-  micBtn.classList.toggle('hidden', has);
-};
-
-input.addEventListener('keydown', e => {
-  if(e.key === 'Enter' && !e.shiftKey){
-    e.preventDefault();
-    send.click();
-  }
-});
-
-/* ================= SEND ================= */
-send.onclick = () => {
-  const text = input.value.trim();
-  if(!text) return;
-  const m = { name:'You', role:'VERIFIED', text, timestamp:Date.now(), out:true };
-  save(m); render(m);
-  input.value='';
-  send.classList.add('hidden');
-  mediaBtn.classList.remove('hidden');
-  micBtn.classList.remove('hidden');
-};
-
-/* ================= MEDIA ================= */
-mediaBtn.onclick = () => fileInput.click();
-fileInput.onchange = e => {
-  if(!e.target.files.length) return;
-  const f = e.target.files[0];
-  const url = URL.createObjectURL(f);
-  let html = f.type.startsWith('image/')
-    ? `<img src="${url}" class="rounded-lg max-w-full">`
-    : `📎 ${f.name}`;
-  const m = { name:'You', role:'VERIFIED', text:html, timestamp:Date.now(), out:true };
-  save(m); render(m);
-  fileInput.value='';
-};
-
-/* ================= VOICE ================= */
-let recorder, chunks=[], recStart, recTick, holding=false, stream=null;
-
-function startUI(){
-  recStart=Date.now();
-  recordTimer.classList.remove('hidden');
-  recTick=setInterval(()=>{
-    const s=Math.floor((Date.now()-recStart)/1000);
-    recordTimer.textContent=`● ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
-  },1000);
-  micBtn.classList.add('recording');
-  micBtn.innerHTML=`<div class="wave"><span></span><span></span><span></span><span></span></div>`;
-}
-function stopUI(){
-  clearInterval(recTick);
-  recordTimer.classList.add('hidden');
-  micBtn.classList.remove('recording');
-  micBtn.innerHTML='<i data-lucide="mic"></i>';
-  lucide.createIcons();
-}
-
-async function startRecording(){
-  try{ stream=await navigator.mediaDevices.getUserMedia({audio:true}); }
-  catch{ return; }
-  recorder=new MediaRecorder(stream);
-  chunks=[];
-  recorder.ondataavailable=e=>chunks.push(e.data);
-  recorder.onstop=()=>{
-    const blob=new Blob(chunks,{type:'audio/webm'});
-    const url=URL.createObjectURL(blob);
-    const m={name:'You',role:'VERIFIED',text:`<audio controls src="${url}"></audio>`,timestamp:Date.now(),out:true};
-    save(m); render(m);
-    stream.getTracks().forEach(t=>t.stop());
-  };
-  recorder.start();
-}
-
-micBtn.addEventListener('pointerdown',async e=>{
-  e.preventDefault();
-  holding=true;
-  await startRecording();
-  setTimeout(()=>holding&&startUI(),300);
-});
-micBtn.addEventListener('pointerup',()=>{if(!holding)return;holding=false;stopUI();recorder&&recorder.stop();});
-micBtn.addEventListener('pointerleave',()=>{if(!holding)return;holding=false;stopUI();recorder&&recorder.stop();});
-
-/* ================= MEMBERS ================= */
-const ACTIVE=90000;
-const ADMIN={name:'Profit Hunter 🌐',role:'ADMIN',avatar:'assets/admin.jpg'};
-const MOD={name:'Kitty Star ⭐',role:'MOD',avatar:'assets/mod.jpg'};
-const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
-  name:`Member_${i+1}`,
-  role:'VERIFIED',
-  avatar:`https://randomuser.me/api/portraits/men/${i+20}.jpg`,
-  lastActive:Date.now()-Math.random()*120000
-}))];
-const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
-
-function renderMembers(q=''){
-  q=q.toLowerCase();
-  memberList.innerHTML='';
-  members.filter(m=>!q||m.name.toLowerCase().includes(q))
-    .sort((a,b)=>(isOnline(b)-isOnline(a))||a.name.localeCompare(b.name))
-    .forEach(m=>{
-      memberList.innerHTML+=`
-      <div class="flex gap-3 items-center">
-        <div class="relative">
-          <img src="${m.avatar}" class="w-9 h-9 rounded-full">
-          <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${isOnline(m)?'bg-green-500':'bg-gray-500'}"></span>
-        </div>
-        <div>
-          <div class="text-sm">${m.name}</div>
-          ${m.role==='ADMIN'
-            ? `<span class="badge admin">ADMIN</span>`
-            : m.role==='MOD'
-              ? `<span class="badge mod">MOD</span>`
-              : `<span class="verified-pill-sidebar">VERIFIED</span>`}
-        </div>
-      </div>`;
-    });
-  onlineCount.textContent=members.filter(isOnline).length;
-}
-memberSearch.oninput=e=>renderMembers(e.target.value);
-setInterval(()=>{members[Math.floor(Math.random()*members.length)].lastActive=Date.now();renderMembers(memberSearch.value);},8000);
-renderMembers();
-
-/* ================= TYPING HEADER ================= */
-const activeTypers=new Set();
-function updateTyping(){
-  if(!activeTypers.size){
-    groupTypingBar.classList.remove('active');
-    mainHeader.classList.remove('typing-active');
-    return;
-  }
-  groupTypingBar.querySelector('.typing-summary').textContent =
-    [...activeTypers].slice(0,3).join(', ') + ' typing…';
-  groupTypingBar.classList.add('active');
-  mainHeader.classList.add('typing-active');
-}
-
-/* ================= RENDER ================= */
-let lastMeta=null,lastDate='';
-function render(m){
-  const d=new Date(m.timestamp);
-  if(d.toDateString()!==lastDate){
-    const sep=document.createElement('div');
-    sep.className='date-sep';
-    sep.textContent=d.toDateString();
-    chat.appendChild(sep);
-    lastDate=d.toDateString();
-  }
-
-  const grouped=lastMeta&&lastMeta.sender===m.name&&(d-lastMeta.time)<120000;
-  const el=document.createElement('div');
-  el.className=`msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
-
-  const verified=m.role==='VERIFIED'
-    ? `<span class="verified-bubble"><i data-lucide="gem"></i></span>`:'';
-
-  el.innerHTML=`
-    ${!m.out?`<img class="avatar" src="${members.find(x=>x.name===m.name)?.avatar||''}">`:''}
-    <div class="bubble">
-      ${!grouped&&!m.out?`<div class="sender">${m.name}${verified}</div>`:''}
-      ${m.text}
-      <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
-      <div class="read-by"></div>
-    </div>`;
-
-  chat.appendChild(el);
-  lucide.createIcons();
-  lastMeta={sender:m.name,time:d};
-  chat.scrollTop=chat.scrollHeight;
-}
-
-/* ================= READ RECEIPTS ================= */
-function receipts(el){
-  const t=el.querySelector('.time');
-  const r=el.querySelector('.read-by');
-  setTimeout(()=>t.textContent=`✓✓ ${t.textContent.slice(2)}`,500);
-  setTimeout(()=>{
-    t.textContent=`✓✓ 👀 ${t.textContent.slice(2)}`;
-    [ADMIN,MOD].forEach(u=>{
-      const img=document.createElement('img');
-      img.src=u.avatar;
-      r.appendChild(img);
-    });
-  },1200);
-}
-
-/* ================= STORAGE ================= */
-const DB='AbroxDB',STORE='messages';
-let db;
-indexedDB.open(DB,1).onsuccess=e=>{
-  db=e.target.result;
-  db.transaction(STORE).objectStore(STORE).getAll().onsuccess=ga=>{
-    (ga.target.result||[]).sort((a,b)=>a.timestamp-b.timestamp).forEach(render);
-  };
-};
-function save(m){
-  try{db.transaction(STORE,'readwrite').objectStore(STORE).add(m)}catch{}
-}
-
-/* ================= SIDEBAR ================= */
-membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
-closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
-</script>
-
-</body>
-</html>
-
-
-<!-- === PART 2 END === -->
-
-<!-- Set to true or tell the assistant in chat: "Merge now" -->
-<script>
-  const READY_TO_MERGE = false;
-</script>
-
-<!-- === MERGED OUTPUT START (assistant will write merged file here) === -->
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>Abrox – Private Lounge</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1c1f26">
-<link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Abrox">
-
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/lucide@latest"></script>
-<script src="emoji-pack.js" defer></script>
-
-<script>
-tailwind.config = {
-  theme: {
-    extend: {
-      colors: {
-        bg:'#1c1f26',
-        panel:'#232833',
-        border:'#343a4a',
-        muted:'#a0a6b5',
-        accent:'#6bdba7',
-        bubble:'#262b38',
-        bubbleOut:'#2b3242',
-        send:'#3b82f6'
-      }
-    }
-  }
-}
-</script>
-
-<style>
-/* ================= TELEGRAM RHYTHM ================= */
-.msg{display:flex;gap:8px;margin-bottom:8px}
-.msg.out{justify-content:flex-end}
-.grouped{margin-top:-6px}
-
-/* ================= BUBBLES ================= */
-.bubble{
-  padding:8px 14px 7px;
-  font-size:13px;
-  line-height:1.45;
-  max-width:78%;
-  position:relative;
-  box-shadow:0 2px 8px rgba(0,0,0,.18);
-}
-.msg.in .bubble{background:#262b38;border-radius:6px 18px 18px 6px}
-.msg.out .bubble{background:#2b3242;border:1px solid #343a4a;border-radius:18px 6px 6px 18px}
-.grouped.in .bubble{border-top-left-radius:18px}
-.grouped.out .bubble{border-top-right-radius:18px}
-
-/* ================= MESSAGE TAILS ================= */
-.msg.in:not(.grouped) .bubble::after{
-  content:'';
-  position:absolute;
-  left:-6px;
-  bottom:0;
-  width:12px;height:12px;
-  background:#262b38;
-  clip-path:polygon(100% 0, 0 100%, 100% 100%);
-}
-.msg.out:not(.grouped) .bubble::after{
-  content:'';
-  position:absolute;
-  right:-6px;
-  bottom:0;
-  width:12px;height:12px;
-  background:#2b3242;
-  clip-path:polygon(0 0, 0 100%, 100% 100%);
-}
-
-/* ================= META ================= */
-.sender{
-  font-size:12px;
-  font-weight:600;
-  color:#6bdba7;
-  margin-bottom:4px;
-  display:flex;
-  align-items:center;
-  gap:6px;
-  flex-wrap:nowrap;
-}
-.time{font-size:10px;opacity:.7;margin-top:6px;display:flex;justify-content:flex-end;gap:4px}
-.read-by{display:flex;gap:4px;margin-top:4px;justify-content:flex-end}
-.read-by img{width:13px;height:13px;border-radius:999px;border:1px solid #1c1f26}
-.date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
-
-/* ================= VERIFIED GEM ================= */
-.verified-bubble{
-  display:inline-flex;
-  align-items:center;
-  gap:4px;
-  padding:1px 5px;
-  border-radius:999px;
-  background:linear-gradient(180deg,#1b6d46,#125034);
-  color:#d8f6e2;
-  font-size:9.5px;
+  font-size:9px;
   font-weight:400;
   line-height:1;
-  white-space:nowrap;
 }
 .verified-bubble i{
   width:6px;
@@ -564,10 +122,8 @@ tailwind.config = {
   opacity:.85;
 }
 
-/* ================= HEADER TYPING ================= */
+/* === HEADER / TYPING === */
 header{position:relative}
-.header-controls{display:flex;align-items:center;gap:8px}
-
 .group-typing-bar{
   position:absolute;
   right:calc(100% + 6px);
@@ -585,46 +141,41 @@ header{position:relative}
   pointer-events:none;
   transition:opacity .18s ease;
 }
-.group-typing-bar.active{opacity:1}
-.group-typing-bar .dot{
-  width:7px;height:7px;border-radius:50%;
-  background:#6bdba7;
+.group-typing-bar.active{
+  opacity:1;
 }
-.header-members{transition:opacity .18s ease}
-header.typing-active .header-members{opacity:0}
-
-/* ================= AVATARS ================= */
-.avatar{width:32px;height:32px;border-radius:999px}
-
-/* ================= VOICE WAVEFORM ================= */
-.recording .wave span{
-  animation:wave .8s infinite;
+.header-members{
+  transition:opacity .18s ease;
 }
+header.typing-active .header-members{
+  opacity:0;
+}
+
+/* === AVATARS === */
+.avatar{
+  width:32px;
+  height:32px;
+  border-radius:999px;
+}
+
+/* === MIC WAVE === */
+.recording{position:relative}
 .wave{display:inline-flex;gap:4px}
 .wave span{
-  width:4px;height:12px;
+  width:4px;
+  height:12px;
   background:currentColor;
   border-radius:2px;
-  transform-origin:bottom;
+  opacity:.8;
+  animation:wave 800ms infinite;
 }
-.wave span:nth-child(2){animation-delay:.1s}
-.wave span:nth-child(3){animation-delay:.2s}
-.wave span:nth-child(4){animation-delay:.3s}
+.wave span:nth-child(2){animation-delay:100ms}
+.wave span:nth-child(3){animation-delay:200ms}
+.wave span:nth-child(4){animation-delay:300ms}
 @keyframes wave{
   0%{transform:scaleY(.4)}
   50%{transform:scaleY(1)}
   100%{transform:scaleY(.4)}
-}
-
-/* ================= SIDEBAR BADGES ================= */
-.badge{font-size:10px;padding:2px 6px;border-radius:999px}
-.badge.admin{background:#6b21a8}
-.badge.mod{background:#1d4ed8}
-.verified-pill-sidebar{
-  font-size:10px;
-  padding:2px 6px;
-  border-radius:999px;
-  background:#14532d;
 }
 </style>
 </head>
@@ -633,7 +184,7 @@ header.typing-active .header-members{opacity:0}
 <div class="flex h-full">
 <main class="flex flex-col flex-1 border-r border-border">
 
-<header class="bg-panel border-b border-border px-4 py-3 flex justify-between items-center" id="mainHeader">
+<header id="mainHeader" class="bg-panel border-b border-border px-4 py-3 flex justify-between items-center">
   <div class="flex gap-3 items-center">
     <img src="assets/logo.png" class="w-8 h-8">
     <div>
@@ -645,25 +196,32 @@ header.typing-active .header-members{opacity:0}
       <div class="text-xs text-muted header-members">
         Members: 4,872 • Online: <span id="onlineCount">132</span>
       </div>
-      <div class="text-xs text-muted">Demo discussion · Verification required</div>
+      <div class="text-xs text-muted">
+        Demo discussion · Verification required
+      </div>
     </div>
   </div>
 
-  <div class="header-controls">
+  <div class="flex items-center gap-2 relative">
+    <div id="unread-counter" class="hidden px-3 py-1 rounded-full bg-bubbleOut text-xs"></div>
+
     <div id="group-typing-bar" class="group-typing-bar">
-      <div class="dot"></div>
-      <div class="typing-summary">Someone is typing…</div>
+      <span class="w-2 h-2 rounded-full bg-accent"></span>
+      <span class="typing-summary">Someone is typing…</span>
     </div>
-    <button id="membersBtn"><i data-lucide="users"></i></button>
+
+    <button id="membersBtn">
+      <i data-lucide="users"></i>
+    </button>
   </div>
 </header>
 
-<section id="chat" class="flex-1 overflow-y-auto px-4 py-4 space-y-2 scroll-smooth">
-  <div class="text-center text-muted text-sm">
+<section id="chat" class="flex-1 overflow-y-auto px-4 py-4">
+  <div class="text-center text-muted text-sm mb-4">
     📌 <strong>Group Rules</strong><br>
     New members are read-only until verified<br>
     Admins DM individually<br>
-    No screenshots<br>
+    No screenshots in chat<br>
     Ignore unsolicited messages
   </div>
 </section>
@@ -683,7 +241,7 @@ header.typing-active .header-members{opacity:0}
 
 </main>
 
-<!-- SIDEBAR -->
+<!-- ===== SIDEBAR ===== -->
 <aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full transition-transform z-50 flex flex-col">
   <div class="p-4 border-b border-border flex items-center justify-between">
     <strong>Members</strong>
@@ -700,12 +258,12 @@ header.typing-active .header-members{opacity:0}
 </aside>
 
 <input type="file" id="fileInput" class="hidden">
-</div>
 
 <script>
-lucide.createIcons();
+/* ================= ICONS ================= */
+requestAnimationFrame(()=>lucide.createIcons());
 
-/* ================= CORE ================= */
+/* ================= CORE STATE ================= */
 const chat = document.getElementById('chat');
 const input = document.getElementById('input');
 const send = document.getElementById('send');
@@ -720,10 +278,11 @@ const closeSidebar = document.getElementById('closeSidebar');
 const memberList = document.getElementById('memberList');
 const onlineCount = document.getElementById('onlineCount');
 const groupTypingBar = document.getElementById('group-typing-bar');
+const unreadCounter = document.getElementById('unread-counter');
 const memberSearch = document.getElementById('memberSearch');
 const mainHeader = document.getElementById('mainHeader');
 
-/* ================= INPUT ================= */
+/* ================= INPUT TOGGLE ================= */
 input.oninput = () => {
   const has = input.value.trim().length > 0;
   send.classList.toggle('hidden', !has);
@@ -731,23 +290,21 @@ input.oninput = () => {
   micBtn.classList.toggle('hidden', has);
 };
 
-input.addEventListener('keydown', e => {
-  if(e.key === 'Enter' && !e.shiftKey){
-    e.preventDefault();
-    send.click();
-  }
-});
-
 /* ================= SEND ================= */
 send.onclick = () => {
-  const text = input.value.trim();
-  if(!text) return;
-  const m = { name:'You', role:'VERIFIED', text, timestamp:Date.now(), out:true };
-  save(m); render(m);
+  if(!input.value.trim()) return;
+  const m = { name:'You', role:'VERIFIED', text:input.value, timestamp:Date.now(), out:true };
+  save(m);
+  render(m);
   input.value='';
   send.classList.add('hidden');
   mediaBtn.classList.remove('hidden');
   micBtn.classList.remove('hidden');
+};
+
+/* ================= EMOJI ================= */
+emojiBtn.onclick = () => {
+  if(window.EmojiPack) EmojiPack.openPicker(input);
 };
 
 /* ================= MEDIA ================= */
@@ -756,9 +313,11 @@ fileInput.onchange = e => {
   if(!e.target.files.length) return;
   const f = e.target.files[0];
   const url = URL.createObjectURL(f);
-  let html = f.type.startsWith('image/')
-    ? `<img src="${url}" class="rounded-lg max-w-full">`
-    : `📎 ${f.name}`;
+  const html =
+    f.type.startsWith('image/') ? `<img src="${url}" class="rounded-lg max-w-full">` :
+    f.type.startsWith('video/') ? `<video src="${url}" controls class="rounded-lg max-w-full"></video>` :
+    f.type.startsWith('audio/') ? `<audio src="${url}" controls></audio>` :
+    `📎 ${f.name}`;
   const m = { name:'You', role:'VERIFIED', text:html, timestamp:Date.now(), out:true };
   save(m); render(m);
   fileInput.value='';
@@ -766,6 +325,21 @@ fileInput.onchange = e => {
 
 /* ================= VOICE ================= */
 let recorder, chunks=[], recStart, recTick, holding=false, stream=null;
+
+async function startRecording(){
+  try{ stream=await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch{return;}
+  recorder=new MediaRecorder(stream);
+  chunks=[];
+  recorder.ondataavailable=e=>chunks.push(e.data);
+  recorder.onstop=()=>{
+    const url=URL.createObjectURL(new Blob(chunks,{type:'audio/webm'}));
+    const m={name:'You',role:'VERIFIED',out:true,timestamp:Date.now(),text:`<audio controls src="${url}"></audio>`};
+    save(m); render(m);
+    stream.getTracks().forEach(t=>t.stop());
+  };
+  recorder.start();
+}
 
 function startUI(){
   recStart=Date.now();
@@ -777,6 +351,7 @@ function startUI(){
   micBtn.classList.add('recording');
   micBtn.innerHTML=`<div class="wave"><span></span><span></span><span></span><span></span></div>`;
 }
+
 function stopUI(){
   clearInterval(recTick);
   recordTimer.classList.add('hidden');
@@ -785,33 +360,22 @@ function stopUI(){
   lucide.createIcons();
 }
 
-async function startRecording(){
-  try{ stream=await navigator.mediaDevices.getUserMedia({audio:true}); }
-  catch{ return; }
-  recorder=new MediaRecorder(stream);
-  chunks=[];
-  recorder.ondataavailable=e=>chunks.push(e.data);
-  recorder.onstop=()=>{
-    const blob=new Blob(chunks,{type:'audio/webm'});
-    const url=URL.createObjectURL(blob);
-    const m={name:'You',role:'VERIFIED',text:`<audio controls src="${url}"></audio>`,timestamp:Date.now(),out:true};
-    save(m); render(m);
-    stream.getTracks().forEach(t=>t.stop());
-  };
-  recorder.start();
-}
-
-micBtn.addEventListener('pointerdown',async e=>{
+micBtn.addEventListener('pointerdown', async e=>{
   e.preventDefault();
   holding=true;
   await startRecording();
   setTimeout(()=>holding&&startUI(),300);
 });
-micBtn.addEventListener('pointerup',()=>{if(!holding)return;holding=false;stopUI();recorder&&recorder.stop();});
-micBtn.addEventListener('pointerleave',()=>{if(!holding)return;holding=false;stopUI();recorder&&recorder.stop();});
+['pointerup','pointerleave'].forEach(ev=>{
+  micBtn.addEventListener(ev,()=>{
+    if(!holding) return;
+    holding=false;
+    stopUI();
+    recorder && recorder.state==='recording' && recorder.stop();
+  });
+});
 
 /* ================= MEMBERS ================= */
-const ACTIVE=90000;
 const ADMIN={name:'Profit Hunter 🌐',role:'ADMIN',avatar:'assets/admin.jpg'};
 const MOD={name:'Kitty Star ⭐',role:'MOD',avatar:'assets/mod.jpg'};
 const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
@@ -820,12 +384,14 @@ const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
   avatar:`https://randomuser.me/api/portraits/men/${i+20}.jpg`,
   lastActive:Date.now()-Math.random()*120000
 }))];
+const ACTIVE=90000;
 const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
 
 function renderMembers(q=''){
   q=q.toLowerCase();
   memberList.innerHTML='';
-  members.filter(m=>!q||m.name.toLowerCase().includes(q))
+  members
+    .filter(m=>!q||m.name.toLowerCase().includes(q))
     .sort((a,b)=>(isOnline(b)-isOnline(a))||a.name.localeCompare(b.name))
     .forEach(m=>{
       memberList.innerHTML+=`
@@ -836,33 +402,64 @@ function renderMembers(q=''){
         </div>
         <div>
           <div class="text-sm">${m.name}</div>
-          ${m.role==='ADMIN'
-            ? `<span class="badge admin">ADMIN</span>`
-            : m.role==='MOD'
-              ? `<span class="badge mod">MOD</span>`
-              : `<span class="verified-pill-sidebar">VERIFIED</span>`}
+          <span class="text-[10px] px-2 py-[1px] rounded-full ${
+            m.role==='ADMIN'?'bg-red-600':
+            m.role==='MOD'?'bg-purple-600':'bg-green-600'
+          }">${m.role}</span>
         </div>
       </div>`;
     });
-  onlineCount.textContent=members.filter(isOnline).length;
+  onlineCount.textContent = members.filter(isOnline).length;
 }
 memberSearch.oninput=e=>renderMembers(e.target.value);
-setInterval(()=>{members[Math.floor(Math.random()*members.length)].lastActive=Date.now();renderMembers(memberSearch.value);},8000);
-renderMembers();
+setTimeout(()=>renderMembers(),120);
 
-/* ================= TYPING HEADER ================= */
-const activeTypers=new Set();
+/* ================= TYPING (TELEGRAM STYLE) ================= */
+const activeTypers=new Map();
 function updateTyping(){
   if(!activeTypers.size){
     groupTypingBar.classList.remove('active');
     mainHeader.classList.remove('typing-active');
     return;
   }
+  const names=[...activeTypers.keys()].slice(0,3);
   groupTypingBar.querySelector('.typing-summary').textContent =
-    [...activeTypers].slice(0,3).join(', ') + ' typing…';
+    names.length===1 ? `${names[0]} is typing…` : `${names.join(', ')} are typing…`;
   groupTypingBar.classList.add('active');
   mainHeader.classList.add('typing-active');
 }
+function startTyping(member){
+  activeTypers.set(member.name,Date.now());
+  updateTyping();
+  setTimeout(()=>{
+    activeTypers.delete(member.name);
+    updateTyping();
+  },3000+Math.random()*2000);
+}
+
+/* ================= UNREAD + RECEIPTS ================= */
+let unreadCount=0;
+const unreadEls=new Set();
+const readObserver=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting && unreadEls.has(e.target)){
+      unreadEls.delete(e.target);
+      readObserver.unobserve(e.target);
+      receipts(e.target);
+    }
+  });
+},{root:chat,threshold:.65});
+
+function isAtBottom(){return chat.scrollTop+chat.clientHeight>=chat.scrollHeight-10;}
+function incrementUnread(){
+  unreadCounter.textContent=++unreadCount;
+  unreadCounter.classList.remove('hidden');
+}
+unreadCounter.onclick=()=>{
+  chat.scrollTop=chat.scrollHeight;
+  unreadCounter.classList.add('hidden');
+  unreadCount=0;
+};
 
 /* ================= RENDER ================= */
 let lastMeta=null,lastDate='';
@@ -877,32 +474,39 @@ function render(m){
   }
 
   const grouped=lastMeta&&lastMeta.sender===m.name&&(d-lastMeta.time)<120000;
+  const badge =
+    m.role==='ADMIN' ? '<span class="role-pill admin">ADMIN</span>' :
+    m.role==='MOD' ? '<span class="role-pill mod">MOD</span>' :
+    m.role==='VERIFIED' ? '<span class="verified-bubble"><i data-lucide="gem"></i></span>' : '';
+
   const el=document.createElement('div');
   el.className=`msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
-
-  const verified=m.role==='VERIFIED'
-    ? `<span class="verified-bubble"><i data-lucide="gem"></i></span>`:'';
-
   el.innerHTML=`
     ${!m.out?`<img class="avatar" src="${members.find(x=>x.name===m.name)?.avatar||''}">`:''}
     <div class="bubble">
-      ${!grouped&&!m.out?`<div class="sender">${m.name}${verified}</div>`:''}
+      ${!grouped&&!m.out?`<div class="sender">${m.name} ${badge}</div>`:''}
       ${m.text}
       <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
       <div class="read-by"></div>
     </div>`;
-
   chat.appendChild(el);
   lucide.createIcons();
+
+  if(m.out){
+    unreadEls.add(el);
+    readObserver.observe(el);
+    if(isAtBottom()) receipts(el);
+  }else if(!isAtBottom()) incrementUnread();
+
   lastMeta={sender:m.name,time:d};
   chat.scrollTop=chat.scrollHeight;
 }
 
-/* ================= READ RECEIPTS ================= */
+/* ================= RECEIPTS ================= */
 function receipts(el){
   const t=el.querySelector('.time');
   const r=el.querySelector('.read-by');
-  setTimeout(()=>t.textContent=`✓✓ ${t.textContent.slice(2)}`,500);
+  setTimeout(()=>t.textContent=`✓✓ ${t.textContent.slice(2)}`,400);
   setTimeout(()=>{
     t.textContent=`✓✓ 👀 ${t.textContent.slice(2)}`;
     [ADMIN,MOD].forEach(u=>{
@@ -910,13 +514,17 @@ function receipts(el){
       img.src=u.avatar;
       r.appendChild(img);
     });
-  },1200);
+  },1000);
 }
 
-/* ================= STORAGE ================= */
+/* ================= DB ================= */
 const DB='AbroxDB',STORE='messages';
 let db;
-indexedDB.open(DB,1).onsuccess=e=>{
+const req=indexedDB.open(DB,1);
+req.onupgradeneeded=e=>{
+  e.target.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});
+};
+req.onsuccess=e=>{
   db=e.target.result;
   db.transaction(STORE).objectStore(STORE).getAll().onsuccess=ga=>{
     (ga.target.result||[]).sort((a,b)=>a.timestamp-b.timestamp).forEach(render);
@@ -933,6 +541,3 @@ closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
 </body>
 </html>
-
-
-<!-- === MERGED OUTPUT END === -->
