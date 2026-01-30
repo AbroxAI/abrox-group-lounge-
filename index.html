@@ -87,7 +87,7 @@ tailwind.config = {
 .badge.mod{background:#f39c12}
 .badge.verified{background:#2ecc71}
 
-/* Verified pill inside chat bubble (gem + text) - softened */
+/* Verified pill inside chat bubble (gem + text) - softened + smaller gem */
 .verified-bubble{
   display:inline-flex;
   align-items:center;
@@ -104,10 +104,10 @@ tailwind.config = {
   vertical-align:middle;
 }
 .verified-bubble i[data-lucide="gem"]{
-  width:9px;height:9px; /* smaller than before */
+  width:8px;height:8px; /* reduced ~8% from previous 9px */
   display:inline-block;
   stroke:#6fbf98;     /* slightly desaturated */
-  stroke-width:0.6;   /* thinner stroke */
+  stroke-width:0.45;   /* thinner stroke (reduced) */
   fill:none;
   opacity:0.95;
   transform:translateY(0.6px);
@@ -174,10 +174,11 @@ header{position:relative}
    This keeps the pill anchored and vertically centered next to the members/controls without reflow. */
 .header-controls{position:relative;min-width:120px;display:flex;align-items:center;gap:8px}
 
-/* group typing pill positioned absolutely inside header-controls (left of controls) */
+/* group typing pill positioned absolutely inside header-controls (left of controls)
+   Nudged 6px left by reducing the right offset (previously +8px -> now +2px) */
 .group-typing-bar{
   position:absolute;
-  right:calc(100% + 8px); /* sit just left of the controls block */
+  right:calc(100% + 2px); /* moved left by ~6px compared to prior +8px */
   top:50%;
   transform:translateY(-50%);
   z-index:50;
@@ -211,7 +212,7 @@ header.typing-active .header-members{display:none}
 }
 
 /* responsive */
-@media (max-width:420px){ .group-typing-bar{ max-width:58%; right:calc(100% + 6px); font-size:12px; } }
+@media (max-width:420px){ .group-typing-bar{ max-width:58%; right:calc(100% + 0px); font-size:12px; } }
 </style>
 </head>
 
@@ -291,7 +292,7 @@ header.typing-active .header-members{display:none}
 <script>
 lucide.createIcons();
 
-/* ================= FULL LOGIC (anchored header pill + softened gem) ================= */
+/* ================= FULL LOGIC (anchored header pill + softened gem - micro tweaks applied) ================= */
 
 const chat=document.getElementById('chat');
 const input=document.getElementById('input');
