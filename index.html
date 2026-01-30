@@ -58,42 +58,48 @@ tailwind.config = {
   font-size:12px;
   font-weight:600;
   color:#6bdba7;
-  margin-bottom:4px
+  margin-bottom:4px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:nowrap;
 }
 .time{font-size:10px;opacity:.7;margin-top:6px;display:flex;justify-content:flex-end;gap:4px}
 .read-by{display:flex;gap:4px;margin-top:4px;justify-content:flex-end}
 .read-by img{width:13px;height:13px;border-radius:999px;border:1px solid #1c1f26}
 .date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
 
-/* ===== VERIFIED GEM (REFINED) ===== */
+/* ===== VERIFIED GEM (SUBTLE, INLINE) ===== */
 .verified-bubble{
   display:inline-flex;
   align-items:center;
-  gap:5px;
-  padding:2px 7px;
+  gap:4px;
+  padding:1px 5px;
   border-radius:999px;
   background:linear-gradient(180deg,#1b6d46,#125034);
   color:#d8f6e2;
-  font-size:10.5px;
-  font-weight:500;
+  font-size:9.5px;
+  font-weight:400;
+  line-height:1;
+  white-space:nowrap;
 }
 .verified-bubble i{
-  width:7px;
-  height:7px;
-  stroke-width:0.45;
-  opacity:.9;
+  width:6px;
+  height:6px;
+  stroke-width:0.4;
+  opacity:.85;
 }
 
-/* ===== GROUP TYPING BAR ===== */
+/* ===== GROUP TYPING BAR (NO JUMP) ===== */
 header{position:relative}
 .header-controls{position:relative;display:flex;align-items:center;gap:8px}
 
 .group-typing-bar{
   position:absolute;
-  right:calc(100% + 4px);
+  right:calc(100% + 6px);
   top:50%;
   transform:translateY(-50%);
-  display:none;
+  display:flex;
   align-items:center;
   gap:8px;
   padding:6px 10px;
@@ -101,6 +107,13 @@ header{position:relative}
   background:rgba(255,255,255,.03);
   font-size:13px;
   color:#6bdba7;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .18s ease;
+}
+.group-typing-bar.active{
+  opacity:1;
+  pointer-events:auto;
 }
 .group-typing-bar .dot{
   width:7px;
@@ -109,12 +122,16 @@ header{position:relative}
   background:#6bdba7;
 }
 .group-typing-bar .typing-summary{
-  color:#6bdba7;
   font-weight:600;
 }
 
-.header-members{display:block}
-header.typing-active .header-members{display:none}
+/* Members text fades instead of disappearing */
+.header-members{
+  transition:opacity .18s ease;
+}
+header.typing-active .header-members{
+  opacity:0;
+}
 
 /* ===== UNREAD COUNTER ===== */
 .patched-unread-counter{
@@ -125,7 +142,7 @@ header.typing-active .header-members{display:none}
   display:none;
 }
 
-/* ===== MEMBER SEARCH (PILL FIX) ===== */
+/* ===== MEMBER SEARCH ===== */
 #memberSearch{
   width:100%;
   border-radius:999px;
@@ -135,36 +152,28 @@ header.typing-active .header-members{display:none}
 
 /* ===== AVATARS ===== */
 .avatar{width:32px;height:32px;border-radius:999px}
-.avatar-spacer{width:32px;height:32px;display:inline-block}
 
-/* ===== TYPING ROW (LEGACY) ===== */
-.typing-row{display:flex;gap:8px;margin:6px 0;align-items:center}
-.typing-bubble{background:rgba(255,255,255,.03);padding:8px;border-radius:12px}
-.typing-dots span{
-  display:inline-block;
-  width:6px;height:6px;
-  background:#a0a6b5;
-  margin-right:4px;
-  border-radius:50%;
-  animation:dot 1s infinite
-}
-.typing-dots span:nth-child(2){animation-delay:120ms}
-.typing-dots span:nth-child(3){animation-delay:240ms}
-@keyframes dot{
-  0%{transform:translateY(0)}
-  50%{transform:translateY(-4px)}
-  100%{transform:translateY(0)}
-}
-
-/* mic recording UI */
+/* ===== MIC RECORDING UI ===== */
 .recording { position: relative; }
 .wave { display:inline-flex; gap:4px; align-items:center; }
-.wave span { width:4px; height:12px; display:inline-block; background:currentColor; opacity:.8; border-radius:2px; transform-origin:center bottom; animation:wave 800ms infinite; }
-.wave span:nth-child(2){ animation-delay:100ms; animation-duration:760ms; }
-.wave span:nth-child(3){ animation-delay:200ms; animation-duration:720ms; }
-.wave span:nth-child(4){ animation-delay:300ms; animation-duration:700ms; }
-@keyframes wave { 0% { transform:scaleY(.4);} 50%{transform:scaleY(1);} 100%{transform:scaleY(.4);} }
-
+.wave span {
+  width:4px;
+  height:12px;
+  display:inline-block;
+  background:currentColor;
+  opacity:.8;
+  border-radius:2px;
+  transform-origin:center bottom;
+  animation:wave 800ms infinite;
+}
+.wave span:nth-child(2){ animation-delay:100ms }
+.wave span:nth-child(3){ animation-delay:200ms }
+.wave span:nth-child(4){ animation-delay:300ms }
+@keyframes wave{
+  0%{transform:scaleY(.4)}
+  50%{transform:scaleY(1)}
+  100%{transform:scaleY(.4)}
+}
 </style>
 </head>
 
@@ -172,6 +181,7 @@ header.typing-active .header-members{display:none}
 <div class="flex h-full">
 <main class="flex flex-col flex-1 border-r border-border">
 
+<!-- HEADER -->
 <header class="bg-panel border-b border-border px-4 py-3 flex items-center justify-between" id="mainHeader">
   <div class="flex gap-3 items-center">
     <img src="assets/logo.png" class="w-8 h-8">
@@ -198,11 +208,9 @@ header.typing-active .header-members{display:none}
       <div class="typing-summary">Someone is typing…</div>
     </div>
 
-    <!-- online circle restored beside members icon -->
     <div class="relative">
       <button id="membersBtn"><i data-lucide="users"></i></button>
-      <span id="onlineDot"
-            class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-green-500 border border-panel"></span>
+      <span class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-green-500 border border-panel"></span>
     </div>
   </div>
 </header>
@@ -232,6 +240,7 @@ header.typing-active .header-members{display:none}
 
 </main>
 
+<!-- SIDEBAR -->
 <aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full transition-transform z-50 flex flex-col">
   <div class="p-4 border-b border-border flex items-center justify-between">
     <strong>Members</strong>
@@ -240,8 +249,8 @@ header.typing-active .header-members{display:none}
 
   <div class="px-3 pb-3">
     <input id="memberSearch"
-           class="w-full bg-bg border border-border rounded-full px-4 py-2 text-sm outline-none"
-           placeholder="Search members…">
+      class="w-full bg-bg border border-border rounded-full px-4 py-2 text-sm outline-none"
+      placeholder="Search members…">
   </div>
 
   <div id="memberList" class="flex-1 p-3 space-y-4 overflow-y-auto"></div>
@@ -300,7 +309,7 @@ fileInput.onchange = e => {
   fileInput.value='';
 };
 
-/* ===== VOICE RECORDING (restored from earlier halves) ===== */
+/* ===== VOICE RECORDING ===== */
 let recorder, chunks = [], recStart, recTick;
 let holding = false, stream = null;
 
@@ -332,7 +341,7 @@ async function startRecording(){
     const blob = new Blob(chunks,{type:'audio/webm'});
     const url = URL.createObjectURL(blob);
     const m = {
-      name:'You', role:'VERIFIED', out:true, type:'voice',
+      name:'You', role:'VERIFIED', out:true,
       timestamp:Date.now(), text:`<audio controls src="${url}"></audio>`
     };
     save(m); render(m);
@@ -345,7 +354,6 @@ function stopRecording(){
   if(recorder && recorder.state==='recording') recorder.stop();
 }
 
-/* POINTER EVENTS (voice) */
 micBtn.addEventListener('pointerdown', async e=>{
   e.preventDefault();
   holding=true;
@@ -395,20 +403,20 @@ memberSearch.oninput=e=>renderMembers(e.target.value);
 setInterval(()=>{members[Math.floor(Math.random()*members.length)].lastActive=Date.now();renderMembers(memberSearch.value);},8000);
 renderMembers();
 
-/* ===== GROUP TYPING (HUMAN-LIKE) ===== */
+/* ===== GROUP TYPING ===== */
 const activeTypers=new Map();
 let typingTimeout=null;
 
 function updateTypingHeader(){
   if(activeTypers.size===0){
-    groupTypingBar.style.display='none';
+    groupTypingBar.classList.remove('active');
     mainHeader.classList.remove('typing-active');
     return;
   }
   const names=[...activeTypers.keys()].slice(0,3);
   groupTypingBar.querySelector('.typing-summary').textContent =
     names.length===1 ? `${names[0]} is typing…` : `${names.join(', ')} are typing…`;
-  groupTypingBar.style.display='inline-flex';
+  groupTypingBar.classList.add('active');
   mainHeader.classList.add('typing-active');
 }
 
@@ -416,31 +424,15 @@ function startTyping(member){
   if(activeTypers.has(member.name)) return;
   activeTypers.set(member.name,Date.now());
   updateTypingHeader();
-
   clearTimeout(typingTimeout);
-  typingTimeout=setTimeout(()=>{
-    // typed but didn't send realism
-    stopTyping(member.name);
-  },3000+Math.random()*2500);
+  typingTimeout=setTimeout(()=>stopTyping(member.name),3000+Math.random()*2500);
 }
-
 function stopTyping(name){
   activeTypers.delete(name);
   updateTypingHeader();
 }
 
-window.showTyping=m=>startTyping(m);
-window.hideTyping=m=>stopTyping(m.name||m);
-window.fakeMemberSend=(m,t)=>{
-  startTyping(m);
-  setTimeout(()=>{
-    stopTyping(m.name);
-    const msg={name:m.name,role:m.role,text:t,timestamp:Date.now(),out:false};
-    save(msg);render(msg);
-  },800+Math.random()*1200);
-};
-
-/* ===== UNREAD + READ RECEIPTS (SCROLL-BASED) ===== */
+/* ===== UNREAD + READ RECEIPTS ===== */
 let unreadCount=0;
 const unreadEls=new Set();
 let readObserver;
@@ -448,35 +440,25 @@ let readObserver;
 function isUserAtBottom(){
   return chat.scrollTop+chat.clientHeight>=chat.scrollHeight-10;
 }
-
-function initReadObserver(){
-  if(readObserver) return;
-  readObserver=new IntersectionObserver(entries=>{
-    entries.forEach(e=>{
-      if(!e.isIntersecting) return;
-      const el=e.target;
-      if(!unreadEls.has(el)) return;
-      unreadEls.delete(el);
-      readObserver.unobserve(el);
-      receipts(el);
-    });
-  },{root:chat,threshold:.65});
-}
-initReadObserver();
+readObserver=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting && unreadEls.has(e.target)){
+      unreadEls.delete(e.target);
+      readObserver.unobserve(e.target);
+      receipts(e.target);
+    }
+  });
+},{root:chat,threshold:.65});
 
 function incrementUnread(){
   unreadCount++;
   unreadCounter.textContent=unreadCount;
   unreadCounter.style.display='inline-block';
 }
-function clearUnread(){
-  unreadCount=0;
-  unreadCounter.style.display='none';
-}
-
 unreadCounter.onclick=()=>{
   chat.scrollTop=chat.scrollHeight;
-  clearUnread();
+  unreadCounter.style.display='none';
+  unreadCount=0;
 };
 
 /* ===== RENDER ===== */
@@ -495,43 +477,32 @@ function render(m){
   const el=document.createElement('div');
   el.className=`msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
 
-  const roleUpper=(m.role||'').toUpperCase();
-  const verified=roleUpper==='VERIFIED'
-    ? `<span class="verified-bubble"><i data-lucide="gem"></i><span>VERIFIED</span></span>`:'';
+  const verified=m.role==='VERIFIED'
+    ? `<span class="verified-bubble"><i data-lucide="gem"></i>VERIFIED</span>`:'';
 
   el.innerHTML=`
     ${!m.out?`<img class="avatar" src="${members.find(x=>x.name===m.name)?.avatar||''}">`:''}
     <div class="bubble">
-      ${!grouped&&!m.out?`<div class="sender">${m.name} ${verified}</div>`:''}
+      ${!grouped&&!m.out?`<div class="sender">${m.name}${verified}</div>`:''}
       ${m.text}
       <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
       <div class="read-by"></div>
     </div>`;
-
   chat.appendChild(el);
   lucide.createIcons();
 
   if(m.out){
     unreadEls.add(el);
     readObserver.observe(el);
-    if(isUserAtBottom()){
-      requestAnimationFrame(()=>{
-        if(unreadEls.has(el)){
-          unreadEls.delete(el);
-          readObserver.unobserve(el);
-          receipts(el);
-        }
-      });
-    }
-  }else{
-    if(!isUserAtBottom()) incrementUnread();
+  }else if(!isUserAtBottom()){
+    incrementUnread();
   }
 
   lastMeta={sender:m.name,time:d};
   chat.scrollTop=chat.scrollHeight;
 }
 
-/* ===== READ RECEIPTS (STAGGERED PER MEMBER) ===== */
+/* ===== READ RECEIPTS ===== */
 function receipts(el){
   const t=el.querySelector('.time');
   const r=el.querySelector('.read-by');
@@ -546,44 +517,26 @@ function receipts(el){
   },1200);
 }
 
-/* ===== INDEXEDDB (DB + seed + load) ===== */
+/* ===== INDEXEDDB ===== */
 const DB='AbroxDB',STORE='messages';
 let db;
 const req=indexedDB.open(DB,1);
 req.onupgradeneeded=e=>{
-  try { e.target.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true}); }
-  catch(err){}
+  try{e.target.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true})}catch{}
 };
 req.onsuccess=e=>{
   db=e.target.result;
-  // seed initial messages if empty, then load saved messages
-  try {
-    const tx = db.transaction(STORE,'readonly').objectStore(STORE);
-    tx.count().onsuccess=ce=>{
-      if(!ce.target.result){
-        const addTx = db.transaction(STORE,'readwrite').objectStore(STORE);
-        addTx.add({...ADMIN,text:'Welcome to Abrox Private Lounge.',timestamp:Date.now()-86400000,out:false});
-        addTx.add({...MOD,text:'Please read pinned rules before chatting.',timestamp:Date.now()-86300000,out:false});
-      }
-      // load after ensuring seed
-      db.transaction(STORE).objectStore(STORE).getAll().onsuccess=ga=>{
-        (ga.target.result||[]).sort((a,b)=>a.timestamp-b.timestamp).forEach(render);
-      };
-    };
-  } catch(err){ console.warn('DB seed/load error',err); }
+  db.transaction(STORE).objectStore(STORE).getAll().onsuccess=ga=>{
+    (ga.target.result||[]).sort((a,b)=>a.timestamp-b.timestamp).forEach(render);
+  };
 };
-req.onerror=e=>{ console.warn('IndexedDB open error', e); };
-
 function save(m){
-  try {
-    if(db) db.transaction(STORE,'readwrite').objectStore(STORE).add(m);
-  } catch(err){ console.warn('DB save failed', err); }
+  try{db.transaction(STORE,'readwrite').objectStore(STORE).add(m)}catch{}
 }
 
 /* ===== SIDEBAR ===== */
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
-
 </script>
 </body>
 </html>
