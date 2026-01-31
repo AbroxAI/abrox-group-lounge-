@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <title>Abrox – Private Lounge</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
+<script src="emoji-pack.js" defer></script>
 
 <script>
 tailwind.config = {
@@ -20,7 +21,8 @@ tailwind.config = {
         muted:'#a0a6b5',
         accent:'#6bdba7',
         bubble:'#262b38',
-        bubbleOut:'#2b3242'
+        bubbleOut:'#2b3242',
+        send:'#3b82f6'
       }
     }
   }
@@ -29,9 +31,22 @@ tailwind.config = {
 
 <style>
 /* ================= TELEGRAM RHYTHM ================= */
-.msg{display:flex;gap:6px;margin-bottom:8px}
+.msg{
+  display:flex;
+  gap:6px;
+  margin-bottom:8px;
+  align-items:flex-end; /* BASELINE FIX */
+}
 .msg.out{justify-content:flex-end}
 .grouped{margin-top:-6px}
+
+/* ================= AVATAR ================= */
+.avatar{
+  width:32px;
+  height:32px;
+  border-radius:999px;
+  flex-shrink:0;
+}
 
 /* ================= BUBBLES ================= */
 .bubble{
@@ -42,7 +57,9 @@ tailwind.config = {
   position:relative;
   box-shadow:0 2px 8px rgba(0,0,0,.18);
 }
+.bubble-inner{display:block}
 
+/* IN / OUT */
 .msg.in .bubble{
   background:#262b38;
   border-radius:6px 18px 18px 6px;
@@ -53,12 +70,12 @@ tailwind.config = {
   border-radius:18px 6px 6px 18px;
 }
 
-/* ===== AVATAR → BUBBLE TAIL ===== */
+/* ===== TELEGRAM-LOCKED TAILS ===== */
 .msg.in .bubble::before{
   content:'';
   position:absolute;
   left:-6px;
-  top:14px;
+  bottom:10px;
   width:8px;
   height:8px;
   background:#262b38;
@@ -68,7 +85,7 @@ tailwind.config = {
   content:'';
   position:absolute;
   right:-6px;
-  top:14px;
+  bottom:10px;
   width:8px;
   height:8px;
   background:#2b3242;
@@ -77,29 +94,6 @@ tailwind.config = {
 .grouped.in .bubble::before,
 .grouped.out .bubble::after{display:none}
 
-/* ================= REPLY PREVIEW ================= */
-.reply-preview{
-  display:flex;
-  gap:6px;
-  margin:-2px 0 6px;
-  padding-left:6px;
-  border-left:2px solid #6bdba7;
-  font-size:11px;
-  color:#a0a6b5;
-  line-height:1.2;
-  cursor:pointer;
-}
-.reply-preview .sender{
-  font-weight:600;
-  color:#6bdba7;
-}
-.reply-preview .text{
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  max-width:220px;
-}
-
 /* ================= META ================= */
 .sender{
   font-size:12px;
@@ -107,81 +101,64 @@ tailwind.config = {
   color:#6bdba7;
   margin-bottom:4px;
   display:flex;
-  gap:6px;
   align-items:center;
+  gap:6px;
 }
 .time{
   font-size:10px;
-  opacity:.6;
+  opacity:.65;
   margin-top:6px;
   display:flex;
   justify-content:flex-end;
 }
 
-/* ================= REACTIONS ================= */
-.reactions{
-  display:flex;
-  gap:6px;
-  margin-top:6px;
-}
-.reaction-pill{
-  font-size:11px;
-  padding:2px 8px;
-  border-radius:999px;
-  background:#1c1f26;
-  border:1px solid #343a4a;
-}
-
 /* ================= BADGES ================= */
-.badge{
+.verified-bubble{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  padding:1px 4px;
+  border-radius:999px;
+  background:linear-gradient(180deg,#1b6d46,#125034);
+  font-size:9px;
+}
+.verified-bubble i{width:6px;height:6px}
+.role-pill{
   font-size:9px;
   padding:1px 6px;
   border-radius:999px;
 }
-.badge.admin{background:#7f1d1d}
-.badge.mod{background:#5b21b6}
+.role-pill.admin{background:#7f1d1d}
+.role-pill.mod{background:#5b21b6}
 
-/* ================= AVATAR ================= */
-.avatar{
-  width:32px;
-  height:32px;
-  border-radius:999px;
-}
-
-/* ================= TYPING BAR ================= */
+/* ================= HEADER ================= */
 header{position:relative}
-.group-typing-bar{
+
+/* 🔒 FIXED TYPING RAIL (PHASE 1 CORE FIX) */
+.typing-rail{
   position:absolute;
-  right:16px;
+  right:12px;
   bottom:-18px;
+  height:20px;
+  pointer-events:none;
+}
+.group-typing-bar{
   display:flex;
+  align-items:center;
   gap:6px;
   padding:4px 10px;
   border-radius:999px;
   background:rgba(255,255,255,.05);
   font-size:12px;
+  font-weight:500;
   color:#6bdba7;
-  animation:fadeIn .18s ease;
+  opacity:0;
+  transform:translateY(4px);
+  transition:.18s ease;
 }
-@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}}
-
-/* ================= RIPPLE ================= */
-.ripple-container{position:relative;overflow:hidden}
-.ripple{
-  position:absolute;
-  border-radius:50%;
-  background:rgba(255,255,255,.18);
-  transform:scale(0);
-  animation:ripple .22s ease-out;
-}
-@keyframes ripple{
-  to{transform:scale(2.2);opacity:0}
-}
-
-/* ================= SCROLL ================= */
-section{
-  overscroll-behavior: auto;
-  -webkit-overflow-scrolling: touch;
+.group-typing-bar.active{
+  opacity:1;
+  transform:translateY(0);
 }
 </style>
 </head>
@@ -190,21 +167,32 @@ section{
 <div class="flex h-full">
 <main class="flex flex-col flex-1 border-r border-border">
 
-<header class="bg-panel border-b border-border px-4 py-3 flex justify-between items-center">
-  <div class="flex gap-3 items-center">
-    <img src="assets/logo.png" class="w-8 h-8">
-    <div>
-      <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-      <div class="text-xs text-muted">Members: 4,872 • Online: 132</div>
+<!-- ================= HEADER ================= -->
+<header id="mainHeader" class="bg-panel border-b border-border px-4 py-3">
+  <div class="flex justify-between items-center">
+    <div class="flex gap-3 items-center">
+      <img src="assets/logo.png" class="w-8 h-8">
+      <div>
+        <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
+        <div class="text-xs text-muted">
+          Members: 4,872 • Online: <span id="onlineCount">—</span>
+        </div>
+      </div>
     </div>
+    <button id="membersBtn"><i data-lucide="users"></i></button>
   </div>
-  <div class="group-typing-bar">
-    <span class="w-2 h-2 rounded-full bg-accent"></span>
-    <span>Member_11 is typing…</span>
+
+  <!-- 🔒 TYPING RAIL -->
+  <div class="typing-rail">
+    <div id="group-typing-bar" class="group-typing-bar">
+      <span class="w-2 h-2 rounded-full bg-accent"></span>
+      <span class="typing-summary">Typing…</span>
+    </div>
   </div>
 </header>
 
-<section class="flex-1 overflow-y-auto px-4 py-4">
+<!-- ================= CHAT ================= -->
+<section id="chat" class="flex-1 overflow-y-auto px-4 py-4 scroll-smooth">
   <div class="text-center text-muted text-sm mb-4">
     📌 <strong>Group Rules</strong><br>
     New members are read-only until verified<br>
@@ -212,54 +200,38 @@ section{
     No screenshots in chat<br>
     Ignore unsolicited messages
   </div>
-
-  <div class="msg in ripple-container">
-    <img class="avatar" src="https://randomuser.me/api/portraits/men/32.jpg">
-    <div class="bubble">
-      <div class="sender">Profit Hunter <span class="badge admin">ADMIN</span></div>
-      Please follow the rules.
-    </div>
-  </div>
-
-  <div class="msg in grouped ripple-container">
-    <img class="avatar" src="https://randomuser.me/api/portraits/women/45.jpg">
-    <div class="bubble">
-      <div class="reply-preview">
-        <div>
-          <div class="sender">Profit Hunter</div>
-          <div class="text">Please follow the rules…</div>
-        </div>
-      </div>
-      Verified members can now chat.
-      <div class="reactions">
-        <span class="reaction-pill">👍 3</span>
-        <span class="reaction-pill">🔥 1</span>
-      </div>
-      <div class="time">02:09 AM</div>
-    </div>
-  </div>
 </section>
+
+<footer class="bg-panel border-t border-border px-4 py-3">
+  <div class="flex items-center bg-bg rounded-full px-3 py-2 gap-2">
+    <button id="emojiBtn"><i data-lucide="smile"></i></button>
+    <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
+    <div class="flex items-center gap-2 ml-auto">
+      <button id="mediaBtn"><i data-lucide="paperclip"></i></button>
+      <button id="micBtn"><i data-lucide="mic"></i></button>
+      <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
+    </div>
+  </div>
+</footer>
 
 </main>
 </div>
 
 <script>
-lucide.createIcons();
+requestAnimationFrame(()=>lucide.createIcons());
 
-/* Ripple attach */
-document.querySelectorAll('.ripple-container').forEach(el=>{
-  el.addEventListener('pointerdown',e=>{
-    const r=el.getBoundingClientRect();
-    const ripple=document.createElement('span');
-    ripple.className='ripple';
-    const size=Math.max(r.width,r.height);
-    ripple.style.width=ripple.style.height=size+'px';
-    ripple.style.left=(e.clientX-r.left-size/2)+'px';
-    ripple.style.top=(e.clientY-r.top-size/2)+'px';
-    el.appendChild(ripple);
-    setTimeout(()=>ripple.remove(),240);
-  });
-});
+/* ===== PHASE 1 TYPING LOGIC (UNCHANGED, NOW VISUALLY LOCKED) ===== */
+const input=document.getElementById('input');
+const groupTypingBar=document.getElementById('group-typing-bar');
+const summary=groupTypingBar.querySelector('.typing-summary');
+
+let typingTimer;
+input.oninput=()=>{
+  summary.textContent='You are typing…';
+  groupTypingBar.classList.add('active');
+  clearTimeout(typingTimer);
+  typingTimer=setTimeout(()=>groupTypingBar.classList.remove('active'),1500);
+};
 </script>
 
 </body>
