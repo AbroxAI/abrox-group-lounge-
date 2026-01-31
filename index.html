@@ -127,7 +127,8 @@ tailwind.config = {
 .reply-preview{
   font-size:11px;opacity:.7;
   border-left:2px solid #6bdba7;
-  padding-left:6px;margin-bottom:4px
+  padding-left:6px;margin-bottom:4px;
+  cursor:pointer
 }
 
 /* reactions */
@@ -146,6 +147,19 @@ tailwind.config = {
 }
 .pinned-banner.hidden{display:none}
 
+/* unread */
+#unreadBtn{
+  position:fixed;bottom:90px;left:50%;
+  transform:translateX(-50%);
+  background:#3b82f6;
+  color:#fff;
+  padding:6px 14px;
+  border-radius:999px;
+  font-size:12px;
+  display:none;
+  z-index:40
+}
+
 /* date */
 .date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
 
@@ -161,7 +175,6 @@ section{-webkit-overflow-scrolling:touch}
 
 <main class="flex flex-col flex-1 border-r border-border">
 
-<!-- HEADER -->
 <header class="header">
   <div class="flex items-center justify-between px-4 py-3">
     <div class="flex gap-3 items-center">
@@ -193,7 +206,6 @@ section{-webkit-overflow-scrolling:touch}
   </div>
 </header>
 
-<!-- PIN -->
 <div id="pinnedBanner" class="pinned-banner hidden">
   <i data-lucide="pin"></i>
   <span id="pinnedText" class="flex-1 truncate"></span>
@@ -210,6 +222,8 @@ section{-webkit-overflow-scrolling:touch}
   </div>
 </section>
 
+<button id="unreadBtn">⬇ New messages</button>
+
 <footer class="bg-panel border-t border-border px-4 py-3">
   <div class="flex items-center bg-bg rounded-full px-3 py-2 gap-2">
     <button id="emojiBtn"><i data-lucide="smile"></i></button>
@@ -224,7 +238,6 @@ section{-webkit-overflow-scrolling:touch}
 
 </main>
 
-<!-- SIDEBAR -->
 <aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full z-50 flex flex-col">
   <div class="p-4 border-b border-border flex justify-between">
     <strong>Members</strong>
@@ -236,26 +249,28 @@ section{-webkit-overflow-scrolling:touch}
 <input type="file" id="fileInput" class="hidden">
 
 <script>
+/* ================= INIT ================= */
 requestAnimationFrame(()=>lucide.createIcons());
 
 /* ================= CORE ================= */
-const chat = document.getElementById('chat');
-const input = document.getElementById('input');
-const send = document.getElementById('send');
-const emojiBtn = document.getElementById('emojiBtn');
-const mediaBtn = document.getElementById('mediaBtn');
-const micBtn = document.getElementById('micBtn');
-const fileInput = document.getElementById('fileInput');
+const chat=document.getElementById('chat');
+const input=document.getElementById('input');
+const send=document.getElementById('send');
+const emojiBtn=document.getElementById('emojiBtn');
+const mediaBtn=document.getElementById('mediaBtn');
+const micBtn=document.getElementById('micBtn');
+const fileInput=document.getElementById('fileInput');
+const unreadBtn=document.getElementById('unreadBtn');
 
-const membersRow = document.getElementById('membersRow');
-const typingRow = document.getElementById('typingRow');
-const typingText = document.getElementById('typingText');
-const onlineCountEl = document.getElementById('onlineCount');
+const membersRow=document.getElementById('membersRow');
+const typingRow=document.getElementById('typingRow');
+const typingText=document.getElementById('typingText');
+const onlineCountEl=document.getElementById('onlineCount');
 
-const sidebar = document.getElementById('sidebar');
-const membersBtn = document.getElementById('membersBtn');
-const closeSidebar = document.getElementById('closeSidebar');
-const memberList = document.getElementById('memberList');
+const sidebar=document.getElementById('sidebar');
+const membersBtn=document.getElementById('membersBtn');
+const closeSidebar=document.getElementById('closeSidebar');
+const memberList=document.getElementById('memberList');
 
 /* ================= MEMBERS ================= */
 const ADMIN={name:'Profit Hunter 🌐',role:'ADMIN',avatar:'assets/admin.jpg'};
@@ -273,7 +288,7 @@ const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
 /* online simulation */
 setInterval(()=>{
   members.forEach(m=>Math.random()>.6&&(m.lastActive=Date.now()));
-  onlineCountEl.textContent = members.filter(isOnline).length;
+  onlineCountEl.textContent=members.filter(isOnline).length;
   renderMembers();
 },4000);
 
@@ -302,7 +317,7 @@ const typingMembers=members.map(m=>m.name).filter(n=>n!=='Profit Hunter 🌐');
 function showTyping(){
   const count=Math.floor(Math.random()*3)+1;
   const names=[...typingMembers].sort(()=>.5-Math.random()).slice(0,count);
-  typingText.textContent =
+  typingText.textContent=
     names.length===1?`${names[0]} is typing…`:
     names.length===2?`${names[0]} and ${names[1]} are typing…`:
     `${names.length} people are typing…`;
@@ -349,15 +364,34 @@ fileInput.onchange=e=>{
   fileInput.value='';
 };
 
-/* ================= PIN / REPLY / REACTIONS / SEEN ================= */
-let pinnedId=null,replyTo=null;
+/* ================= VOICE (PATCH A) ================= */
+let recorder,voiceChunks=[],recording=false;
+micBtn.onmousedown=async()=>{
+  if(recording)return;
+  recording=true;
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  recorder=new MediaRecorder(stream);
+  recorder.ondataavailable=e=>voiceChunks.push(e.data);
+  recorder.onstop=()=>{
+    const blob=new Blob(voiceChunks,{type:'audio/webm'});
+    const url=URL.createObjectURL(blob);
+    postMessage({name:'You',role:'VERIFIED',text:`<audio controls src="${url}"></audio>`,out:true});
+    voiceChunks=[];
+    stream.getTracks().forEach(t=>t.stop());
+  };
+  recorder.start();
+};
+micBtn.onmouseup=()=>{if(recording){recording=false;recorder.stop()}};
 
+/* ================= PIN / REPLY / REACTIONS ================= */
+let pinnedId=null,replyTo=null;
 const pinnedBanner=document.getElementById('pinnedBanner');
 const pinnedText=document.getElementById('pinnedText');
 document.getElementById('unpinBtn').onclick=e=>{
   e.stopPropagation();
   pinnedId=null;
   pinnedBanner.classList.add('hidden');
+  localStorage.removeItem('pinnedId');
 };
 pinnedBanner.onclick=()=>{
   const el=document.querySelector(`[data-id="${pinnedId}"]`);
@@ -365,15 +399,17 @@ pinnedBanner.onclick=()=>{
 };
 
 /* ================= MESSAGE RENDER ================= */
+let lastMeta=null,lastDate='';
+let unread=0;
+
 function postMessage(m){
   m.id=crypto.randomUUID();
   m.time=Date.now();
   save(m);
-  render(m);
+  render(m,true);
 }
 
-let lastMeta=null,lastDate='';
-function render(m){
+function render(m,isNew=false){
   const d=new Date(m.time);
   if(d.toDateString()!==lastDate){
     const sep=document.createElement('div');
@@ -413,15 +449,15 @@ function render(m){
     };
   });
 
-  /* reactions */
+  /* reactions (PATCH D) */
+  const reactBox=el.querySelector('.reactions');
   el.querySelector('.bubble').ondblclick=()=>{
-    const r=el.querySelector('.reactions');
-    const ex=[...r.children].find(x=>x.textContent.startsWith('👍'));
+    const ex=reactBox.querySelector('.reaction');
     if(ex) ex.remove();
     else{
       const b=document.createElement('div');
       b.className='reaction';b.textContent='👍 1';
-      r.appendChild(b);
+      reactBox.appendChild(b);
     }
   };
 
@@ -440,6 +476,7 @@ function render(m){
         pinnedId=m.id;
         pinnedText.textContent=el.querySelector('.content').textContent;
         pinnedBanner.classList.remove('hidden');
+        localStorage.setItem('pinnedId',pinnedId);
       }
       menu.remove();
     };
@@ -449,27 +486,38 @@ function render(m){
     lucide.createIcons();
   };
 
-  /* seen-by */
+  /* seen-by (PATCH C) */
   if(m.out){
-    setTimeout(()=>{
-      const r=el.querySelector('.read-by');
-      [ADMIN,MOD].forEach(u=>{
-        const img=document.createElement('img');
-        img.src=u.avatar;r.appendChild(img);
-      });
-    },1200);
+    const r=el.querySelector('.read-by');
+    [ADMIN,MOD].forEach(u=>{
+      const img=document.createElement('img');
+      img.src=u.avatar;r.appendChild(img);
+    });
   }
 
   lastMeta={sender:m.name,time:d};
-  chat.scrollTop=chat.scrollHeight;
-  replyTo=null;
+
+  if(isNew && chat.scrollTop+chat.clientHeight<chat.scrollHeight-40){
+    unread++;
+    unreadBtn.textContent=`⬇ ${unread} new messages`;
+    unreadBtn.style.display='block';
+  }else{
+    chat.scrollTop=chat.scrollHeight;
+  }
 }
+
+/* ================= UNREAD ================= */
+unreadBtn.onclick=()=>{
+  chat.scrollTop=chat.scrollHeight;
+  unread=0;
+  unreadBtn.style.display='none';
+};
 
 /* ================= SIDEBAR ================= */
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
-/* ================= DB (PERSISTENCE) ================= */
+/* ================= DB (PATCH G) ================= */
 const DB='AbroxDB',STORE='messages';
 let db;
 const req=indexedDB.open(DB,1);
@@ -479,11 +527,18 @@ req.onupgradeneeded=e=>{
 req.onsuccess=e=>{
   db=e.target.result;
   db.transaction(STORE).objectStore(STORE).getAll().onsuccess=ga=>{
-    (ga.target.result||[]).sort((a,b)=>a.time-b.time).forEach(render);
+    (ga.target.result||[]).sort((a,b)=>a.time-b.time).forEach(m=>render(m));
   };
 };
 function save(m){
   try{db.transaction(STORE,'readwrite').objectStore(STORE).put(m)}catch{}
+}
+
+/* ================= RESTORE PIN ================= */
+const savedPin=localStorage.getItem('pinnedId');
+if(savedPin){
+  pinnedId=savedPin;
+  pinnedBanner.classList.remove('hidden');
 }
 
 /* ================= SAMPLE ================= */
