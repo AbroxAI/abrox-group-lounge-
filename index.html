@@ -55,14 +55,30 @@ tailwind.config = {
   border-radius:18px 6px 6px 18px;
   margin-right:-2px;
 }
-.grouped.in .bubble{
-  margin-left:0;
-  border-top-left-radius:18px;
+
+/* === AVATAR → BUBBLE TAIL (ANCHOR FIX) === */
+.msg.in .bubble::before{
+  content:'';
+  position:absolute;
+  left:-6px;
+  top:14px;
+  width:8px;
+  height:8px;
+  background:#262b38;
+  border-radius:0 0 0 8px;
 }
-.grouped.out .bubble{
-  margin-right:0;
-  border-top-right-radius:18px;
+.msg.out .bubble::after{
+  content:'';
+  position:absolute;
+  right:-6px;
+  top:14px;
+  width:8px;
+  height:8px;
+  background:#2b3242;
+  border-radius:0 0 8px 0;
 }
+.grouped.in .bubble::before,
+.grouped.out .bubble::after{display:none}
 
 /* === META === */
 .sender{
@@ -102,7 +118,7 @@ tailwind.config = {
   margin:12px 0;
 }
 
-/* === VERIFIED GEM (SUBTLE, INLINE) === */
+/* === VERIFIED / ROLE BADGES === */
 .verified-bubble{
   display:inline-flex;
   align-items:center;
@@ -112,15 +128,18 @@ tailwind.config = {
   background:linear-gradient(180deg,#1b6d46,#125034);
   color:#d8f6e2;
   font-size:9px;
-  font-weight:400;
   line-height:1;
 }
-.verified-bubble i{
-  width:6px;
-  height:6px;
-  stroke-width:.4;
+.verified-bubble i{width:6px;height:6px}
+
+.role-pill{
+  font-size:9px;
+  padding:1px 6px;
+  border-radius:999px;
   opacity:.85;
 }
+.role-pill.admin{background:#7f1d1d}
+.role-pill.mod{background:#5b21b6}
 
 /* === HEADER / TYPING === */
 header{position:relative}
@@ -141,41 +160,15 @@ header{position:relative}
   pointer-events:none;
   transition:opacity .18s ease;
 }
-.group-typing-bar.active{
-  opacity:1;
-}
-.header-members{
-  transition:opacity .18s ease;
-}
-header.typing-active .header-members{
-  opacity:0;
-}
+.group-typing-bar.active{opacity:1}
+.header-members{transition:opacity .18s ease}
+header.typing-active .header-members{opacity:0}
 
 /* === AVATARS === */
 .avatar{
   width:32px;
   height:32px;
   border-radius:999px;
-}
-
-/* === MIC WAVE === */
-.recording{position:relative}
-.wave{display:inline-flex;gap:4px}
-.wave span{
-  width:4px;
-  height:12px;
-  background:currentColor;
-  border-radius:2px;
-  opacity:.8;
-  animation:wave 800ms infinite;
-}
-.wave span:nth-child(2){animation-delay:100ms}
-.wave span:nth-child(3){animation-delay:200ms}
-.wave span:nth-child(4){animation-delay:300ms}
-@keyframes wave{
-  0%{transform:scaleY(.4)}
-  50%{transform:scaleY(1)}
-  100%{transform:scaleY(.4)}
 }
 </style>
 </head>
@@ -260,7 +253,7 @@ header.typing-active .header-members{
 <input type="file" id="fileInput" class="hidden">
 
 <script>
-/* ================= ICONS ================= */
+/* ================= ICONS (FIRST PAINT SAFE) ================= */
 requestAnimationFrame(()=>lucide.createIcons());
 
 /* ================= CORE STATE ================= */
@@ -294,8 +287,7 @@ input.oninput = () => {
 send.onclick = () => {
   if(!input.value.trim()) return;
   const m = { name:'You', role:'VERIFIED', text:input.value, timestamp:Date.now(), out:true };
-  save(m);
-  render(m);
+  save(m); render(m);
   input.value='';
   send.classList.add('hidden');
   mediaBtn.classList.remove('hidden');
@@ -384,6 +376,7 @@ const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
   avatar:`https://randomuser.me/api/portraits/men/${i+20}.jpg`,
   lastActive:Date.now()-Math.random()*120000
 }))];
+
 const ACTIVE=90000;
 const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
 
@@ -414,8 +407,9 @@ function renderMembers(q=''){
 memberSearch.oninput=e=>renderMembers(e.target.value);
 setTimeout(()=>renderMembers(),120);
 
-/* ================= TYPING (TELEGRAM STYLE) ================= */
+/* ================= TYPING (LIVE DEMO) ================= */
 const activeTypers=new Map();
+
 function updateTyping(){
   if(!activeTypers.size){
     groupTypingBar.classList.remove('active');
@@ -428,14 +422,21 @@ function updateTyping(){
   groupTypingBar.classList.add('active');
   mainHeader.classList.add('typing-active');
 }
+
 function startTyping(member){
   activeTypers.set(member.name,Date.now());
   updateTyping();
   setTimeout(()=>{
     activeTypers.delete(member.name);
     updateTyping();
-  },3000+Math.random()*2000);
+  },2800+Math.random()*2000);
 }
+
+/* 🔴 DEMO: random member types every 12–20s */
+setInterval(()=>{
+  const m = members[Math.floor(Math.random()*members.length)];
+  startTyping(m);
+},12000);
 
 /* ================= UNREAD + RECEIPTS ================= */
 let unreadCount=0;
