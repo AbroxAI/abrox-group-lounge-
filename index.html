@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <title>Abrox – Private Lounge</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
 
 <script src="https://cdn.tailwindcss.com"></script>
@@ -20,7 +20,8 @@ tailwind.config = {
         muted:'#a0a6b5',
         accent:'#6bdba7',
         bubble:'#262b38',
-        bubbleOut:'#2b3242'
+        bubbleOut:'#2b3242',
+        send:'#3b82f6'
       }
     }
   }
@@ -29,46 +30,111 @@ tailwind.config = {
 
 <style>
 *{box-sizing:border-box}
+
+/* ===== HEADER ===== */
 .header{background:#232833;border-bottom:1px solid #343a4a}
 
+/* ===== MEMBERS / TYPING ===== */
 .members-row,.typing-row{
   padding:0 16px;height:22px;font-size:12px;
   display:flex;align-items:center
 }
 .members-row{color:#a0a6b5}
 .typing-row{gap:8px;font-weight:500;color:#6bdba7;display:none}
-.typing-row.active{display:flex}
-.members-row.hidden{display:none}
 
+/* typing dots */
 .typing-dots{display:flex;gap:3px}
 .typing-dots span{
   width:4px;height:4px;border-radius:999px;
   background:#6bdba7;opacity:.25;
   animation:blink 1.4s infinite both
 }
+.typing-dots span:nth-child(2){animation-delay:.15s}
+.typing-dots span:nth-child(3){animation-delay:.3s}
 @keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
 
-.msg{display:flex;gap:8px;margin-bottom:8px;align-items:flex-end}
+/* ===== CHAT ===== */
+.msg{display:flex;gap:8px;margin-bottom:10px;align-items:flex-end}
 .msg.out{justify-content:flex-end}
+.grouped{margin-top:-6px}
+
 .avatar{width:36px;height:36px;border-radius:999px}
+.msg.grouped .avatar{visibility:hidden}
 
 .bubble{
-  max-width:74%;padding:8px 14px;font-size:14px;
-  line-height:1.45;position:relative;
+  max-width:74%;
+  padding:8px 14px;
+  font-size:14px;
+  line-height:1.45;
+  position:relative;
   box-shadow:0 2px 8px rgba(0,0,0,.18)
 }
-.msg.in .bubble{background:#262b38;border-radius:8px 18px 18px 8px}
-.msg.out .bubble{background:#2b3242;border-radius:18px 8px 8px 18px}
 
-.sender{font-size:12px;font-weight:600;color:#6bdba7;margin-bottom:4px}
-.time{font-size:10px;opacity:.65;margin-top:6px;display:flex;gap:4px;justify-content:flex-end}
-.reactions span{font-size:11px}
+.msg.in .bubble{
+  background:#262b38;
+  border-radius:8px 18px 18px 8px
+}
+.msg.in .bubble::before{
+  content:'';
+  position:absolute;
+  left:-6px;
+  bottom:14px;
+  width:10px;height:10px;
+  background:#262b38;
+  transform:rotate(45deg)
+}
 
+.msg.out .bubble{
+  background:#2b3242;
+  border:1px solid #343a4a;
+  border-radius:18px 8px 8px 18px
+}
+.msg.out .bubble::after{
+  content:'';
+  position:absolute;
+  right:-6px;
+  bottom:14px;
+  width:10px;height:10px;
+  background:#2b3242;
+  transform:rotate(45deg)
+}
+
+.sender{
+  font-size:12px;
+  font-weight:600;
+  color:#6bdba7;
+  margin-bottom:4px
+}
+
+.time{
+  font-size:10px;
+  opacity:.65;
+  margin-top:6px;
+  display:flex;
+  justify-content:flex-end
+}
+
+/* badges */
+.verified-bubble{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  padding:1px 4px;
+  border-radius:999px;
+  background:linear-gradient(180deg,#1b6d46,#125034);
+  font-size:9px
+}
+.role-pill{font-size:9px;padding:1px 6px;border-radius:999px}
+.role-pill.admin{background:#7f1d1d}
+.role-pill.mod{background:#5b21b6}
+
+section{-webkit-overflow-scrolling:touch}
 </style>
 </head>
 
 <body class="bg-bg text-white h-[100dvh] overflow-hidden">
-<main class="flex flex-col h-full">
+<div class="flex h-full">
+<main class="flex flex-col flex-1">
 
 <header class="header">
   <div class="flex items-center justify-between px-4 py-3">
@@ -82,103 +148,224 @@ tailwind.config = {
         </div>
       </div>
     </div>
+    <button><i data-lucide="users"></i></button>
   </div>
 
-  <div class="members-row" id="membersRow">
+  <div class="members-row">
     Members: <strong>4,872</strong>
     <span class="mx-2">•</span>
-    Online: <strong id="onlineCount">13</strong>
+    Online: <strong>13</strong>
   </div>
 
-  <div class="typing-row" id="typingRow">
+  <div class="typing-row">
     <div class="typing-dots"><span></span><span></span><span></span></div>
-    <span id="typingText"></span>
+    <span>Typing…</span>
+  </div>
+
+  <div class="px-4 text-xs text-muted pb-1">
+    Demo discussion · Verification required
   </div>
 </header>
 
-<section id="chat" class="flex-1 overflow-y-auto px-4 py-4">
-  <div class="text-center text-muted text-sm mb-4">
+<section class="flex-1 overflow-y-auto px-4 py-4">
+  <div class="text-center text-muted text-sm mb-6">
     📌 <strong>Group Rules</strong><br>
     New members are read-only until verified<br>
     Admins DM individually<br>
-    No screenshots<br>
+    No screenshots in chat<br>
     Ignore unsolicited messages
   </div>
 </section>
 
 <footer class="bg-panel border-t border-border px-4 py-3">
-  <input id="input" class="w-full bg-bg rounded-full px-4 py-2 text-sm outline-none" placeholder="Message">
+  <div class="flex items-center bg-bg rounded-full px-3 py-2 gap-2">
+    <button><i data-lucide="smile"></i></button>
+    <input class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
+    <button><i data-lucide="paperclip"></i></button>
+    <button><i data-lucide="mic"></i></button>
+    <button class="hidden text-send"><i data-lucide="send"></i></button>
+  </div>
 </footer>
 
+</main>
+</div>
+
 <script>
-requestAnimationFrame(()=>lucide.createIcons());
+lucide.createIcons();
+</script>
 
-const chat = document.getElementById('chat');
-const membersRow = document.getElementById('membersRow');
-const typingRow = document.getElementById('typingRow');
-const typingText = document.getElementById('typingText');
-const onlineCountEl = document.getElementById('onlineCount');
+<script>
+/* ================= CORE ================= */
+const chat = document.querySelector('section');
+const input = document.querySelector('input');
+const sendBtn = document.querySelector('[data-lucide="send"]')?.parentElement;
+const micBtn = document.querySelector('[data-lucide="mic"]')?.parentElement;
+const membersRow = document.querySelector('.members-row');
+const typingRow = document.querySelector('.typing-row');
+const typingText = typingRow.querySelector('span');
 
-const ADMIN={name:'Profit Hunter 🌐',avatar:'assets/admin.jpg'};
-const MOD={name:'Kitty Star ⭐',avatar:'assets/mod.jpg'};
-const members=[ADMIN,MOD,...Array.from({length:8},(_,i)=>({name:'Member_'+(i+1),avatar:'https://randomuser.me/api/portraits/men/'+(20+i)+'.jpg',lastActive:Date.now()}))];
+/* ================= STATE ================= */
+let replyToId = null;
+let pinnedId = null;
+let contextMenu = null;
 
-setInterval(()=>{
-  members.forEach(m=>{if(Math.random()>.6)m.lastActive=Date.now()});
-  onlineCountEl.textContent=members.filter(m=>Date.now()-m.lastActive<90000).length;
-},4000);
+/* ================= MEMBERS ================= */
+const SIM_MEMBERS = [
+  'Kitty Star ⭐',
+  'Member_4',
+  'Member_9',
+  'Member_12',
+  'Member_18'
+];
 
-setInterval(()=>{
-  if(Math.random()>.5){
-    const names=members.slice(1).sort(()=>.5-Math.random()).slice(0,2).map(m=>m.name);
-    typingText.textContent=names.join(' and ')+' typing…';
-    typingRow.classList.add('active');
-    membersRow.classList.add('hidden');
-    setTimeout(()=>{
-      typingRow.classList.remove('active');
-      membersRow.classList.remove('hidden');
-    },2000);
+/* ================= INPUT TOGGLE ================= */
+input.addEventListener('input', () => {
+  if (input.value.trim()) {
+    micBtn.classList.add('hidden');
+    sendBtn.classList.remove('hidden');
+    triggerTyping();
+  } else {
+    micBtn.classList.remove('hidden');
+    sendBtn.classList.add('hidden');
   }
-},5000);
+});
 
-/* ===== PIN + REPLY + REACTIONS ===== */
-let replyTo=null,pinnedId=null;
-const reads=new Map(),reactions=new Map();
+/* ================= SEND ================= */
+function sendMessage() {
+  if (!input.value.trim()) return;
 
-const pinBanner=document.createElement('div');
-pinBanner.className='hidden bg-panel px-4 py-2 text-sm flex gap-2 cursor-pointer';
-pinBanner.innerHTML='<i data-lucide="pin"></i><span id="pinText"></span>';
+  const msg = document.createElement('div');
+  msg.className = 'msg out';
+  msg.dataset.id = crypto.randomUUID();
+
+  msg.innerHTML = `
+    <div class="bubble">
+      ${replyToId ? `
+        <div class="text-xs opacity-60 cursor-pointer quoted" data-jump="${replyToId}">
+          ↩ Reply
+        </div>` : ''}
+      <div class="content">${input.value}</div>
+      <div class="time">
+        <i data-lucide="check-check" class="w-3 h-3"></i>
+      </div>
+    </div>
+  `;
+
+  chat.appendChild(msg);
+  chat.scrollTop = chat.scrollHeight;
+  input.value = '';
+  replyToId = null;
+  micBtn.classList.remove('hidden');
+  sendBtn.classList.add('hidden');
+
+  lucide.createIcons();
+  simulateSeen(msg);
+}
+
+sendBtn.addEventListener('click', sendMessage);
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendMessage();
+});
+
+/* ================= TYPING ================= */
+function triggerTyping() {
+  const count = Math.floor(Math.random()*3)+1;
+  const names = SIM_MEMBERS.sort(()=>0.5-Math.random()).slice(0,count);
+
+  typingText.textContent =
+    names.length === 1 ? `${names[0]} is typing…` :
+    names.length === 2 ? `${names[0]} and ${names[1]} are typing…` :
+    `${names.length} people are typing…`;
+
+  membersRow.style.display = 'none';
+  typingRow.style.display = 'flex';
+
+  clearTimeout(triggerTyping._t);
+  triggerTyping._t = setTimeout(() => {
+    typingRow.style.display = 'none';
+    membersRow.style.display = 'flex';
+  }, 2000);
+}
+
+/* ================= CONTEXT MENU ================= */
+chat.addEventListener('contextmenu', e => {
+  const msg = e.target.closest('.msg');
+  if (!msg) return;
+  e.preventDefault();
+
+  if (contextMenu) contextMenu.remove();
+
+  contextMenu = document.createElement('div');
+  contextMenu.className =
+    'fixed bg-panel border border-border rounded-xl p-2 space-y-2 z-50';
+
+  contextMenu.innerHTML = `
+    <button data-a="reply" class="flex gap-2 items-center">
+      <i data-lucide="reply"></i> Reply
+    </button>
+    <button data-a="pin" class="flex gap-2 items-center">
+      <i data-lucide="pin"></i> Pin
+    </button>
+  `;
+
+  contextMenu.onclick = ev => {
+    const a = ev.target.closest('button')?.dataset.a;
+    if (a === 'reply') replyToId = msg.dataset.id;
+    if (a === 'pin') pinMessage(msg);
+    contextMenu.remove();
+    contextMenu = null;
+    lucide.createIcons();
+  };
+
+  document.body.appendChild(contextMenu);
+  contextMenu.style.left = e.pageX+'px';
+  contextMenu.style.top  = e.pageY+'px';
+  lucide.createIcons();
+});
+
+document.addEventListener('click', () => {
+  if (contextMenu) contextMenu.remove();
+  contextMenu = null;
+});
+
+/* ================= PIN ================= */
+const pinBanner = document.createElement('div');
+pinBanner.className =
+  'hidden bg-panel border-b border-border px-4 py-2 text-sm flex gap-2 cursor-pointer';
+pinBanner.innerHTML =
+  '<i data-lucide="pin"></i><span class="truncate"></span>';
 chat.before(pinBanner);
 
-pinBanner.onclick=()=>document.querySelector(`[data-id="${pinnedId}"]`)?.scrollIntoView({behavior:'smooth'});
-
-function postMessage(name,text){
-  const id=crypto.randomUUID();
-  const el=document.createElement('div');
-  el.className='msg in';
-  el.dataset.id=id;
-  el.innerHTML=`
-    <img class="avatar" src="${members.find(m=>m.name===name)?.avatar}">
-    <div class="bubble">
-      ${replyTo?`<div class="text-xs opacity-60 cursor-pointer" onclick="jump('${replyTo}')">${document.querySelector(`[data-id="${replyTo}"] .content`)?.textContent}</div>`:''}
-      <div class="sender">${name}</div>
-      <div class="content">${text}</div>
-      <div class="reactions"></div>
-      <div class="time"><i data-lucide="eye" class="w-3 h-3"></i> Seen</div>
-    </div>`;
-  chat.appendChild(el);
-  replyTo=null;
+function pinMessage(msg) {
+  pinnedId = msg.dataset.id;
+  pinBanner.querySelector('span').textContent =
+    msg.querySelector('.content').textContent;
+  pinBanner.classList.remove('hidden');
   lucide.createIcons();
 }
 
-window.jump=id=>document.querySelector(`[data-id="${id}"]`)?.scrollIntoView({behavior:'smooth'});
+pinBanner.onclick = () => {
+  const el = document.querySelector(`[data-id="${pinnedId}"]`);
+  if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+};
 
-setTimeout(()=>{
-  postMessage(ADMIN.name,'Welcome everyone 👋 Please follow the rules.');
-  postMessage(MOD.name,'Verified members can now chat.');
-},800);
+/* ================= REPLY JUMP ================= */
+chat.addEventListener('click', e => {
+  const q = e.target.closest('.quoted');
+  if (!q) return;
+  const el = document.querySelector(`[data-id="${q.dataset.jump}"]`);
+  if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+});
+
+/* ================= SEEN 👁 ================= */
+function simulateSeen(msg) {
+  setTimeout(() => {
+    const time = msg.querySelector('.time');
+    time.innerHTML = `<i data-lucide="eye" class="w-3 h-3"></i>`;
+    lucide.createIcons();
+  }, 2500);
+}
 </script>
 
-</main>
 </body>
 </html>
