@@ -3,10 +3,30 @@
 <head>
 <meta charset="UTF-8" />
 <title>Abrox – Private Lounge</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c1f26">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        bg:'#1c1f26',
+        panel:'#232833',
+        border:'#343a4a',
+        muted:'#a0a6b5',
+        accent:'#6bdba7',
+        bubble:'#262b38',
+        bubbleOut:'#2b3242',
+        send:'#3b82f6'
+      }
+    }
+  }
+}
+</script>
 
 <style>
 *{box-sizing:border-box}
@@ -17,7 +37,7 @@
   border-bottom:1px solid #343a4a;
 }
 
-/* ===== TYPING ROW (LOCKED — TELEGRAM SAFE) ===== */
+/* ===== INLINE TYPING ROW (RESERVED SPACE) ===== */
 .typing-row{
   display:flex;
   align-items:center;
@@ -35,19 +55,16 @@
   height:22px;
   opacity:1;
 }
-
-/* typing dots */
 .typing-dots{display:flex;gap:3px}
 .typing-dots span{
-  width:4px;height:4px;border-radius:999px;
-  background:#6bdba7;opacity:.25;
-  animation:dotPulse 1.2s infinite ease-in-out;
+  width:4px;
+  height:4px;
+  border-radius:999px;
+  background:#6bdba7;
+  opacity:.25;
 }
-.typing-dots span:nth-child(2){animation-delay:.15s}
-.typing-dots span:nth-child(3){animation-delay:.3s}
-@keyframes dotPulse{0%,80%,100%{opacity:.25}40%{opacity:1}}
 
-/* ================= CHAT ================= */
+/* ================= CHAT LAYOUT ================= */
 .msg{
   display:flex;
   gap:8px;
@@ -63,13 +80,9 @@
   height:36px;
   border-radius:999px;
 }
+.msg.grouped .avatar{visibility:hidden}
 
-/* hide avatar on grouped messages (Telegram behavior) */
-.msg.grouped .avatar{
-  visibility:hidden;
-}
-
-/* bubbles */
+/* ================= BUBBLES ================= */
 .bubble{
   max-width:78%;
   padding:9px 15px 8px;
@@ -79,7 +92,7 @@
   box-shadow:0 2px 8px rgba(0,0,0,.18);
 }
 
-/* ===== INCOMING (TELEGRAM-ACCURATE TAIL) ===== */
+/* incoming */
 .msg.in .bubble{
   background:#262b38;
   border-radius:8px 18px 18px 8px;
@@ -87,15 +100,17 @@
 .msg.in .bubble::before{
   content:'';
   position:absolute;
-  left:-5px;
-  bottom:11px;
-  width:9px;
-  height:11px;
+  left:-6px;
+  bottom:14px;
+  width:10px;
+  height:10px;
   background:#262b38;
-  border-bottom-left-radius:9px;
+  border-radius:2px;
+  transform:rotate(45deg);
+  box-shadow:-1px 1px 2px rgba(0,0,0,.18);
 }
 
-/* ===== OUTGOING (TELEGRAM-ACCURATE TAIL) ===== */
+/* outgoing */
 .msg.out .bubble{
   background:#2b3242;
   border:1px solid #343a4a;
@@ -104,131 +119,454 @@
 .msg.out .bubble::after{
   content:'';
   position:absolute;
-  right:-5px;
-  bottom:11px;
-  width:9px;
-  height:11px;
+  right:-6px;
+  bottom:14px;
+  width:10px;
+  height:10px;
   background:#2b3242;
-  border-bottom-right-radius:9px;
+  border-radius:2px;
+  transform:rotate(45deg);
+  box-shadow:1px 1px 2px rgba(0,0,0,.18);
 }
 
 /* grouped hides tails */
 .grouped.in .bubble::before,
-.grouped.out .bubble::after{
-  display:none;
-}
+.grouped.out .bubble::after{display:none}
 
-/* meta */
+/* ================= META ================= */
 .sender{
   font-size:12px;
   font-weight:600;
   color:#6bdba7;
   margin-bottom:4px;
+  display:flex;
+  align-items:center;
+  gap:6px;
 }
 .time{
   font-size:10px;
-  opacity:.6;
+  opacity:.65;
   margin-top:6px;
-  text-align:right;
+  display:flex;
+  justify-content:flex-end;
 }
 
-/* scroll */
+/* badges */
+.verified-bubble{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  padding:1px 4px;
+  border-radius:999px;
+  background:linear-gradient(180deg,#1b6d46,#125034);
+  color:#d8f6e2;
+  font-size:9px;
+}
+.role-pill{
+  font-size:9px;
+  padding:1px 6px;
+  border-radius:999px;
+}
+.role-pill.admin{background:#7f1d1d}
+.role-pill.mod{background:#5b21b6}
+
+/* ================= SCROLL ================= */
 section{-webkit-overflow-scrolling:touch}
 </style>
 </head>
 
-<body class="bg-[#1c1f26] text-white h-[100dvh] overflow-hidden">
-<main class="flex flex-col h-full">
+<body class="bg-bg text-white h-[100dvh] overflow-hidden">
+<div class="flex h-full">
 
+<main class="flex flex-col flex-1 border-r border-border">
+
+<!-- ================= HEADER ================= -->
 <header class="header">
   <div class="flex items-center justify-between px-4 py-3">
     <div class="flex gap-3 items-center">
-      <div class="w-9 h-9 rounded bg-[#6bdba7]"></div>
+      <div class="w-9 h-9 rounded bg-accent"></div>
       <div>
         <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-        <div class="flex items-center gap-1 text-xs text-gray-400">
+        <div class="flex items-center gap-1 text-xs text-muted">
           <i data-lucide="lock" class="w-3 h-3"></i>
           <span>Private Group</span>
         </div>
+        <div class="text-xs text-muted">
+          Members: 4,872 • Online: <span id="onlineCount">—</span>
+        </div>
       </div>
     </div>
-    <button><i data-lucide="users"></i></button>
+    <button id="membersBtn"><i data-lucide="users"></i></button>
   </div>
 
-  <div class="px-4 text-xs text-gray-400">
-    Members: 4,872 • Online: 132
-  </div>
-
-  <!-- typing BEFORE discussion -->
+  <!-- INLINE TYPING ROW -->
   <div id="typingRow" class="typing-row">
     <div class="typing-dots"><span></span><span></span><span></span></div>
-    <span id="typingText">Typing…</span>
+    <span>Typing…</span>
   </div>
 
-  <div class="px-4 text-xs text-gray-500 pb-1">
+  <div class="px-4 text-xs text-muted pb-1">
     Demo discussion · Verification required
   </div>
 </header>
 
-<section class="flex-1 overflow-y-auto px-4 py-4">
-  <div class="msg in">
-    <img class="avatar" src="https://randomuser.me/api/portraits/men/32.jpg">
-    <div class="bubble">
-      <div class="sender">Profit Hunter</div>
-      Please follow the rules.
-      <div class="time">02:08 AM</div>
-    </div>
-  </div>
-
-  <div class="msg in grouped">
-    <img class="avatar" src="https://randomuser.me/api/portraits/men/32.jpg">
-    <div class="bubble">
-      Verified members can now chat.
-      <div class="time">02:09 AM</div>
-    </div>
+<!-- ================= CHAT ================= -->
+<section id="chat" class="flex-1 overflow-y-auto px-4 py-4">
+  <div class="text-center text-muted text-sm mb-4">
+    📌 <strong>Group Rules</strong><br>
+    New members are read-only until verified<br>
+    Admins DM individually<br>
+    No screenshots in chat<br>
+    Ignore unsolicited messages
   </div>
 </section>
 
-<footer class="bg-[#232833] border-t border-[#343a4a] px-4 py-3">
-  <input id="input"
-    class="w-full bg-[#1c1f26] border border-[#343a4a] rounded px-3 py-2 text-sm"
-    placeholder="Message">
+<!-- ================= INPUT ================= -->
+<footer class="bg-panel border-t border-border px-4 py-3">
+  <div class="flex items-center bg-bg rounded-full px-3 py-2 gap-2">
+    <button id="emojiBtn"><i data-lucide="smile"></i></button>
+    <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
+    <div class="flex items-center gap-2 ml-auto">
+      <button id="mediaBtn"><i data-lucide="paperclip"></i></button>
+      <button id="micBtn"><i data-lucide="mic"></i></button>
+      <button id="sendBtn" class="hidden text-send"><i data-lucide="send"></i></button>
+    </div>
+  </div>
 </footer>
 
 </main>
 
+<!-- ================= SIDEBAR ================= -->
+<aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full z-50 flex flex-col">
+  <div class="p-4 border-b border-border flex items-center justify-between">
+    <strong>Members</strong>
+    <button id="closeSidebar"><i data-lucide="x"></i></button>
+  </div>
+  <div class="px-3 pb-3">
+    <input id="memberSearch"
+      class="w-full bg-bg border border-border rounded-full px-4 py-2 text-sm outline-none"
+      placeholder="Search members…">
+  </div>
+  <div id="memberList" class="flex-1 p-3 space-y-4 overflow-y-auto"></div>
+</aside>
+
+</div>
+
 <script>
 lucide.createIcons();
+</script>
 
-const typingRow=document.getElementById('typingRow');
-const typingText=document.getElementById('typingText');
-const input=document.getElementById('input');
 
-let activeTypers=new Set();
-let selfTimer;
+<script>
+/* ================= ICONS ================= */
+requestAnimationFrame(() => lucide.createIcons());
+
+/* ================= CORE ================= */
+const chat = document.getElementById('chat');
+const typingRow = document.getElementById('typingRow');
+const onlineCount = document.getElementById('onlineCount');
+const membersBtn = document.getElementById('membersBtn');
+
+/* input controls */
+const input = document.getElementById('input');
+const sendBtn = document.getElementById('sendBtn');
+const mediaBtn = document.getElementById('mediaBtn');
+const micBtn = document.getElementById('micBtn');
+
+/* sidebar */
+const sidebar = document.getElementById('sidebar');
+const closeSidebar = document.getElementById('closeSidebar');
+const memberSearch = document.getElementById('memberSearch');
+const memberList = document.getElementById('memberList');
+
+/* ================= MEMBERS ================= */
+const ADMIN = { name:'Profit Hunter 🌐', role:'ADMIN', avatar:'assets/admin.jpg' };
+const MOD   = { name:'Kitty Star ⭐',     role:'MOD',   avatar:'assets/mod.jpg' };
+
+const members = [
+  ADMIN,
+  MOD,
+  ...Array.from({ length:18 }, (_,i)=>({
+    name:`Member_${i+1}`,
+    role:'VERIFIED',
+    avatar:`https://randomuser.me/api/portraits/men/${i+20}.jpg`,
+    lastActive: Date.now() - Math.random()*120000
+  }))
+];
+
+const ACTIVE = 90000;
+const isOnline = m => Date.now() - m.lastActive < ACTIVE;
+
+/* ================= SIDEBAR ================= */
+function renderMembers(q=''){
+  q = q.toLowerCase();
+  memberList.innerHTML = '';
+
+  members
+    .filter(m => !q || m.name.toLowerCase().includes(q))
+    .sort((a,b)=>(isOnline(b)-isOnline(a)) || a.name.localeCompare(b.name))
+    .forEach(m=>{
+      memberList.innerHTML += `
+        <div class="flex gap-3 items-center">
+          <div class="relative">
+            <img src="${m.avatar}" class="w-9 h-9 rounded-full">
+            <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${isOnline(m)?'bg-green-500':'bg-gray-500'}"></span>
+          </div>
+          <div>
+            <div class="text-sm">${m.name}</div>
+            <span class="text-[10px] px-2 py-[1px] rounded-full ${
+              m.role==='ADMIN'?'bg-red-600':
+              m.role==='MOD'?'bg-purple-600':'bg-green-600'
+            }">${m.role}</span>
+          </div>
+        </div>
+      `;
+    });
+
+  onlineCount.textContent = members.filter(isOnline).length;
+}
+renderMembers();
+memberSearch.oninput = e => renderMembers(e.target.value);
+
+/* sidebar toggle */
+membersBtn.onclick = () => sidebar.classList.remove('translate-x-full');
+closeSidebar.onclick = () => sidebar.classList.add('translate-x-full');
+
+/* ================= INPUT ================= */
+input.oninput = () => {
+  const has = input.value.trim().length > 0;
+  sendBtn.classList.toggle('hidden', !has);
+  mediaBtn.classList.toggle('hidden', has);
+  micBtn.classList.toggle('hidden', has);
+  typingSelf();
+};
+
+/* ================= TYPING ================= */
+const activeTypers = new Map();
+let selfTypingTimeout;
 
 function updateTyping(){
-  const names=[...activeTypers];
-  if(!names.length){
-    typingRow.classList.remove('active');
-    return;
-  }
-  typingText.textContent =
-    names.length===1
-      ? `${names[0]} is typing…`
-      : `${names.slice(0,2).join(', ')} are typing…`;
-  typingRow.classList.add('active');
+  typingRow.classList.toggle('active', activeTypers.size > 0);
 }
 
-input.addEventListener('input',()=>{
-  activeTypers.add('You');
+function typingSelf(){
+  activeTypers.set('You', Date.now());
   updateTyping();
-  clearTimeout(selfTimer);
-  selfTimer=setTimeout(()=>{
+  clearTimeout(selfTypingTimeout);
+  selfTypingTimeout = setTimeout(()=>{
     activeTypers.delete('You');
     updateTyping();
-  },2200);
-});
+  }, 1800);
+}
+
+/* ================= SEND ================= */
+sendBtn.onclick = () => {
+  if(!input.value.trim()) return;
+
+  activeTypers.delete('You');
+  updateTyping();
+
+  postMessage({
+    name:'You',
+    role:'VERIFIED',
+    text: input.value,
+    out:true
+  });
+
+  input.value='';
+  sendBtn.classList.add('hidden');
+  mediaBtn.classList.remove('hidden');
+  micBtn.classList.remove('hidden');
+};
+
+/* ================= DATA ================= */
+const reactions = new Map();
+const reads = new Map();
+
+/* ================= POST ================= */
+function postMessage(m){
+  m.id = crypto.randomUUID();
+  m.timestamp = Date.now();
+  save(m);
+  render(m);
+  sync.postMessage({ type:'msg', m });
+}
+
+/* ================= RENDER ================= */
+let lastMeta=null, lastDate='';
+
+function render(m){
+  const d = new Date(m.timestamp);
+
+  if(d.toDateString() !== lastDate){
+    const sep = document.createElement('div');
+    sep.className = 'date-sep';
+    sep.textContent = d.toDateString();
+    chat.appendChild(sep);
+    lastDate = d.toDateString();
+  }
+
+  const grouped =
+    lastMeta &&
+    lastMeta.sender === m.name &&
+    (d - lastMeta.time) < 120000;
+
+  const badge =
+    m.role==='ADMIN' ? '<span class="role-pill admin">ADMIN</span>' :
+    m.role==='MOD'   ? '<span class="role-pill mod">MOD</span>' :
+    '<span class="verified-bubble"><i data-lucide="gem"></i></span>';
+
+  const el = document.createElement('div');
+  el.className = `msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
+  el.dataset.id = m.id;
+
+  el.innerHTML = `
+    ${!m.out ? `<img class="avatar" src="${members.find(x=>x.name===m.name)?.avatar||''}">` : ''}
+    <div class="bubble">
+      ${!grouped && !m.out ? `<div class="sender">${m.name} ${badge}</div>` : ''}
+      <div class="content">${m.text}</div>
+      <div class="reactions"></div>
+      <div class="time">
+        ${m.out ? '<i data-lucide="check-check" class="w-3 h-3"></i>' : ''}
+        <span>${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
+      </div>
+    </div>
+  `;
+
+  chat.appendChild(el);
+  lucide.createIcons();
+  observeRead(el);
+  chat.scrollTo({ top: chat.scrollHeight, behavior:'smooth' });
+
+  lastMeta = { sender:m.name, time:d };
+}
+
+/* ================= READ RECEIPTS ================= */
+const readerObserver = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      markRead(e.target.dataset.id);
+      readerObserver.unobserve(e.target);
+    }
+  });
+},{ root:chat, threshold:.7 });
+
+function observeRead(el){ readerObserver.observe(el); }
+
+function markRead(id){
+  if(!reads.has(id)) reads.set(id, new Set());
+  reads.get(id).add('You');
+  updateSeen(id);
+  sync.postMessage({ type:'read', id });
+}
+
+function updateSeen(id){
+  const el = document.querySelector(`[data-id="${id}"] .time`);
+  if(!el) return;
+
+  if((reads.get(id)?.size || 0) > 2){
+    el.innerHTML = `
+      <i data-lucide="eye" class="w-3 h-3"></i>
+      <span>Seen</span>
+    `;
+    lucide.createIcons();
+  }
+}
+
+/* ================= REACTIONS ================= */
+chat.addEventListener('contextmenu', openMenu);
+chat.addEventListener('touchstart', holdStart, {passive:true});
+
+let holdTimer;
+function holdStart(e){
+  const msg = e.target.closest('.msg');
+  if(!msg) return;
+  holdTimer = setTimeout(()=>openReactionPicker(msg), 500);
+}
+document.addEventListener('touchend', ()=>clearTimeout(holdTimer));
+
+function openMenu(e){
+  const msg = e.target.closest('.msg');
+  if(!msg) return;
+  e.preventDefault();
+  openReactionPicker(msg);
+}
+
+function openReactionPicker(msg){
+  const picker = document.createElement('div');
+  picker.className = 'fixed bg-panel border border-border rounded-xl p-2 flex gap-2 z-50';
+
+  ['👍','❤️','😂','🔥','😮'].forEach(r=>{
+    const b=document.createElement('button');
+    b.textContent=r;
+    b.onclick=()=>{
+      addReaction(msg.dataset.id, r);
+      picker.remove();
+    };
+    picker.appendChild(b);
+  });
+
+  document.body.appendChild(picker);
+  const r = msg.getBoundingClientRect();
+  picker.style.left = Math.min(r.left, window.innerWidth-160)+'px';
+  picker.style.top  = (r.top-42)+'px';
+}
+
+function addReaction(id, emoji){
+  if(!reactions.has(id)) reactions.set(id,new Map());
+  const map = reactions.get(id);
+  map.set(emoji, (map.get(emoji)||0)+1);
+  renderReactions(id);
+  sync.postMessage({ type:'react', id, emoji });
+}
+
+function renderReactions(id){
+  const el = document.querySelector(`[data-id="${id}"] .reactions`);
+  if(!el) return;
+  el.innerHTML='';
+  reactions.get(id)?.forEach((v,k)=>{
+    el.innerHTML += `<span class="px-2 py-1 bg-bg rounded-full text-xs">${k} ${v}</span>`;
+  });
+}
+
+/* ================= DB ================= */
+const DB='AbroxDB', STORE='messages';
+let db;
+
+const req = indexedDB.open(DB,2);
+req.onupgradeneeded = e => {
+  const db = e.target.result;
+  if(!db.objectStoreNames.contains(STORE))
+    db.createObjectStore(STORE,{keyPath:'id'});
+};
+req.onsuccess = e => {
+  db = e.target.result;
+  db.transaction(STORE).objectStore(STORE).getAll().onsuccess = ga => {
+    (ga.target.result||[])
+      .sort((a,b)=>a.timestamp-b.timestamp)
+      .forEach(render);
+  };
+};
+
+function save(m){
+  try{
+    db.transaction(STORE,'readwrite').objectStore(STORE).put(m);
+  }catch{}
+}
+
+/* ================= SYNC ================= */
+const sync = new BroadcastChannel('AbroxSync');
+sync.onmessage = e => {
+  if(e.data.type==='msg') render(e.data.m);
+  if(e.data.type==='read') markRead(e.data.id);
+  if(e.data.type==='react') addReaction(e.data.id, e.data.emoji);
+};
+
+/* ================= SAMPLE ================= */
+setTimeout(()=>{
+  postMessage({ name:ADMIN.name, role:'ADMIN', text:'Welcome everyone 👋 Please follow the rules.', out:false });
+  postMessage({ name:MOD.name, role:'MOD', text:'Verified members can now chat.', out:false });
+}, 800);
 </script>
 
 </body>
