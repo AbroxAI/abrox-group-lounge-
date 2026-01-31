@@ -37,19 +37,29 @@ tailwind.config = {
   border-bottom:1px solid #343a4a;
 }
 
-/* ===== INLINE TYPING ROW ===== */
+/* ===== MEMBERS / TYPING ROWS ===== */
+.members-row,
 .typing-row{
-  display:flex;
-  align-items:center;
-  gap:8px;
   padding:0 16px;
   height:22px;
   font-size:12px;
+  display:flex;
+  align-items:center;
+}
+
+.members-row{
+  color:#a0a6b5;
+}
+
+.typing-row{
+  gap:8px;
   font-weight:500;
   color:#6bdba7;
-  visibility:hidden;
+  display:none;
 }
-.typing-row.active{visibility:visible}
+
+.typing-row.active{display:flex}
+.members-row.hidden{display:none}
 
 .typing-dots{display:flex;gap:3px}
 .typing-dots span{
@@ -67,7 +77,6 @@ tailwind.config = {
 .msg.out{justify-content:flex-end}
 .grouped{margin-top:-6px}
 
-/* avatars */
 .avatar{
   width:36px;
   height:36px;
@@ -85,7 +94,6 @@ tailwind.config = {
   box-shadow:0 2px 8px rgba(0,0,0,.18);
 }
 
-/* incoming */
 .msg.in .bubble{
   background:#262b38;
   border-radius:8px 18px 18px 8px;
@@ -102,7 +110,6 @@ tailwind.config = {
   box-shadow:-1px 1px 2px rgba(0,0,0,.18);
 }
 
-/* outgoing */
 .msg.out .bubble{
   background:#2b3242;
   border:1px solid #343a4a;
@@ -159,7 +166,6 @@ tailwind.config = {
 .role-pill.admin{background:#7f1d1d}
 .role-pill.mod{background:#5b21b6}
 
-/* scroll */
 section{-webkit-overflow-scrolling:touch}
 </style>
 </head>
@@ -179,12 +185,15 @@ section{-webkit-overflow-scrolling:touch}
           <i data-lucide="lock" class="w-3 h-3"></i>
           <span>Private Group</span>
         </div>
-        <div class="text-xs text-muted members-row">
-          Members: 4,872 • Online: —
-        </div>
       </div>
     </div>
     <button><i data-lucide="users"></i></button>
+  </div>
+
+  <div class="members-row" id="membersRow">
+    <span>Members: <strong>4,872</strong></span>
+    <span class="mx-2">•</span>
+    <span>Online: <strong>13</strong></span>
   </div>
 
   <div class="typing-row" id="typingRow">
@@ -222,6 +231,22 @@ section{-webkit-overflow-scrolling:touch}
 </main>
 </div>
 
-<script>lucide.createIcons()</script>
+<script>
+lucide.createIcons();
+
+/* demo typing toggle (safe) */
+const typingRow = document.getElementById('typingRow');
+const membersRow = document.getElementById('membersRow');
+
+setInterval(()=>{
+  typingRow.classList.add('active');
+  membersRow.classList.add('hidden');
+  setTimeout(()=>{
+    typingRow.classList.remove('active');
+    membersRow.classList.remove('hidden');
+  },2200);
+},7000);
+</script>
+
 </body>
 </html>
