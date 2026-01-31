@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <title>Abrox – Private Lounge</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
+<script src="emoji-pack.js" defer></script>
 
 <script>
 tailwind.config = {
@@ -29,98 +30,93 @@ tailwind.config = {
 </script>
 
 <style>
-*{box-sizing:border-box}
-
-/* ===== HEADER ===== */
-.header{background:#232833;border-bottom:1px solid #343a4a}
-
-/* ===== MEMBERS / TYPING ===== */
-.members-row,.typing-row{
-  padding:0 16px;height:22px;font-size:12px;
-  display:flex;align-items:center
-}
-.members-row{color:#a0a6b5}
-.typing-row{gap:8px;font-weight:500;color:#6bdba7;display:none}
-
-/* typing dots */
-.typing-dots{display:flex;gap:3px}
-.typing-dots span{
-  width:4px;height:4px;border-radius:999px;
-  background:#6bdba7;opacity:.25;
-  animation:blink 1.4s infinite both
-}
-.typing-dots span:nth-child(2){animation-delay:.15s}
-.typing-dots span:nth-child(3){animation-delay:.3s}
-@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
-
-/* ===== CHAT ===== */
-.msg{display:flex;gap:8px;margin-bottom:10px;align-items:flex-end}
+/* ===== TELEGRAM RHYTHM ===== */
+.msg{display:flex;gap:6px;margin-bottom:8px;align-items:flex-end}
 .msg.out{justify-content:flex-end}
 .grouped{margin-top:-6px}
 
-.avatar{width:36px;height:36px;border-radius:999px}
+.avatar{width:32px;height:32px;border-radius:999px}
 .msg.grouped .avatar{visibility:hidden}
 
+/* ===== BUBBLES ===== */
 .bubble{
-  max-width:74%;
-  padding:8px 14px;
-  font-size:14px;
+  max-width:78%;
+  padding:8px 14px 7px;
+  font-size:13px;
   line-height:1.45;
   position:relative;
   box-shadow:0 2px 8px rgba(0,0,0,.18)
 }
-
 .msg.in .bubble{
   background:#262b38;
-  border-radius:8px 18px 18px 8px
+  border-radius:6px 18px 18px 6px
 }
+.msg.out .bubble{
+  background:#2b3242;
+  border:1px solid #343a4a;
+  border-radius:18px 6px 6px 18px
+}
+
+/* tails */
 .msg.in .bubble::before{
   content:'';
   position:absolute;
   left:-6px;
-  bottom:14px;
-  width:10px;height:10px;
+  top:14px;
+  width:8px;height:8px;
   background:#262b38;
   transform:rotate(45deg)
-}
-
-.msg.out .bubble{
-  background:#2b3242;
-  border:1px solid #343a4a;
-  border-radius:18px 8px 8px 18px
 }
 .msg.out .bubble::after{
   content:'';
   position:absolute;
   right:-6px;
-  bottom:14px;
-  width:10px;height:10px;
+  top:14px;
+  width:8px;height:8px;
   background:#2b3242;
   transform:rotate(45deg)
 }
+.grouped.in .bubble::before,
+.grouped.out .bubble::after{display:none}
 
+/* ===== META ===== */
 .sender{
   font-size:12px;
   font-weight:600;
   color:#6bdba7;
-  margin-bottom:4px
+  margin-bottom:4px;
+  display:flex;
+  gap:6px;
+  align-items:center
 }
-
 .time{
   font-size:10px;
-  opacity:.65;
+  opacity:.7;
   margin-top:6px;
   display:flex;
+  justify-content:flex-end;
+  gap:4px
+}
+.read-by{
+  display:flex;
+  gap:4px;
+  margin-top:4px;
   justify-content:flex-end
 }
+.read-by img{
+  width:13px;height:13px;border-radius:999px;border:1px solid #1c1f26
+}
+.date-sep{
+  text-align:center;
+  font-size:11px;
+  color:#a0a6b5;
+  margin:12px 0
+}
 
-/* badges */
+/* ===== BADGES ===== */
 .verified-bubble{
-  display:inline-flex;
-  align-items:center;
-  gap:3px;
-  padding:1px 4px;
-  border-radius:999px;
+  display:inline-flex;align-items:center;gap:4px;
+  padding:1px 4px;border-radius:999px;
   background:linear-gradient(180deg,#1b6d46,#125034);
   font-size:9px
 }
@@ -128,47 +124,48 @@ tailwind.config = {
 .role-pill.admin{background:#7f1d1d}
 .role-pill.mod{background:#5b21b6}
 
-section{-webkit-overflow-scrolling:touch}
+/* ===== HEADER / TYPING ===== */
+.group-typing-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 10px;border-radius:999px;
+  background:rgba(255,255,255,.04);
+  font-size:13px;color:#6bdba7;
+  opacity:0;transition:.18s
+}
+.group-typing-bar.active{opacity:1}
 </style>
 </head>
 
 <body class="bg-bg text-white h-[100dvh] overflow-hidden">
 <div class="flex h-full">
-<main class="flex flex-col flex-1">
 
-<header class="header">
-  <div class="flex items-center justify-between px-4 py-3">
-    <div class="flex gap-3 items-center">
-      <img src="assets/logo.png" class="w-9 h-9 rounded">
-      <div>
-        <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-        <div class="flex items-center gap-1 text-xs text-muted">
-          <i data-lucide="lock" class="w-3 h-3"></i>
-          <span>Private Group</span>
-        </div>
+<main class="flex flex-col flex-1 border-r border-border">
+
+<header id="mainHeader" class="bg-panel border-b border-border px-4 py-3 flex justify-between items-center">
+  <div class="flex gap-3 items-center">
+    <img src="assets/logo.png" class="w-8 h-8 rounded">
+    <div>
+      <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
+      <div class="flex items-center gap-1 text-xs text-muted">
+        <i data-lucide="lock" class="w-3 h-3"></i> Private Group
+      </div>
+      <div id="membersRow" class="text-xs text-muted">
+        Members: <strong>4,872</strong> • Online: <strong id="onlineCount">0</strong>
       </div>
     </div>
-    <button><i data-lucide="users"></i></button>
   </div>
 
-  <div class="members-row">
-    Members: <strong>4,872</strong>
-    <span class="mx-2">•</span>
-    Online: <strong>13</strong>
-  </div>
-
-  <div class="typing-row">
-    <div class="typing-dots"><span></span><span></span><span></span></div>
-    <span>Typing…</span>
-  </div>
-
-  <div class="px-4 text-xs text-muted pb-1">
-    Demo discussion · Verification required
+  <div class="flex items-center gap-2">
+    <div id="groupTyping" class="group-typing-bar">
+      <span class="w-2 h-2 rounded-full bg-accent"></span>
+      <span class="typing-summary"></span>
+    </div>
+    <button id="membersBtn"><i data-lucide="users"></i></button>
   </div>
 </header>
 
-<section class="flex-1 overflow-y-auto px-4 py-4">
-  <div class="text-center text-muted text-sm mb-6">
+<section id="chat" class="flex-1 overflow-y-auto px-4 py-4">
+  <div class="text-center text-muted text-sm mb-4">
     📌 <strong>Group Rules</strong><br>
     New members are read-only until verified<br>
     Admins DM individually<br>
@@ -178,193 +175,241 @@ section{-webkit-overflow-scrolling:touch}
 </section>
 
 <footer class="bg-panel border-t border-border px-4 py-3">
+  <div id="recordTimer" class="hidden text-center text-red-500 text-xs">● 0:00</div>
   <div class="flex items-center bg-bg rounded-full px-3 py-2 gap-2">
-    <button><i data-lucide="smile"></i></button>
-    <input class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-    <button><i data-lucide="paperclip"></i></button>
-    <button><i data-lucide="mic"></i></button>
-    <button class="hidden text-send"><i data-lucide="send"></i></button>
+    <button id="emojiBtn"><i data-lucide="smile"></i></button>
+    <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
+    <div class="flex gap-2">
+      <button id="mediaBtn"><i data-lucide="paperclip"></i></button>
+      <button id="micBtn"><i data-lucide="mic"></i></button>
+      <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
+    </div>
   </div>
 </footer>
 
 </main>
-</div>
+
+<!-- SIDEBAR -->
+<aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full transition-transform z-50">
+  <div class="p-4 border-b border-border flex justify-between">
+    <strong>Members</strong>
+    <button id="closeSidebar"><i data-lucide="x"></i></button>
+  </div>
+  <div class="p-3">
+    <input id="memberSearch" class="w-full bg-bg border border-border rounded-full px-4 py-2 text-sm" placeholder="Search members">
+  </div>
+  <div id="memberList" class="p-3 space-y-4 overflow-y-auto"></div>
+</aside>
+
+<input type="file" id="fileInput" class="hidden">
 
 <script>
-lucide.createIcons();
-</script>
+/* ================= INIT ================= */
+requestAnimationFrame(()=>lucide.createIcons());
 
-<script>
 /* ================= CORE ================= */
-const chat = document.querySelector('section');
-const input = document.querySelector('input');
-const sendBtn = document.querySelector('[data-lucide="send"]')?.parentElement;
-const micBtn = document.querySelector('[data-lucide="mic"]')?.parentElement;
-const membersRow = document.querySelector('.members-row');
-const typingRow = document.querySelector('.typing-row');
-const typingText = typingRow.querySelector('span');
-
-/* ================= STATE ================= */
-let replyToId = null;
-let pinnedId = null;
-let contextMenu = null;
+const chat=document.getElementById('chat');
+const input=document.getElementById('input');
+const send=document.getElementById('send');
+const emojiBtn=document.getElementById('emojiBtn');
+const mediaBtn=document.getElementById('mediaBtn');
+const micBtn=document.getElementById('micBtn');
+const fileInput=document.getElementById('fileInput');
+const recordTimer=document.getElementById('recordTimer');
+const sidebar=document.getElementById('sidebar');
+const membersBtn=document.getElementById('membersBtn');
+const closeSidebar=document.getElementById('closeSidebar');
+const memberList=document.getElementById('memberList');
+const onlineCount=document.getElementById('onlineCount');
+const groupTyping=document.getElementById('groupTyping');
 
 /* ================= MEMBERS ================= */
-const SIM_MEMBERS = [
-  'Kitty Star ⭐',
-  'Member_4',
-  'Member_9',
-  'Member_12',
-  'Member_18'
-];
+const ADMIN={name:'Profit Hunter 🌐',role:'ADMIN',avatar:'assets/admin.jpg'};
+const MOD={name:'Kitty Star ⭐',role:'MOD',avatar:'assets/mod.jpg'};
+const members=[ADMIN,MOD,...Array.from({length:25},(_,i)=>({
+  name:`Member_${i+1}`,
+  role:'VERIFIED',
+  avatar:`https://randomuser.me/api/portraits/men/${i+20}.jpg`,
+  lastActive:Date.now()-Math.random()*120000
+}))];
 
-/* ================= INPUT TOGGLE ================= */
-input.addEventListener('input', () => {
-  if (input.value.trim()) {
-    micBtn.classList.add('hidden');
-    sendBtn.classList.remove('hidden');
-    triggerTyping();
-  } else {
-    micBtn.classList.remove('hidden');
-    sendBtn.classList.add('hidden');
-  }
-});
+const ACTIVE=90000;
+const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
 
-/* ================= SEND ================= */
-function sendMessage() {
-  if (!input.value.trim()) return;
+/* online sim */
+setInterval(()=>{
+  members.forEach(m=>Math.random()>.6&&(m.lastActive=Date.now()));
+  onlineCount.textContent=members.filter(isOnline).length;
+},4000);
 
-  const msg = document.createElement('div');
-  msg.className = 'msg out';
-  msg.dataset.id = crypto.randomUUID();
-
-  msg.innerHTML = `
-    <div class="bubble">
-      ${replyToId ? `
-        <div class="text-xs opacity-60 cursor-pointer quoted" data-jump="${replyToId}">
-          ↩ Reply
-        </div>` : ''}
-      <div class="content">${input.value}</div>
-      <div class="time">
-        <i data-lucide="check-check" class="w-3 h-3"></i>
-      </div>
-    </div>
-  `;
-
-  chat.appendChild(msg);
-  chat.scrollTop = chat.scrollHeight;
-  input.value = '';
-  replyToId = null;
-  micBtn.classList.remove('hidden');
-  sendBtn.classList.add('hidden');
-
-  lucide.createIcons();
-  simulateSeen(msg);
+/* ================= SIDEBAR ================= */
+function renderMembers(q=''){
+  q=q.toLowerCase();
+  memberList.innerHTML='';
+  members
+    .filter(m=>!q||m.name.toLowerCase().includes(q))
+    .sort((a,b)=>(isOnline(b)-isOnline(a))||a.name.localeCompare(b.name))
+    .forEach(m=>{
+      memberList.innerHTML+=`
+      <div class="flex gap-3 items-center">
+        <div class="relative">
+          <img src="${m.avatar}" class="w-9 h-9 rounded-full">
+          <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${isOnline(m)?'bg-green-500':'bg-gray-500'}"></span>
+        </div>
+        <div>
+          <div class="text-sm">${m.name}</div>
+          <span class="text-[10px] px-2 py-[1px] rounded-full ${
+            m.role==='ADMIN'?'bg-red-600':m.role==='MOD'?'bg-purple-600':'bg-green-600'
+          }">${m.role}</span>
+        </div>
+      </div>`;
+    });
 }
+renderMembers();
 
-sendBtn.addEventListener('click', sendMessage);
-input.addEventListener('keydown', e => {
-  if (e.key === 'Enter') sendMessage();
-});
+membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
+closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
+memberSearch.oninput=e=>renderMembers(e.target.value);
 
-/* ================= TYPING ================= */
-function triggerTyping() {
-  const count = Math.floor(Math.random()*3)+1;
-  const names = SIM_MEMBERS.sort(()=>0.5-Math.random()).slice(0,count);
-
-  typingText.textContent =
-    names.length === 1 ? `${names[0]} is typing…` :
-    names.length === 2 ? `${names[0]} and ${names[1]} are typing…` :
-    `${names.length} people are typing…`;
-
-  membersRow.style.display = 'none';
-  typingRow.style.display = 'flex';
-
-  clearTimeout(triggerTyping._t);
-  triggerTyping._t = setTimeout(() => {
-    typingRow.style.display = 'none';
-    membersRow.style.display = 'flex';
-  }, 2000);
-}
-
-/* ================= CONTEXT MENU ================= */
-chat.addEventListener('contextmenu', e => {
-  const msg = e.target.closest('.msg');
-  if (!msg) return;
-  e.preventDefault();
-
-  if (contextMenu) contextMenu.remove();
-
-  contextMenu = document.createElement('div');
-  contextMenu.className =
-    'fixed bg-panel border border-border rounded-xl p-2 space-y-2 z-50';
-
-  contextMenu.innerHTML = `
-    <button data-a="reply" class="flex gap-2 items-center">
-      <i data-lucide="reply"></i> Reply
-    </button>
-    <button data-a="pin" class="flex gap-2 items-center">
-      <i data-lucide="pin"></i> Pin
-    </button>
-  `;
-
-  contextMenu.onclick = ev => {
-    const a = ev.target.closest('button')?.dataset.a;
-    if (a === 'reply') replyToId = msg.dataset.id;
-    if (a === 'pin') pinMessage(msg);
-    contextMenu.remove();
-    contextMenu = null;
-    lucide.createIcons();
-  };
-
-  document.body.appendChild(contextMenu);
-  contextMenu.style.left = e.pageX+'px';
-  contextMenu.style.top  = e.pageY+'px';
-  lucide.createIcons();
-});
-
-document.addEventListener('click', () => {
-  if (contextMenu) contextMenu.remove();
-  contextMenu = null;
-});
-
-/* ================= PIN ================= */
-const pinBanner = document.createElement('div');
-pinBanner.className =
-  'hidden bg-panel border-b border-border px-4 py-2 text-sm flex gap-2 cursor-pointer';
-pinBanner.innerHTML =
-  '<i data-lucide="pin"></i><span class="truncate"></span>';
-chat.before(pinBanner);
-
-function pinMessage(msg) {
-  pinnedId = msg.dataset.id;
-  pinBanner.querySelector('span').textContent =
-    msg.querySelector('.content').textContent;
-  pinBanner.classList.remove('hidden');
-  lucide.createIcons();
-}
-
-pinBanner.onclick = () => {
-  const el = document.querySelector(`[data-id="${pinnedId}"]`);
-  if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+/* ================= INPUT ================= */
+input.oninput=()=>{
+  const has=input.value.trim();
+  send.classList.toggle('hidden',!has);
+  mediaBtn.classList.toggle('hidden',!!has);
+  micBtn.classList.toggle('hidden',!!has);
 };
 
-/* ================= REPLY JUMP ================= */
-chat.addEventListener('click', e => {
-  const q = e.target.closest('.quoted');
-  if (!q) return;
-  const el = document.querySelector(`[data-id="${q.dataset.jump}"]`);
-  if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+/* ================= SEND ================= */
+send.onclick=()=>{
+  if(!input.value.trim())return;
+  const m={name:'You',role:'VERIFIED',text:input.value,timestamp:Date.now(),out:true};
+  save(m);render(m);
+  input.value='';
+  send.classList.add('hidden');
+  mediaBtn.classList.remove('hidden');
+  micBtn.classList.remove('hidden');
+};
+
+/* ================= EMOJI ================= */
+emojiBtn.onclick=()=>window.EmojiPack&&EmojiPack.openPicker(input);
+
+/* ================= MEDIA ================= */
+mediaBtn.onclick=()=>fileInput.click();
+fileInput.onchange=e=>{
+  if(!e.target.files.length)return;
+  const f=e.target.files[0];
+  const url=URL.createObjectURL(f);
+  const html=f.type.startsWith('image/')?`<img src="${url}" class="rounded-lg max-w-full">`
+    :f.type.startsWith('video/')?`<video src="${url}" controls class="rounded-lg max-w-full"></video>`
+    :f.type.startsWith('audio/')?`<audio src="${url}" controls></audio>`
+    :`📎 ${f.name}`;
+  save({name:'You',role:'VERIFIED',text:html,timestamp:Date.now(),out:true});
+  render({name:'You',role:'VERIFIED',text:html,timestamp:Date.now(),out:true});
+  fileInput.value='';
+};
+
+/* ================= VOICE ================= */
+let recorder,chunks=[],recStart,recTick,holding=false,stream=null;
+async function startRecording(){
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{return}
+  recorder=new MediaRecorder(stream);
+  chunks=[];
+  recorder.ondataavailable=e=>chunks.push(e.data);
+  recorder.onstop=()=>{
+    const url=URL.createObjectURL(new Blob(chunks,{type:'audio/webm'}));
+    render({name:'You',role:'VERIFIED',out:true,timestamp:Date.now(),text:`<audio controls src="${url}"></audio>`});
+    stream.getTracks().forEach(t=>t.stop());
+  };
+  recorder.start();
+}
+function startUI(){
+  recStart=Date.now();
+  recordTimer.classList.remove('hidden');
+  recTick=setInterval(()=>{
+    const s=Math.floor((Date.now()-recStart)/1000);
+    recordTimer.textContent=`● ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  },1000);
+}
+function stopUI(){
+  clearInterval(recTick);
+  recordTimer.classList.add('hidden');
+  lucide.createIcons();
+}
+micBtn.addEventListener('pointerdown',async e=>{
+  e.preventDefault();holding=true;
+  await startRecording();
+  setTimeout(()=>holding&&startUI(),300);
+});
+['pointerup','pointerleave'].forEach(ev=>{
+  micBtn.addEventListener(ev,()=>{
+    if(!holding)return;
+    holding=false;stopUI();
+    recorder&&recorder.state==='recording'&&recorder.stop();
+  });
 });
 
-/* ================= SEEN 👁 ================= */
-function simulateSeen(msg) {
-  setTimeout(() => {
-    const time = msg.querySelector('.time');
-    time.innerHTML = `<i data-lucide="eye" class="w-3 h-3"></i>`;
-    lucide.createIcons();
-  }, 2500);
+/* ================= TYPING DEMO ================= */
+const activeTypers=new Map();
+function updateTyping(){
+  if(!activeTypers.size){
+    groupTyping.classList.remove('active');return;
+  }
+  const names=[...activeTypers.keys()].slice(0,3);
+  groupTyping.querySelector('.typing-summary').textContent=
+    names.length===1?`${names[0]} is typing…`:`${names.join(', ')} are typing…`;
+  groupTyping.classList.add('active');
 }
+function startTyping(m){
+  activeTypers.set(m.name,Date.now());
+  updateTyping();
+  setTimeout(()=>{activeTypers.delete(m.name);updateTyping()},2500);
+}
+setInterval(()=>startTyping(members[Math.floor(Math.random()*members.length)]),12000);
+
+/* ================= RENDER ================= */
+let lastMeta=null,lastDate='';
+function render(m){
+  const d=new Date(m.timestamp);
+  if(d.toDateString()!==lastDate){
+    const sep=document.createElement('div');
+    sep.className='date-sep';
+    sep.textContent=d.toDateString();
+    chat.appendChild(sep);
+    lastDate=d.toDateString();
+  }
+  const grouped=lastMeta&&lastMeta.sender===m.name&&(d-lastMeta.time)<120000;
+  const badge=m.role==='ADMIN'?'<span class="role-pill admin">ADMIN</span>'
+    :m.role==='MOD'?'<span class="role-pill mod">MOD</span>'
+    :'<span class="verified-bubble"><i data-lucide="gem"></i></span>';
+
+  const el=document.createElement('div');
+  el.className=`msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
+  el.innerHTML=`
+    ${!m.out?`<img class="avatar" src="${members.find(x=>x.name===m.name)?.avatar||''}">`:''}
+    <div class="bubble">
+      ${!grouped&&!m.out?`<div class="sender">${m.name} ${badge}</div>`:''}
+      ${m.text}
+      <div class="time">✓ ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+      <div class="read-by"></div>
+    </div>`;
+  chat.appendChild(el);
+  lucide.createIcons();
+  lastMeta={sender:m.name,time:d};
+  chat.scrollTop=chat.scrollHeight;
+}
+
+/* ================= DB ================= */
+const DB='AbroxDB',STORE='messages';
+let db;
+const req=indexedDB.open(DB,1);
+req.onupgradeneeded=e=>e.target.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});
+req.onsuccess=e=>{
+  db=e.target.result;
+  db.transaction(STORE).objectStore(STORE).getAll().onsuccess=ga=>{
+    (ga.target.result||[]).sort((a,b)=>a.timestamp-b.timestamp).forEach(render);
+  };
+};
+function save(m){try{db.transaction(STORE,'readwrite').objectStore(STORE).add(m)}catch{}}
 </script>
 
 </body>
