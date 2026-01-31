@@ -19,7 +19,7 @@
 .typing-row {
   display:flex;
   align-items:center;
-  gap:6px;
+  gap:8px;
 
   padding:0 16px;
   height:0;
@@ -36,8 +36,29 @@
 }
 
 .typing-row.active {
-  height:22px; /* fixed reserved row height */
+  height:22px;
   opacity:1;
+}
+
+/* ===== TYPING DOTS ===== */
+.typing-dots {
+  display:flex;
+  gap:3px;
+}
+.typing-dots span {
+  width:4px;
+  height:4px;
+  border-radius:999px;
+  background:#6bdba7;
+  opacity:.25;
+  animation:dotPulse 1.2s infinite ease-in-out;
+}
+.typing-dots span:nth-child(2){animation-delay:.15s}
+.typing-dots span:nth-child(3){animation-delay:.3s}
+
+@keyframes dotPulse {
+  0%,80%,100%{opacity:.25}
+  40%{opacity:1}
 }
 </style>
 </head>
@@ -78,8 +99,10 @@
 
   <!-- TYPING LINE (LOCKED IN FLOW) -->
   <div id="typingRow" class="typing-row">
-    <span class="w-2 h-2 rounded-full bg-[#6bdba7]"></span>
-    <span id="typingText">Member_11 is typing…</span>
+    <div class="typing-dots">
+      <span></span><span></span><span></span>
+    </div>
+    <span id="typingText">Typing…</span>
   </div>
 </header>
 
@@ -93,16 +116,51 @@
 lucide.createIcons();
 
 const typingRow = document.getElementById('typingRow');
+const typingText = document.getElementById('typingText');
 const input = document.getElementById('input');
 
-let timer;
-input.addEventListener('input', () => {
-  typingRow.classList.add('active');
-  clearTimeout(timer);
-  timer = setTimeout(() => {
+let activeTypers = new Set();
+let selfTimer;
+
+/* Update typing text safely */
+function updateTyping() {
+  const names = [...activeTypers].slice(0,2);
+
+  if (!names.length) {
     typingRow.classList.remove('active');
-  }, 1600);
+    return;
+  }
+
+  typingText.textContent =
+    names.length === 1
+      ? `${names[0]} is typing…`
+      : `${names.join(', ')} are typing…`;
+
+  typingRow.classList.add('active');
+}
+
+/* Self typing */
+input.addEventListener('input', () => {
+  activeTypers.add('You');
+  updateTyping();
+
+  clearTimeout(selfTimer);
+  selfTimer = setTimeout(() => {
+    activeTypers.delete('You');
+    updateTyping();
+  }, 2200); // realistic linger
 });
+
+/* Simulated remote member (for realism test) */
+setInterval(() => {
+  activeTypers.add('Member_11');
+  updateTyping();
+
+  setTimeout(() => {
+    activeTypers.delete('Member_11');
+    updateTyping();
+  }, 2600);
+}, 7000);
 </script>
 
 </body>
