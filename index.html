@@ -1,166 +1,209 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Header Test</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8" />
+<title>Abrox – Private Lounge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c1f26">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
+<script src="emoji-pack.js" defer></script>
 
 <style>
-/* ===== HEADER ===== */
-.header {
-  background:#232833;
-  border-bottom:1px solid #343a4a;
+/* ========== HEADER (LOCKED — DO NOT TOUCH) ========== */
+.header{background:#232833;border-bottom:1px solid #343a4a}
+.typing-row{
+  display:flex;align-items:center;gap:6px;
+  padding:0 16px;height:0;overflow:hidden;
+  font-size:12px;font-weight:500;color:#6bdba7;
+  opacity:0;transition:height .18s ease,opacity .12s ease
 }
+.typing-row.active{height:22px;opacity:1}
 
-/* ===== TYPING ROW (LOCKED — TELEGRAM SAFE) ===== */
-.typing-row {
-  display:flex;
-  align-items:center;
-  gap:8px;
+/* ========== CHAT CORE ========== */
+.chat{flex:1;overflow-y:auto;padding:16px}
+.msg{display:flex;gap:6px;margin-bottom:8px}
+.msg.out{justify-content:flex-end}
+.grouped{margin-top:-6px}
 
-  padding:0 16px;
-  height:0;
-  overflow:hidden;
+.avatar{width:32px;height:32px;border-radius:999px;flex:none}
 
-  font-size:12px;
-  font-weight:500;
-  color:#6bdba7;
-
-  opacity:0;
-  transition:
-    height .18s ease,
-    opacity .12s ease;
+.bubble{
+  max-width:78%;padding:8px 14px 7px;
+  font-size:13px;line-height:1.45;
+  position:relative;
+  box-shadow:0 2px 8px rgba(0,0,0,.18)
 }
+.msg.in .bubble{background:#262b38;border-radius:6px 18px 18px 6px}
+.msg.out .bubble{background:#2b3242;border-radius:18px 6px 6px 18px}
 
-.typing-row.active {
-  height:22px;
-  opacity:1;
+/* tails */
+.msg.in .bubble::before{
+  content:'';position:absolute;left:-6px;top:14px;
+  width:8px;height:8px;background:#262b38;
+  border-radius:0 0 0 8px
 }
+.msg.out .bubble::after{
+  content:'';position:absolute;right:-6px;top:14px;
+  width:8px;height:8px;background:#2b3242;
+  border-radius:0 0 8px 0
+}
+.grouped .bubble::before,.grouped .bubble::after{display:none}
 
-/* ===== TYPING DOTS ===== */
-.typing-dots {
-  display:flex;
-  gap:3px;
-}
-.typing-dots span {
-  width:4px;
-  height:4px;
-  border-radius:999px;
-  background:#6bdba7;
-  opacity:.25;
-  animation:dotPulse 1.2s infinite ease-in-out;
-}
-.typing-dots span:nth-child(2){animation-delay:.15s}
-.typing-dots span:nth-child(3){animation-delay:.3s}
+/* sender */
+.sender{font-size:12px;font-weight:600;color:#6bdba7;margin-bottom:4px;display:flex;gap:6px}
 
-@keyframes dotPulse {
-  0%,80%,100%{opacity:.25}
-  40%{opacity:1}
+/* reply */
+.reply-preview{
+  display:flex;gap:6px;
+  margin:-2px 0 6px;padding-left:6px;
+  border-left:2px solid #6bdba7;
+  font-size:11px;color:#a0a6b5;cursor:pointer
 }
+.reply-preview .sender{font-size:11px;margin:0}
+
+/* reactions */
+.reactions{display:flex;gap:6px;margin-top:6px}
+.reaction{font-size:11px;padding:2px 8px;border-radius:999px;
+  background:#1c1f26;border:1px solid #343a4a}
+
+/* footer */
+.footer{background:#232833;border-top:1px solid #343a4a;padding:12px}
 </style>
 </head>
 
-<body class="bg-[#1c1f26] text-white">
+<body class="bg-[#1c1f26] text-white h-[100dvh] flex flex-col">
 
+<!-- ===== HEADER (PHASE-1 LOCKED) ===== -->
 <header class="header">
-  <!-- TOP ROW -->
   <div class="flex items-center justify-between px-4 py-3">
     <div class="flex gap-3 items-center">
       <div class="w-8 h-8 rounded bg-[#6bdba7]"></div>
-
       <div>
-        <div class="text-sm font-semibold leading-tight">
-          Abrox Binary Bot – Private Lounge
-        </div>
+        <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
         <div class="flex items-center gap-1 text-xs text-gray-400">
-          <i data-lucide="lock" class="w-3 h-3"></i>
-          <span>Private Group</span>
+          <i data-lucide="lock" class="w-3 h-3"></i><span>Private Group</span>
         </div>
       </div>
     </div>
-
-    <button>
-      <i data-lucide="users"></i>
-    </button>
+    <i data-lucide="users"></i>
   </div>
-
-  <!-- MEMBERS LINE -->
-  <div class="px-4 text-xs text-gray-400">
-    Members: 4,872 • Online: 132
-  </div>
-
-  <!-- DISCUSSION LINE -->
-  <div class="px-4 text-xs text-gray-500 pb-1">
-    Demo discussion · Verification required
-  </div>
-
-  <!-- TYPING LINE (LOCKED IN FLOW) -->
+  <div class="px-4 text-xs text-gray-400">Members: 4,872 • Online: <span id="online">132</span></div>
+  <div class="px-4 text-xs text-gray-500 pb-1">Demo discussion · Verification required</div>
   <div id="typingRow" class="typing-row">
-    <div class="typing-dots">
-      <span></span><span></span><span></span>
-    </div>
-    <span id="typingText">Typing…</span>
+    <span class="w-2 h-2 rounded-full bg-[#6bdba7]"></span>
+    <span id="typingText"></span>
   </div>
 </header>
 
-<div class="p-4">
-  <input id="input"
-         class="w-full bg-[#232833] border border-[#343a4a] rounded px-3 py-2 text-sm"
-         placeholder="Type to test typing position">
+<!-- ===== CHAT ===== -->
+<div id="chat" class="chat"></div>
+
+<!-- ===== INPUT ===== -->
+<div class="footer flex items-center gap-2">
+  <button id="emojiBtn"><i data-lucide="smile"></i></button>
+  <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
+  <button id="send"><i data-lucide="send"></i></button>
 </div>
 
 <script>
 lucide.createIcons();
 
-const typingRow = document.getElementById('typingRow');
-const typingText = document.getElementById('typingText');
-const input = document.getElementById('input');
+/* ===== DATA ===== */
+const chat=document.getElementById('chat');
+const input=document.getElementById('input');
+const send=document.getElementById('send');
+const typingRow=document.getElementById('typingRow');
+const typingText=document.getElementById('typingText');
 
-let activeTypers = new Set();
-let selfTimer;
+const reactions=new Map();
+let replyTo=null;
 
-/* Update typing text safely */
-function updateTyping() {
-  const names = [...activeTypers].slice(0,2);
-
-  if (!names.length) {
-    typingRow.classList.remove('active');
-    return;
-  }
-
-  typingText.textContent =
-    names.length === 1
-      ? `${names[0]} is typing…`
-      : `${names.join(', ')} are typing…`;
-
+/* ===== TYPING ===== */
+let t;
+input.oninput=()=>{
+  typingText.textContent='You are typing…';
   typingRow.classList.add('active');
+  clearTimeout(t);
+  t=setTimeout(()=>typingRow.classList.remove('active'),1600);
+};
+
+/* ===== SEND ===== */
+send.onclick=()=>{
+  if(!input.value.trim())return;
+  post({name:'You',out:true,text:input.value,reply:replyTo});
+  replyTo=null;input.value='';
+};
+
+/* ===== POST ===== */
+function post(m){
+  m.id=crypto.randomUUID();
+  render(m);
 }
 
-/* Self typing */
-input.addEventListener('input', () => {
-  activeTypers.add('You');
-  updateTyping();
+/* ===== RENDER ===== */
+function render(m){
+  const el=document.createElement('div');
+  el.className='msg '+(m.out?'out':'in');
+  el.dataset.id=m.id;
 
-  clearTimeout(selfTimer);
-  selfTimer = setTimeout(() => {
-    activeTypers.delete('You');
-    updateTyping();
-  }, 2200); // realistic linger
+  el.innerHTML=`
+    ${!m.out?'<img class="avatar" src="https://randomuser.me/api/portraits/men/32.jpg">':''}
+    <div class="bubble">
+      ${m.reply?`
+        <div class="reply-preview" onclick="jump('${m.reply.id}')">
+          <div>
+            <div class="sender">${m.reply.name}</div>
+            <div>${m.reply.text}</div>
+          </div>
+        </div>`:''}
+      ${!m.out?'<div class="sender">'+m.name+'</div>':''}
+      <div>${m.text}</div>
+      <div class="reactions"></div>
+    </div>`;
+  chat.appendChild(el);
+  chat.scrollTop=chat.scrollHeight;
+}
+
+/* ===== REACTIONS ===== */
+chat.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  const msg=e.target.closest('.msg');
+  if(!msg)return;
+  openPicker(msg);
 });
 
-/* Simulated remote member (for realism test) */
-setInterval(() => {
-  activeTypers.add('Member_11');
-  updateTyping();
+function openPicker(msg){
+  const p=document.createElement('div');
+  p.className='fixed bg-[#232833] border border-[#343a4a] rounded-xl p-2 flex gap-2 z-50';
+  ['👍','😂','🔥','❤️'].forEach(r=>{
+    const b=document.createElement('button');
+    b.textContent=r;
+    b.onclick=()=>{addReaction(msg.dataset.id,r);p.remove();}
+    p.appendChild(b);
+  });
+  document.body.appendChild(p);
+  const r=msg.getBoundingClientRect();
+  p.style.left=r.left+'px';p.style.top=(r.top-42)+'px';
+}
 
-  setTimeout(() => {
-    activeTypers.delete('Member_11');
-    updateTyping();
-  }, 2600);
-}, 7000);
+function addReaction(id,r){
+  if(!reactions.has(id))reactions.set(id,new Map());
+  const m=reactions.get(id);
+  m.set(r,(m.get(r)||0)+1);
+  const el=document.querySelector(`[data-id="${id}"] .reactions`);
+  el.innerHTML='';
+  m.forEach((v,k)=>el.innerHTML+=`<span class="reaction">${k} ${v}</span>`);
+}
+
+/* ===== REPLY ===== */
+function jump(id){
+  document.querySelector(`[data-id="${id}"]`)?.scrollIntoView({behavior:'smooth'});
+}
+
+/* ===== DEMO ===== */
+post({name:'Admin',text:'Welcome everyone 👋'});
 </script>
 
 </body>
