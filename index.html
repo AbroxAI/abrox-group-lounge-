@@ -53,7 +53,7 @@ tailwind.config = {
   border-radius:18px 6px 6px 18px;
 }
 
-/* ===== AVATAR → BUBBLE TAIL (PIXEL-LOCKED) ===== */
+/* ===== AVATAR → BUBBLE TAIL ===== */
 .msg.in .bubble::before{
   content:'';
   position:absolute;
@@ -87,7 +87,6 @@ tailwind.config = {
   font-size:11px;
   color:#a0a6b5;
   line-height:1.2;
-  max-width:100%;
   cursor:pointer;
 }
 .reply-preview .sender{
@@ -117,7 +116,6 @@ tailwind.config = {
   margin-top:6px;
   display:flex;
   justify-content:flex-end;
-  gap:4px;
 }
 
 /* ================= REACTIONS ================= */
@@ -142,36 +140,48 @@ tailwind.config = {
 }
 .badge.admin{background:#7f1d1d}
 .badge.mod{background:#5b21b6}
-.badge.verified{
-  background:linear-gradient(180deg,#1b6d46,#125034);
-  display:inline-flex;
-  align-items:center;
-  gap:3px;
-}
-
-/* ================= HEADER + TYPING ================= */
-header{position:relative}
-.group-typing-bar{
-  position:absolute;
-  right:calc(100% + 6px);
-  top:50%;
-  transform:translateY(-50%);
-  display:flex;
-  gap:6px;
-  padding:4px 10px;
-  border-radius:999px;
-  background:rgba(255,255,255,.03);
-  font-size:12px;
-  color:#6bdba7;
-  opacity:0;
-}
-.group-typing-bar.active{opacity:1}
 
 /* ================= AVATAR ================= */
 .avatar{
   width:32px;
   height:32px;
   border-radius:999px;
+}
+
+/* ================= TYPING BAR ================= */
+header{position:relative}
+.group-typing-bar{
+  position:absolute;
+  right:16px;
+  bottom:-18px;
+  display:flex;
+  gap:6px;
+  padding:4px 10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.05);
+  font-size:12px;
+  color:#6bdba7;
+  animation:fadeIn .18s ease;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}}
+
+/* ================= RIPPLE ================= */
+.ripple-container{position:relative;overflow:hidden}
+.ripple{
+  position:absolute;
+  border-radius:50%;
+  background:rgba(255,255,255,.18);
+  transform:scale(0);
+  animation:ripple .22s ease-out;
+}
+@keyframes ripple{
+  to{transform:scale(2.2);opacity:0}
+}
+
+/* ================= SCROLL ================= */
+section{
+  overscroll-behavior: auto;
+  -webkit-overflow-scrolling: touch;
 }
 </style>
 </head>
@@ -185,10 +195,10 @@ header{position:relative}
     <img src="assets/logo.png" class="w-8 h-8">
     <div>
       <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-      <div class="text-xs text-muted">Members: 4,872 • Online: <span>—</span></div>
+      <div class="text-xs text-muted">Members: 4,872 • Online: 132</div>
     </div>
   </div>
-  <div class="group-typing-bar active">
+  <div class="group-typing-bar">
     <span class="w-2 h-2 rounded-full bg-accent"></span>
     <span>Member_11 is typing…</span>
   </div>
@@ -203,8 +213,7 @@ header{position:relative}
     Ignore unsolicited messages
   </div>
 
-  <!-- SAMPLE MESSAGE WITH REPLY -->
-  <div class="msg in">
+  <div class="msg in ripple-container">
     <img class="avatar" src="https://randomuser.me/api/portraits/men/32.jpg">
     <div class="bubble">
       <div class="sender">Profit Hunter <span class="badge admin">ADMIN</span></div>
@@ -212,7 +221,7 @@ header{position:relative}
     </div>
   </div>
 
-  <div class="msg in grouped">
+  <div class="msg in grouped ripple-container">
     <img class="avatar" src="https://randomuser.me/api/portraits/women/45.jpg">
     <div class="bubble">
       <div class="reply-preview">
@@ -229,9 +238,29 @@ header{position:relative}
       <div class="time">02:09 AM</div>
     </div>
   </div>
-
 </section>
+
 </main>
 </div>
+
+<script>
+lucide.createIcons();
+
+/* Ripple attach */
+document.querySelectorAll('.ripple-container').forEach(el=>{
+  el.addEventListener('pointerdown',e=>{
+    const r=el.getBoundingClientRect();
+    const ripple=document.createElement('span');
+    ripple.className='ripple';
+    const size=Math.max(r.width,r.height);
+    ripple.style.width=ripple.style.height=size+'px';
+    ripple.style.left=(e.clientX-r.left-size/2)+'px';
+    ripple.style.top=(e.clientY-r.top-size/2)+'px';
+    el.appendChild(ripple);
+    setTimeout(()=>ripple.remove(),240);
+  });
+});
+</script>
+
 </body>
 </html>
