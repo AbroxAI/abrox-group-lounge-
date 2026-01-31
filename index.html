@@ -107,10 +107,16 @@ tailwind.config = {
 }
 .time{
   font-size:10px;opacity:.65;margin-top:6px;
-  display:flex;gap:4px;justify-content:flex-end;align-items:center
+  display:flex;gap:6px;justify-content:flex-end;align-items:center
 }
-.read-by{display:flex;gap:4px;margin-top:4px;justify-content:flex-end}
-.read-by img{width:13px;height:13px;border-radius:999px;border:1px solid #1c1f26}
+.read-by{
+  font-size:11px;
+  opacity:.75;
+  margin-top:4px;
+  display:flex;
+  justify-content:flex-end;
+  gap:4px;
+}
 
 /* badges */
 .verified-bubble{
@@ -160,11 +166,19 @@ tailwind.config = {
   z-index:40
 }
 
-/* date */
-.date-sep{text-align:center;font-size:11px;color:#a0a6b5;margin:12px 0}
-
 /* sidebar */
 #sidebar{transition:transform .25s ease}
+
+/* sidebar search */
+#memberSearch{
+  width:100%;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#1c1f26;
+  border:1px solid #343a4a;
+  font-size:12px;
+  outline:none;
+}
 
 section{-webkit-overflow-scrolling:touch}
 </style>
@@ -243,6 +257,11 @@ section{-webkit-overflow-scrolling:touch}
     <strong>Members</strong>
     <button id="closeSidebar"><i data-lucide="x"></i></button>
   </div>
+
+  <div class="p-3">
+    <input id="memberSearch" placeholder="Search members…">
+  </div>
+
   <div id="memberList" class="flex-1 overflow-y-auto p-3 space-y-3"></div>
 </aside>
 
@@ -271,6 +290,7 @@ const sidebar=document.getElementById('sidebar');
 const membersBtn=document.getElementById('membersBtn');
 const closeSidebar=document.getElementById('closeSidebar');
 const memberList=document.getElementById('memberList');
+const memberSearch=document.getElementById('memberSearch');
 
 /* ================= MEMBERS ================= */
 const ADMIN={name:'Profit Hunter 🌐',role:'ADMIN',avatar:'assets/admin.jpg'};
@@ -279,27 +299,30 @@ const members=[ADMIN,MOD,...Array.from({length:20},(_,i)=>({
   name:`Member_${i+1}`,
   role:'VERIFIED',
   avatar:`https://randomuser.me/api/portraits/men/${i+20}.jpg`,
-  lastActive:Date.now()-Math.random()*90000
+  lastActive:Date.now()-Math.random()*300000
 }))];
 
-const ACTIVE=90000;
-const isOnline=m=>Date.now()-m.lastActive<ACTIVE;
+const ONLINE_LIMIT=90000;
+const IDLE_LIMIT=300000;
 
-/* online simulation */
-setInterval(()=>{
-  members.forEach(m=>Math.random()>.6&&(m.lastActive=Date.now()));
-  onlineCountEl.textContent=members.filter(isOnline).length;
-  renderMembers();
-},4000);
+function presence(m){
+  const d=Date.now()-m.lastActive;
+  if(d<ONLINE_LIMIT) return 'online';
+  if(d<IDLE_LIMIT) return 'idle';
+  return 'offline';
+}
 
 function renderMembers(){
+  const q=memberSearch.value.toLowerCase();
   memberList.innerHTML='';
-  members.forEach(m=>{
+  members.filter(m=>m.name.toLowerCase().includes(q)).forEach(m=>{
+    const p=presence(m);
+    const color=p==='online'?'bg-green-500':p==='idle'?'bg-yellow-400':'bg-gray-500';
     memberList.innerHTML+=`
     <div class="flex gap-3 items-center">
       <div class="relative">
         <img src="${m.avatar}" class="w-9 h-9 rounded-full">
-        <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${isOnline(m)?'bg-green-500':'bg-gray-500'}"></span>
+        <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${color}"></span>
       </div>
       <div>
         <div class="text-sm">${m.name}</div>
@@ -312,8 +335,17 @@ function renderMembers(){
   });
 }
 
+/* online simulation */
+setInterval(()=>{
+  members.forEach(m=>Math.random()>.6&&(m.lastActive=Date.now()));
+  onlineCountEl.textContent=members.filter(m=>presence(m)==='online').length;
+  renderMembers();
+},4000);
+
+memberSearch.oninput=renderMembers;
+
 /* ================= TYPING ================= */
-const typingMembers=members.map(m=>m.name).filter(n=>n!=='Profit Hunter 🌐');
+const typingMembers=members.map(m=>m.name).filter(n=>n!==ADMIN.name);
 function showTyping(){
   const count=Math.floor(Math.random()*3)+1;
   const names=[...typingMembers].sort(()=>.5-Math.random()).slice(0,count);
@@ -339,9 +371,11 @@ input.oninput=()=>{
 };
 
 /* ================= SEND ================= */
+let replyTo=null;
 send.onclick=()=>{
   if(!input.value.trim())return;
-  postMessage({name:'You',role:'VERIFIED',text:input.value,out:true});
+  postMessage({name:'You',role:'VERIFIED',text:input.value,out:true,replyTo});
+  replyTo=null;
   input.value='';
   send.classList.add('hidden');
   mediaBtn.classList.remove('hidden');
@@ -364,7 +398,7 @@ fileInput.onchange=e=>{
   fileInput.value='';
 };
 
-/* ================= VOICE (PATCH A) ================= */
+/* ================= VOICE ================= */
 let recorder,voiceChunks=[],recording=false;
 micBtn.onmousedown=async()=>{
   if(recording)return;
@@ -383,8 +417,8 @@ micBtn.onmousedown=async()=>{
 };
 micBtn.onmouseup=()=>{if(recording){recording=false;recorder.stop()}};
 
-/* ================= PIN / REPLY / REACTIONS ================= */
-let pinnedId=null,replyTo=null;
+/* ================= PIN ================= */
+let pinnedId=null;
 const pinnedBanner=document.getElementById('pinnedBanner');
 const pinnedText=document.getElementById('pinnedText');
 document.getElementById('unpinBtn').onclick=e=>{
@@ -398,15 +432,20 @@ pinnedBanner.onclick=()=>{
   el&&el.scrollIntoView({behavior:'smooth',block:'center'});
 };
 
-/* ================= MESSAGE RENDER ================= */
-let lastMeta=null,lastDate='';
-let unread=0;
+/* ================= MESSAGE ================= */
+let lastMeta=null,lastDate='',unread=0;
+const seenCache={};
 
 function postMessage(m){
   m.id=crypto.randomUUID();
   m.time=Date.now();
   save(m);
   render(m,true);
+}
+
+function seenCount(){
+  const online=members.filter(m=>presence(m)==='online').length;
+  return Math.floor(online*(0.35+Math.random()*0.4));
 }
 
 function render(m,isNew=false){
@@ -425,6 +464,8 @@ function render(m,isNew=false){
     m.role==='MOD'?'<span class="role-pill mod">MOD</span>':
     '<span class="verified-bubble"><i data-lucide="gem"></i></span>';
 
+  if(m.out && !seenCache[m.id]) seenCache[m.id]=seenCount();
+
   const el=document.createElement('div');
   el.className=`msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
   el.dataset.id=m.id;
@@ -435,13 +476,15 @@ function render(m,isNew=false){
       ${!grouped&&!m.out?`<div class="sender">${m.name} ${badge}</div>`:''}
       <div class="content">${m.text}</div>
       <div class="reactions"></div>
-      <div class="time"><i data-lucide="eye" class="w-3 h-3"></i> ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
-      <div class="read-by"></div>
+      <div class="time">
+        <i data-lucide="eye" class="w-3 h-3"></i>
+        ${m.out?seenCache[m.id]:'·'} ·
+        ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+      </div>
     </div>`;
   chat.appendChild(el);
   lucide.createIcons();
 
-  /* reply jump */
   el.querySelectorAll('.reply-preview').forEach(r=>{
     r.onclick=()=>{
       const t=document.querySelector(`[data-id="${r.dataset.jump}"]`);
@@ -449,19 +492,11 @@ function render(m,isNew=false){
     };
   });
 
-  /* reactions (PATCH D) */
-  const reactBox=el.querySelector('.reactions');
   el.querySelector('.bubble').ondblclick=()=>{
-    const ex=reactBox.querySelector('.reaction');
-    if(ex) ex.remove();
-    else{
-      const b=document.createElement('div');
-      b.className='reaction';b.textContent='👍 1';
-      reactBox.appendChild(b);
-    }
+    const box=el.querySelector('.reactions');
+    box.innerHTML=box.innerHTML?'' : `<div class="reaction">👍 1</div>`;
   };
 
-  /* context menu */
   el.oncontextmenu=e=>{
     e.preventDefault();
     const menu=document.createElement('div');
@@ -486,15 +521,6 @@ function render(m,isNew=false){
     lucide.createIcons();
   };
 
-  /* seen-by (PATCH C) */
-  if(m.out){
-    const r=el.querySelector('.read-by');
-    [ADMIN,MOD].forEach(u=>{
-      const img=document.createElement('img');
-      img.src=u.avatar;r.appendChild(img);
-    });
-  }
-
   lastMeta={sender:m.name,time:d};
 
   if(isNew && chat.scrollTop+chat.clientHeight<chat.scrollHeight-40){
@@ -517,7 +543,7 @@ unreadBtn.onclick=()=>{
 membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
 
-/* ================= DB (PATCH G) ================= */
+/* ================= DB ================= */
 const DB='AbroxDB',STORE='messages';
 let db;
 const req=indexedDB.open(DB,1);
@@ -539,6 +565,14 @@ const savedPin=localStorage.getItem('pinnedId');
 if(savedPin){
   pinnedId=savedPin;
   pinnedBanner.classList.remove('hidden');
+}
+
+/* ================= JOIN MESSAGE ================= */
+if(!localStorage.getItem('joined')){
+  localStorage.setItem('joined','1');
+  setTimeout(()=>{
+    postMessage({name:'System',role:'ADMIN',text:'👋 You joined the group',out:false});
+  },400);
 }
 
 /* ================= SAMPLE ================= */
