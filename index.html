@@ -1,237 +1,108 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Abrox – Private Lounge</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1c1f26">
+<meta charset="UTF-8">
+<title>Header Test</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
-<script src="emoji-pack.js" defer></script>
-
-<script>
-tailwind.config = {
-  theme: {
-    extend: {
-      colors: {
-        bg:'#1c1f26',
-        panel:'#232833',
-        border:'#343a4a',
-        muted:'#a0a6b5',
-        accent:'#6bdba7',
-        bubble:'#262b38',
-        bubbleOut:'#2b3242',
-        send:'#3b82f6'
-      }
-    }
-  }
-}
-</script>
 
 <style>
-/* ================= TELEGRAM RHYTHM ================= */
-.msg{
-  display:flex;
-  gap:6px;
-  margin-bottom:8px;
-  align-items:flex-end; /* BASELINE FIX */
-}
-.msg.out{justify-content:flex-end}
-.grouped{margin-top:-6px}
-
-/* ================= AVATAR ================= */
-.avatar{
-  width:32px;
-  height:32px;
-  border-radius:999px;
-  flex-shrink:0;
+/* ===== HEADER ===== */
+.header {
+  background:#232833;
+  border-bottom:1px solid #343a4a;
 }
 
-/* ================= BUBBLES ================= */
-.bubble{
-  max-width:78%;
-  padding:8px 14px 7px;
-  font-size:13px;
-  line-height:1.45;
-  position:relative;
-  box-shadow:0 2px 8px rgba(0,0,0,.18);
-}
-.bubble-inner{display:block}
-
-/* IN / OUT */
-.msg.in .bubble{
-  background:#262b38;
-  border-radius:6px 18px 18px 6px;
-}
-.msg.out .bubble{
-  background:#2b3242;
-  border:1px solid #343a4a;
-  border-radius:18px 6px 6px 18px;
-}
-
-/* ===== TELEGRAM-LOCKED TAILS ===== */
-.msg.in .bubble::before{
-  content:'';
-  position:absolute;
-  left:-6px;
-  bottom:10px;
-  width:8px;
-  height:8px;
-  background:#262b38;
-  border-radius:0 0 0 8px;
-}
-.msg.out .bubble::after{
-  content:'';
-  position:absolute;
-  right:-6px;
-  bottom:10px;
-  width:8px;
-  height:8px;
-  background:#2b3242;
-  border-radius:0 0 8px 0;
-}
-.grouped.in .bubble::before,
-.grouped.out .bubble::after{display:none}
-
-/* ================= META ================= */
-.sender{
-  font-size:12px;
-  font-weight:600;
-  color:#6bdba7;
-  margin-bottom:4px;
+/* ===== TYPING ROW (LOCKED — TELEGRAM SAFE) ===== */
+.typing-row {
   display:flex;
   align-items:center;
   gap:6px;
-}
-.time{
-  font-size:10px;
-  opacity:.65;
-  margin-top:6px;
-  display:flex;
-  justify-content:flex-end;
-}
 
-/* ================= BADGES ================= */
-.verified-bubble{
-  display:inline-flex;
-  align-items:center;
-  gap:3px;
-  padding:1px 4px;
-  border-radius:999px;
-  background:linear-gradient(180deg,#1b6d46,#125034);
-  font-size:9px;
-}
-.verified-bubble i{width:6px;height:6px}
-.role-pill{
-  font-size:9px;
-  padding:1px 6px;
-  border-radius:999px;
-}
-.role-pill.admin{background:#7f1d1d}
-.role-pill.mod{background:#5b21b6}
+  padding:0 16px;
+  height:0;
+  overflow:hidden;
 
-/* ================= HEADER ================= */
-header{position:relative}
-
-/* 🔒 FIXED TYPING RAIL (PHASE 1 CORE FIX) */
-.typing-rail{
-  position:absolute;
-  right:12px;
-  bottom:-18px;
-  height:20px;
-  pointer-events:none;
-}
-.group-typing-bar{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  padding:4px 10px;
-  border-radius:999px;
-  background:rgba(255,255,255,.05);
   font-size:12px;
   font-weight:500;
   color:#6bdba7;
+
   opacity:0;
-  transform:translateY(4px);
-  transition:.18s ease;
+  transition:
+    height .18s ease,
+    opacity .12s ease;
 }
-.group-typing-bar.active{
+
+.typing-row.active {
+  height:22px; /* fixed reserved row height */
   opacity:1;
-  transform:translateY(0);
 }
 </style>
 </head>
 
-<body class="bg-bg text-white h-[100dvh] overflow-hidden">
-<div class="flex h-full">
-<main class="flex flex-col flex-1 border-r border-border">
+<body class="bg-[#1c1f26] text-white">
 
-<!-- ================= HEADER ================= -->
-<header id="mainHeader" class="bg-panel border-b border-border px-4 py-3">
-  <div class="flex justify-between items-center">
+<header class="header">
+  <!-- TOP ROW -->
+  <div class="flex items-center justify-between px-4 py-3">
     <div class="flex gap-3 items-center">
-      <img src="assets/logo.png" class="w-8 h-8">
+      <div class="w-8 h-8 rounded bg-[#6bdba7]"></div>
+
       <div>
-        <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-        <div class="text-xs text-muted">
-          Members: 4,872 • Online: <span id="onlineCount">—</span>
+        <div class="text-sm font-semibold leading-tight">
+          Abrox Binary Bot – Private Lounge
+        </div>
+        <div class="flex items-center gap-1 text-xs text-gray-400">
+          <i data-lucide="lock" class="w-3 h-3"></i>
+          <span>Private Group</span>
         </div>
       </div>
     </div>
-    <button id="membersBtn"><i data-lucide="users"></i></button>
+
+    <button>
+      <i data-lucide="users"></i>
+    </button>
   </div>
 
-  <!-- 🔒 TYPING RAIL -->
-  <div class="typing-rail">
-    <div id="group-typing-bar" class="group-typing-bar">
-      <span class="w-2 h-2 rounded-full bg-accent"></span>
-      <span class="typing-summary">Typing…</span>
-    </div>
+  <!-- MEMBERS LINE -->
+  <div class="px-4 text-xs text-gray-400">
+    Members: 4,872 • Online: 132
+  </div>
+
+  <!-- DISCUSSION LINE -->
+  <div class="px-4 text-xs text-gray-500 pb-1">
+    Demo discussion · Verification required
+  </div>
+
+  <!-- TYPING LINE (LOCKED IN FLOW) -->
+  <div id="typingRow" class="typing-row">
+    <span class="w-2 h-2 rounded-full bg-[#6bdba7]"></span>
+    <span id="typingText">Member_11 is typing…</span>
   </div>
 </header>
 
-<!-- ================= CHAT ================= -->
-<section id="chat" class="flex-1 overflow-y-auto px-4 py-4 scroll-smooth">
-  <div class="text-center text-muted text-sm mb-4">
-    📌 <strong>Group Rules</strong><br>
-    New members are read-only until verified<br>
-    Admins DM individually<br>
-    No screenshots in chat<br>
-    Ignore unsolicited messages
-  </div>
-</section>
-
-<footer class="bg-panel border-t border-border px-4 py-3">
-  <div class="flex items-center bg-bg rounded-full px-3 py-2 gap-2">
-    <button id="emojiBtn"><i data-lucide="smile"></i></button>
-    <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-    <div class="flex items-center gap-2 ml-auto">
-      <button id="mediaBtn"><i data-lucide="paperclip"></i></button>
-      <button id="micBtn"><i data-lucide="mic"></i></button>
-      <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
-    </div>
-  </div>
-</footer>
-
-</main>
+<div class="p-4">
+  <input id="input"
+         class="w-full bg-[#232833] border border-[#343a4a] rounded px-3 py-2 text-sm"
+         placeholder="Type to test typing position">
 </div>
 
 <script>
-requestAnimationFrame(()=>lucide.createIcons());
+lucide.createIcons();
 
-/* ===== PHASE 1 TYPING LOGIC (UNCHANGED, NOW VISUALLY LOCKED) ===== */
-const input=document.getElementById('input');
-const groupTypingBar=document.getElementById('group-typing-bar');
-const summary=groupTypingBar.querySelector('.typing-summary');
+const typingRow = document.getElementById('typingRow');
+const input = document.getElementById('input');
 
-let typingTimer;
-input.oninput=()=>{
-  summary.textContent='You are typing…';
-  groupTypingBar.classList.add('active');
-  clearTimeout(typingTimer);
-  typingTimer=setTimeout(()=>groupTypingBar.classList.remove('active'),1500);
-};
+let timer;
+input.addEventListener('input', () => {
+  typingRow.classList.add('active');
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    typingRow.classList.remove('active');
+  }, 1600);
+});
 </script>
 
 </body>
