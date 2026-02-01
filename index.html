@@ -121,6 +121,15 @@ html,body{height:100%}
   align-items:center
 }
 
+/* audio duration label inside message */
+.audio-duration{
+  display:inline-block;
+  font-size:11px;
+  color:var(--muted,#a0a6b5);
+  margin-left:8px;
+  vertical-align:middle;
+}
+
 /* ================= DATE PILLS ================= */
 .date-pill{
   position:sticky;
@@ -199,6 +208,22 @@ html,body{height:100%}
   pointer-events:none;color:#fff;
 }
 .input-shell.locked .mic-lock-icon{transform:translateY(0);opacity:1}
+
+/* recording timer (visible while recording) */
+.recording-timer{
+  position:absolute;
+  right:14px;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:13px;
+  color:#cfe9ff;
+  background:rgba(59,130,246,0.06);
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid rgba(59,130,246,0.12);
+  display:none;
+}
+.input-shell.recording .recording-timer{display:block}
 
 /* reply preview container */
 #replyPreviewContainer{padding:6px 0 6px 0}
@@ -307,6 +332,7 @@ section{-webkit-overflow-scrolling:touch}
           <div class="mic-lock-icon" aria-hidden="true"><i data-lucide="lock"></i><span class="text-xs text-muted">Recording locked</span></div>
           <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message" autocomplete="off" aria-label="Message input">
           <canvas id="waveform"></canvas>
+          <div class="recording-timer" id="recordingTimer" aria-hidden="true">0:00</div>
         </div>
 
         <div class="flex items-center gap-2 ml-auto">
@@ -336,29 +362,12 @@ section{-webkit-overflow-scrolling:touch}
 /* ================= INIT & TUNABLES ================= */
 requestAnimationFrame(()=>{ try{ lucide.createIcons(); }catch(e){} });
 
-// WhatsApp-like preset (applied)
+// WhatsApp-like preset
 const TUNABLES = {
-  WAVE: {
-    amplitude: 0.72,   // 0.1 - 1.0
-    glow: 20,          // px shadow
-    backOpacity: 0.42, // background waveform faintness
-    smooth: 0.94       // 0-1 (1.0 -> very smooth)
-  },
-  LOCK: {
-    lockThreshold: 60,   // px vertical swipe to consider "lock"
-    slideDistance: 120,  // px slide-up distance for more explicit feel
-    slideEase: 160
-  },
-  SEEN: {
-    aggressiveness: 0.6,    // 0-1
-    baseOutgoing: 75,
-    incomingFraction: 0.45, // fraction of online users used as baseline for incoming message views
-    incomingMinBaseline: 48 // min baseline for incoming messages
-  },
-  ONLINE: {
-    smoothFactorMin: 0.12,
-    smoothFactorMax: 0.2
-  }
+  WAVE: { amplitude: 0.72, glow: 20, backOpacity: 0.42, smooth: 0.94 },
+  LOCK: { lockThreshold: 60, slideDistance: 120, slideEase: 160 },
+  SEEN: { aggressiveness: 0.6, baseOutgoing: 75, incomingFraction: 0.45, incomingMinBaseline: 48 },
+  ONLINE: { smoothFactorMin: 0.12, smoothFactorMax: 0.2 }
 };
 
 /* DOM refs */
@@ -374,6 +383,7 @@ const inputShell = document.getElementById('inputShell');
 const micLockIcon = inputShell.querySelector('.mic-lock-icon');
 const replyPreviewContainer = document.getElementById('replyPreviewContainer');
 const cancelOverlay = document.getElementById('cancelOverlay');
+const recordingTimerEl = document.getElementById('recordingTimer');
 
 const membersRow = document.getElementById('membersRow');
 const typingRow = document.getElementById('typingRow');
@@ -407,15 +417,17 @@ for(let i=0;i<40;i++){
 
 let persistedMemberCount = Number(localStorage.getItem('member_count') || 4872);
 localStorage.setItem('member_count', String(persistedMemberCount));
-let virtualOnlineCount = Number(localStorage.getItem('virtual_online') || 75);
+// Start virtualOnlineCount not tiny — seed with psychology realism near target
+let virtualOnlineCount = Number(localStorage.getItem('virtual_online') || Math.max(75, Math.round(persistedMemberCount * 0.016)));
 let pinnedMessageId = localStorage.getItem('pinned_message_id') || null;
 let replyTo = null;
 
 /* ================ UTIL: UI update for input area ================ */
+let recording = false;
+let locked = false;
 function updateInputUI(){
   const hasText = !!input.value.trim();
   if(recording && locked){
-    // recording locked: show send (send will send voice)
     send.classList.remove('hidden');
     mediaBtn.classList.add('hidden');
     micBtn.classList.add('hidden');
@@ -507,16 +519,14 @@ setInterval(typingSimulation, 3500);
 let lastSender=null, lastTime=0, lastDate=''; let unread=0;
 const seenCache = {}; // id -> {count, cap}
 
+// init seen counts (guarantee messages get realistic counts, not tiny)
 function initSeenForMessage(msg){
   if(seenCache[msg.id]) return;
-  // outgoing baseline starts at configured baseOutgoing + random small amount
   if(msg.out){
     const base = TUNABLES.SEEN.baseOutgoing + Math.floor(Math.random()*6);
     seenCache[msg.id] = { count: base, cap: Math.max(virtualOnlineCount, base) };
   } else {
-    // incoming: use fraction of online users, but never below incomingMinBaseline
     const baseline = Math.max(TUNABLES.SEEN.incomingMinBaseline, Math.round(virtualOnlineCount * TUNABLES.SEEN.incomingFraction));
-    // small noise
     const base = baseline - Math.floor(Math.random()*6);
     const cap = Math.max(virtualOnlineCount, baseline + Math.floor(Math.random()*8));
     seenCache[msg.id] = { count: Math.max(3, base), cap };
@@ -524,7 +534,7 @@ function initSeenForMessage(msg){
 }
 function getSeenCountValue(id){ return seenCache[id] ? seenCache[id].count : '·'; }
 
-/* periodically tick seen counts realistically */
+// gradual seen updater
 setInterval(()=>{
   const ids = Object.keys(seenCache);
   if(!ids.length) return;
@@ -593,6 +603,26 @@ function renderMessage(m,isNew){
 
   attachMessageInteractions(el, m);
 
+  // if audio present and no duration label, try to add duration
+  const audioEl = el.querySelector('audio');
+  if(audioEl && !el.querySelector('.audio-duration')){
+    const probe = new Audio();
+    probe.src = audioEl.src;
+    probe.addEventListener('loadedmetadata', ()=> {
+      const dur = formatTime(probe.duration);
+      const ad = document.createElement('span');
+      ad.className = 'audio-duration';
+      ad.textContent = dur;
+      const content = el.querySelector('.content');
+      if(content) content.appendChild(ad);
+    });
+    setTimeout(()=> {
+      if(!probe.duration || !isFinite(probe.duration)){
+        // nothing; message already posted without duration fallback
+      }
+    }, 2500);
+  }
+
   if(isNew && chat.scrollTop+chat.clientHeight < chat.scrollHeight-60){
     unread++;
     unreadBtn.textContent = `⬇ ${unread} new messages`;
@@ -602,14 +632,13 @@ function renderMessage(m,isNew){
   }
 }
 
-/* ================= interactions: long-press & context menu ================= */
+/* interactions: long-press & context menu */
 function attachMessageInteractions(domEl, msg){
   domEl.addEventListener('contextmenu', (ev) => {
     ev.preventDefault();
     showContextMenuAt(ev.clientX, ev.clientY, msg, domEl);
   });
 
-  // touch long-press cancel on move
   let touchTimer = null;
   let startX = 0, startY = 0;
   domEl.addEventListener('touchstart', (ev) => {
@@ -648,7 +677,6 @@ function showContextMenuAt(x,y,msg,anchorEl){
   `;
   document.body.appendChild(menu);
 
-  // clamp within viewport
   const rect = menu.getBoundingClientRect();
   let left = x, top = y;
   if(left + rect.width > window.innerWidth - 8) left = window.innerWidth - rect.width - 8;
@@ -721,11 +749,7 @@ function setReplyTo(msgId){
   input.focus();
   updateInputUI();
 }
-function clearReply(){
-  replyTo = null;
-  replyPreviewContainer.innerHTML = '';
-  updateInputUI();
-}
+function clearReply(){ replyTo = null; replyPreviewContainer.innerHTML = ''; updateInputUI(); }
 
 /* ================= EMOJI / MEDIA ================= */
 emojiBtn.onclick = ()=>window.EmojiPack && EmojiPack.openPicker(input);
@@ -746,37 +770,61 @@ fileInput.onchange = e=>{
   fileInput.value='';
 };
 
-/* ================= MIC + WAVEFORM (WhatsApp behaviour) ================= */
+/* ================= MIC + WAVEFORM + RECORDING TIMER ================= */
 const canvas = document.getElementById('waveform');
 const ctx = canvas.getContext('2d');
 
 let audioCtx, analyser, micStream, mediaRecorder;
-let waveAnim = null, locked=false, recording=false, canceled=false;
+let waveAnim = null, canceled=false;
 let chunks=[];
-let wavePrev = null; // smoothing buffer
+let wavePrev = null;
+
+let recordStart = 0;
+let recordTimerInterval = null;
+function formatTime(sec){
+  if(!isFinite(sec)) sec = 0;
+  sec = Math.max(0, Math.round(sec));
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+function startRecordTimer(){
+  recordStart = Date.now();
+  recordingTimerEl.textContent = '0:00';
+  recordingTimerEl.setAttribute('aria-hidden','false');
+  if(recordTimerInterval) clearInterval(recordTimerInterval);
+  recordTimerInterval = setInterval(()=>{
+    const sec = Math.floor((Date.now() - recordStart)/1000);
+    recordingTimerEl.textContent = formatTime(sec);
+  }, 250);
+}
+function stopRecordTimer(){
+  if(recordTimerInterval) { clearInterval(recordTimerInterval); recordTimerInterval = null; }
+  recordingTimerEl.textContent = '0:00';
+  recordingTimerEl.setAttribute('aria-hidden','true');
+}
 
 function resizeWave(){
   const style = getComputedStyle(inputShell);
   const padLeft = parseInt(style.paddingLeft || 12);
   const padRight = parseInt(style.paddingRight || 12);
-  const reserve = 60; // reserve for icons inside input shell
+  const reserve = 60;
   const total = Math.max(180, inputShell.clientWidth - padLeft - padRight - reserve);
   canvas.width = Math.max(180, total);
   canvas.height = Math.max(28, inputShell.clientHeight - 6);
-  // init prev array for smoothing
-  wavePrev = new Float32Array(Math.max(128, analyser ? analyser.fftSize : 2048));
+  if(analyser) wavePrev = new Float32Array(Math.max(128, analyser.fftSize));
 }
-window.addEventListener('resize', resizeWave);
+window.addEventListener('resize', () => {
+  try{ resizeWave(); }catch(e){}
+});
 resizeWave();
 
-/* drawWave using tunables: amplitude, glow, smooth */
 function drawWave(){
   if(!analyser || !wavePrev) { waveAnim = requestAnimationFrame(drawWave); return; }
   const bufferLength = analyser.fftSize;
   const data = new Uint8Array(bufferLength);
   analyser.getByteTimeDomainData(data);
 
-  // smoothing lerp from previous frame -> reduces jitter
   const smooth = Math.max(0, Math.min(1, TUNABLES.WAVE.smooth));
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -790,9 +838,7 @@ function drawWave(){
   const center = canvas.height/2;
   ctx.beginPath();
   for(let i=0;i<data.length;i++){
-    // normalized sample between -1..1
     const sample = (data[i] - 128) / 128;
-    // smooth between frames
     const prev = wavePrev[i] || 0;
     const smp = prev * smooth + sample * (1 - smooth);
     wavePrev[i] = smp;
@@ -803,7 +849,6 @@ function drawWave(){
   }
   ctx.stroke();
 
-  // faint background line for extra softness
   ctx.beginPath();
   ctx.lineWidth = 1;
   ctx.globalAlpha = TUNABLES.WAVE.backOpacity;
@@ -821,7 +866,6 @@ function drawWave(){
   waveAnim = requestAnimationFrame(drawWave);
 }
 
-/* start/stop mic */
 async function startMic(){
   try{
     canceled = false;
@@ -846,7 +890,6 @@ async function startMic(){
     const source = audioCtx.createMediaStreamSource(micStream);
     source.connect(analyser);
 
-    // ensure resize uses analyser size
     resizeWave();
 
     let mime = 'audio/webm';
@@ -871,7 +914,8 @@ async function startMic(){
     }
 
     mediaRecorder.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
-    mediaRecorder.onstop = ()=>{
+
+    mediaRecorder.onstop = async ()=>{
       cancelAnimationFrame(waveAnim);
       canvas.style.display = 'none';
       input.style.display = 'block';
@@ -879,6 +923,8 @@ async function startMic(){
       inputShell.classList.remove('locked');
       micBtn.style.display = '';
       micBtn.setAttribute('aria-pressed','false');
+
+      stopRecordTimer();
 
       if(canceled){
         chunks = [];
@@ -894,14 +940,34 @@ async function startMic(){
       if(chunks.length){
         const blob = new Blob(chunks,{type: mime || 'audio/webm'});
         const url = URL.createObjectURL(blob);
-        postMessage({
-          name:'You',
-          role:'VERIFIED',
-          text:`<audio controls src="${url}"></audio>`,
-          out:true,
-          replyTo,
-          replyMeta: getReplyMeta(replyTo)
+
+        const probe = new Audio();
+        probe.src = url;
+        let metadataLoaded = false;
+        probe.addEventListener('loadedmetadata', ()=> {
+          metadataLoaded = true;
+          const durText = formatTime(probe.duration);
+          postMessage({
+            name:'You',
+            role:'VERIFIED',
+            text:`<audio controls src="${url}"></audio><span class="audio-duration">${durText}</span>`,
+            out:true,
+            replyTo,
+            replyMeta: getReplyMeta(replyTo)
+          });
         });
+        setTimeout(()=> {
+          if(!metadataLoaded){
+            postMessage({
+              name:'You',
+              role:'VERIFIED',
+              text:`<audio controls src="${url}"></audio>`,
+              out:true,
+              replyTo,
+              replyMeta: getReplyMeta(replyTo)
+            });
+          }
+        }, 2200);
       }
       chunks=[];
       try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){}
@@ -915,6 +981,7 @@ async function startMic(){
 
     mediaRecorder.start();
     drawWave();
+    startRecordTimer();
     updateInputUI();
   }catch(err){
     console.error('Mic start error', err);
@@ -935,11 +1002,12 @@ function stopMic(forceSend=false){
   if(mediaRecorder && mediaRecorder.state !== 'inactive'){
     mediaRecorder.stop();
   } else {
-    // fallback if recorder already inactive
     try{ micStream.getTracks().forEach(t=>t.stop()); }catch(e){}
     recording = false; locked = false; canceled = false;
     input.style.display='block'; canvas.style.display='none'; inputShell.classList.remove('recording');
-    micBtn.setAttribute('aria-pressed','false'); updateInputUI();
+    micBtn.setAttribute('aria-pressed','false');
+    stopRecordTimer();
+    updateInputUI();
   }
 }
 function cancelRecording(){
@@ -951,7 +1019,9 @@ function cancelRecording(){
     try{ micStream.getTracks().forEach(t=>t.stop()); }catch(e){}
     recording = false; canceled = false; locked = false;
     input.style.display='block'; canvas.style.display='none'; inputShell.classList.remove('recording');
-    micBtn.setAttribute('aria-pressed','false'); updateInputUI();
+    micBtn.setAttribute('aria-pressed','false');
+    stopRecordTimer();
+    updateInputUI();
   }
 }
 
@@ -976,17 +1046,15 @@ micBtn.addEventListener('touchmove', (e)=> {
   const dy = startY - t.clientY;
   const dx = t.clientX - startX;
 
-  // swipe up to lock
   if(dy > TUNABLES.LOCK.lockThreshold && !locked && !canceled){
     locked = true;
     inputShell.classList.add('locked');
     micLockIcon.querySelector('span').textContent = 'Recording locked';
-    send.classList.remove('hidden'); // show send button when locked
+    send.classList.remove('hidden');
     micBtn.style.display = 'none';
     cancelOverlay.classList.remove('visible');
   }
 
-  // swipe left to cancel
   if(dx < -40 && !canceled && !locked){
     canceled = true;
     cancelOverlay.classList.add('visible');
@@ -1004,7 +1072,6 @@ micBtn.addEventListener('touchend', (e)=> {
     return;
   }
   if(locked){
-    // remain recording until user taps send
     recording = true;
     inputShell.classList.add('locked');
     micLockIcon.querySelector('span').textContent = 'Recording locked';
@@ -1070,7 +1137,7 @@ chat.addEventListener('touchend', e =>{
 /* ================= SEND HANDLING (text + voice when locked) ================= */
 send.addEventListener('click', (ev) => {
   if(recording && locked){
-    stopMic(true); // send the locked voice recording
+    stopMic(true);
     return;
   }
   if(input.value.trim()){
@@ -1125,6 +1192,9 @@ window.addEventListener('beforeunload', ()=>{ try{ if(recording) cancelRecording
 
 /* expose helper for debugging */
 window._abrox = { postMessage, renderMessage, pinMessage, unpinMessage, setReplyTo: (id)=> setReplyTo(id) };
+
+/* small util for formatting time used above */
+function formatTimeSeconds(s){ return formatTime(s); }
 </script>
 </body>
 </html>
