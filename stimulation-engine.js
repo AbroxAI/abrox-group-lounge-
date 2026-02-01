@@ -1,22 +1,54 @@
 // simulation-engine.js
-// Demo SimulationEngine that wires MessagePool.streamToUI(), TypingEngine.triggerTyping()
-// and optionally uses MessagePool.createGeneratorView() for memory-light paging.
-// - Default: useStreamAPI: true, simulateTypingBeforeSend: true
-// - Deterministic: configure({ seedBase })
+// Demo simulation engine that wires MessagePool.createGeneratorView() + TypingEngine
+// - Defaults: useStreamAPI: true (preferred for very large pools), simulateTypingBeforeSend: true
+// - If simulateTypingBeforeSend is true the engine will call TypingEngine.triggerTyping() (or window._abrox.showTyping())
+//   before rendering each message to create a natural "typing -> send" flow.
+// - If useStreamAPI && !simulateTypingBeforeSend and MessagePool.streamToUI exists, the engine will call streamToUI()
+//   which lets MessagePool drive rendering (fast).
+// - If MessagePool.createGeneratorView() exists we use it for memory-light paging; otherwise we fall back to getRange()
+// - Deterministic: call SimulationEngine.configure({ seedBase: 4000 }) before start to reproduce runs.
 //
 // API:
 //   SimulationEngine.configure(opts)
 //   SimulationEngine.start()
 //   SimulationEngine.stop()
 //   SimulationEngine.isRunning()
-//   SimulationEngine.previewOnce(count)
-//   SimulationEngine.emitOnce(idx)  // emit a single message by index (for tests)
+//   SimulationEngine.setRate(ratePerMin)
+//   SimulationEngine.setUseStreamAPI(bool)
+//   SimulationEngine.setSimulateTypingBeforeSend(bool)
+//   SimulationEngine.triggerOnce()  // emits a single message immediately (respecting typing simulation mode)
+//
 
 (function globalSimulationEngine(){
   if(window.SimulationEngine) return;
 
-  // small xorshift PRNG for deterministic behaviour when seedBase provided
-  function xorshift32(seed){
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function now(){ return Date.now(); }
+
+  const DEFAULTS = {
+    seedBase: null,                // if set => deterministic PRNG used for internal jitter decisions
+    useStreamAPI: true,            // prefer MessagePool.streamToUI for very large pools (fast)
+    simulateTypingBeforeSend: true, // simulate typing before sending (more realistic)
+    ratePerMin: 45,                // messages per minute
+    pageSize: 200,                 // generator view page size (if using generator view)
+    jitterFraction: 0.25,          // jitter applied to intervals
+    typingMinMs: 300,              // min typing indicator (ms)
+    typingMaxMs: 1800,             // max typing indicator (ms)
+    typingPerCharMs: 45,           // optional typing duration per character heuristic
+    useGeneratorViewIfAvailable: true, // prefer generator view over getRange for prefill/streaming
+    simulateTypingFraction: 0.75   // fraction of messages to simulate typing for (not all)
+  };
+
+  let cfg = Object.assign({}, DEFAULTS);
+  let running = false;
+  let timer = null;
+  let pageIdx = 0;    // absolute message index counter
+  let currentStreamer = null; // holds stream object from MessagePool.streamToUI if in use
+  let deterministicRnd = null;
+
+  function createRnd(seed){
+    if(seed === null || seed === undefined) return Math.random;
+    // tiny xorshift32 local
     let x = (seed >>> 0) || 0x811c9dc5;
     return function(){
       x |= 0;
@@ -27,329 +59,234 @@
     };
   }
 
-  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-
-  const DEFAULTS = {
-    seedBase: null,               // null => non-deterministic Math.random
-    useStreamAPI: true,           // prefer streaming from MessagePool for huge pools
-    simulateTypingBeforeSend: true, // show typing indicator before emit
-    msgsPerMin: 45,               // emission rate when streaming locally/emulation
-    typingBeforeMsMin: 400,       // typing indicator min duration (ms)
-    typingBeforeMsMax: 1800,      // typing indicator max duration (ms)
-    burstChance: 0.08,            // chance a message event emits small burst instead of single msg
-    burstSizeMin: 2,
-    burstSizeMax: 4,
-    generatorPageSize: 200        // when createGeneratorView used, page size
-  };
-
-  let cfg = Object.assign({}, DEFAULTS);
-  let running = false;
-  let rng = Math.random;
-  let streamController = null;    // for streamToUI stop handle
-  let localTimer = null;         // fallback timer when not using MessagePool.streamToUI
-  let nextIndex = 0;             // next index to emit when using local generation
-  let generatorView = null;      // view returned by MessagePool.createGeneratorView
-  let generatorPage = null;      // current page buffer
-  let generatorPageIdx = 0;      // index within current buffer
-  let generatorPageStart = 0;    // absolute index of page start
-
-  // internal helper: choose typing hook
-  function showTyping(names, duration){
+  // small helper to call TypingEngine.triggerTyping or fallback to _abrox.showTyping
+  function triggerTypingForNames(names, durationMs){
+    durationMs = Math.max(50, Math.round(durationMs || 500));
     try{
       if(window.TypingEngine && typeof window.TypingEngine.triggerTyping === 'function'){
-        try{ window.TypingEngine.triggerTyping(names, duration); return; }catch(e){}
+        window.TypingEngine.triggerTyping(names, durationMs);
+        return;
       }
-      if(window._abrox && typeof window._abrox.showTyping === 'function'){
-        try{ window._abrox.showTyping(names); return; }catch(e){}
-      }
-      // fallback: console
-      console.debug('Typing:', names, 'for', duration);
     }catch(e){}
-  }
-
-  // getMessageAt: prefer generatorView -> MessagePool.getRange -> MessagePool._generateMessageForIndex (if exposed)
-  function getMessageAt(idx){
-    // generator view: if present, ensure page loaded
     try{
-      if(generatorView && typeof generatorView.get === 'function'){
-        const itm = generatorView.get(idx);
-        if(itm) return Promise.resolve(itm);
+      if(window._abrox && typeof window._abrox.showTyping === 'function'){
+        window._abrox.showTyping(names);
+        setTimeout(()=>{ try{ window._abrox.showTyping([]); }catch(e){} }, durationMs + 80);
+        return;
       }
-    }catch(e){ console.warn('generatorView.get failed', e); }
-
-    // fallback: MessagePool.getRange
-    if(window.MessagePool && typeof window.MessagePool.getRange === 'function'){
-      try{
-        const arr = window.MessagePool.getRange(idx, 1);
-        if(arr && arr.length) return Promise.resolve(arr[0]);
-      }catch(e){ console.warn('MessagePool.getRange failed', e); }
-    }
-
-    // last fallback: if MessagePool exposes a generator function _generateMessageForIndex (internal)
-    if(window.MessagePool && typeof window.MessagePool._generateMessageForIndex === 'function'){
-      try{
-        return Promise.resolve(window.MessagePool._generateMessageForIndex(idx, {}));
-      }catch(e){ console.warn('MessagePool._generateMessageForIndex failed', e); }
-    }
-
-    return Promise.resolve(null);
+    }catch(e){}
+    // otherwise no-op
   }
 
-  // helper: emit a single message to UI (renderMessage) with optional typing simulation
-  async function emitMessageWithTyping(msg){
-    if(!msg) return;
-    // optionally simulate typing
-    if(cfg.simulateTypingBeforeSend){
-      const who = (msg.displayName || msg.name || 'Someone');
-      const duration = Math.max(cfg.typingBeforeMsMin, Math.floor(cfg.typingBeforeMsMin + rng() * (cfg.typingBeforeMsMax - cfg.typingBeforeMsMin)));
-      showTyping([who], duration);
-      await new Promise(r => setTimeout(r, duration + 40));
-    }
-    // render
+  // compute per-message typing duration heuristically
+  function computeTypingDurationForMessage(m){
+    if(!m || !m.text) return cfg.typingMinMs;
+    const chars = m.text.length || 0;
+    const est = Math.round(chars * cfg.typingPerCharMs);
+    return clamp(est, cfg.typingMinMs, cfg.typingMaxMs);
+  }
+
+  // main loop when using generator view / manual streaming
+  function startManualStream(){
+    if(running === false) return;
+    // create or reuse generator view
+    let view = null;
     try{
-      if(typeof window.renderMessage === 'function'){
-        window.renderMessage(msg, true);
+      if(cfg.useGeneratorViewIfAvailable && window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
+        view = window.MessagePool.createGeneratorView({ pageSize: cfg.pageSize, seedBase: cfg.seedBase !== null ? cfg.seedBase : undefined, spanDays: (window.MessagePool && window.MessagePool.meta && window.MessagePool.meta.spanDays) || undefined, cachePages: 12 });
+        window._abrox && (window._abrox._messagePoolView = view);
+      } else if(window.MessagePool && typeof window.MessagePool.getRange === 'function'){
+        // fallback to in-memory getRange (potentially expensive)
+        view = {
+          pageSize: cfg.pageSize,
+          totalSize: (window.MessagePool && window.MessagePool.messages && window.MessagePool.messages.length) || (window.MessagePool && window.MessagePool.meta && window.MessagePool.meta.size) || null,
+          nextPage: function(start){ return window.MessagePool.getRange(start, cfg.pageSize); },
+          get: function(i){ return window.MessagePool.getMessageByIndex ? window.MessagePool.getMessageByIndex(i) : (window.MessagePool.getRange ? window.MessagePool.getRange(i,1)[0] : null); }
+        };
+        window._abrox && (window._abrox._messagePoolView = view);
       } else {
-        console.warn('renderMessage not available to emit message');
+        console.warn('SimulationEngine: No MessagePool view or getRange available — cannot start manual stream.');
+        return;
       }
-    }catch(e){ console.warn('emitMessage render failed', e); }
-  }
+    }catch(e){
+      console.warn('SimulationEngine: failed to create generator view fallback', e);
+      return;
+    }
 
-  // local stream loop (when not using MessagePool.streamToUI)
-  function startLocalLoop(){
-    stopLocalLoop();
-    const intervalMs = Math.max(20, Math.round(60000 / clamp(cfg.msgsPerMin, 1, 5000)));
-    localTimer = setInterval(async ()=>{
-      try{
-        if(!running) return;
-        // burst vs single
-        if(rng() < cfg.burstChance){
-          const burstSize = Math.floor(cfg.burstSizeMin + rng() * (cfg.burstSizeMax - cfg.burstSizeMin + 1));
-          for(let i=0;i<burstSize;i++){
-            const idx = nextIndex++;
-            const msg = await getMessageAt(idx);
-            if(msg) await emitMessageWithTyping(msg);
-          }
-        } else {
-          const idx = nextIndex++;
-          const msg = await getMessageAt(idx);
-          if(msg) await emitMessageWithTyping(msg);
+    // compute timing
+    const baseIntervalMs = Math.round(60000 / Math.max(1, cfg.ratePerMin));
+    deterministicRnd = createRnd(cfg.seedBase);
+
+    // iterate pages and messages
+    let currentPageStart = Math.floor(pageIdx / view.pageSize) * view.pageSize;
+    let currentPage = view.nextPage(currentPageStart) || [];
+    let idxWithinPage = pageIdx - currentPageStart;
+    if(idxWithinPage < 0) idxWithinPage = 0;
+
+    // internal emitter function
+    const emitNext = () => {
+      if(!running) return;
+      // if we exhausted current page, fetch next
+      if(idxWithinPage >= currentPage.length){
+        currentPageStart += view.pageSize;
+        // if view.totalSize exists and exceeded, wrap to 0
+        if(view.totalSize !== null && view.totalSize !== undefined && currentPageStart >= view.totalSize){
+          currentPageStart = 0;
         }
-      }catch(e){ console.warn('localLoop error', e); }
-    }, intervalMs);
-    return localTimer;
+        currentPage = view.nextPage(currentPageStart) || [];
+        idxWithinPage = 0;
+        // if still empty, stop
+        if(!currentPage || !currentPage.length){
+          console.warn('SimulationEngine: no messages returned for page start', currentPageStart);
+          stop();
+          return;
+        }
+      }
+
+      const m = currentPage[idxWithinPage];
+      pageIdx = currentPageStart + idxWithinPage;
+      idxWithinPage++;
+
+      // simulate typing before send?
+      const doTyping = cfg.simulateTypingBeforeSend && (deterministicRnd() < cfg.simulateTypingFraction);
+      if(doTyping && window && typeof triggerTypingForNames === 'function'){
+        const name = (m && (m.displayName || m.name)) ? (m.displayName || m.name) : 'Someone';
+        const typingDur = computeTypingDurationForMessage(m);
+        try{
+          triggerTypingForNames([name], typingDur);
+        }catch(e){}
+        // render after typingDur plus a small natural delay
+        setTimeout(()=>{
+          try{ window.renderMessage && window.renderMessage(m, true); }catch(e){ console.warn('SimulationEngine: renderMessage failed', e); }
+        }, typingDur + Math.round((deterministicRnd() - 0.5) * 180)); // small +/- jitter to feel organic
+      } else {
+        // immediate render
+        try{ window.renderMessage && window.renderMessage(m, true); }catch(e){ console.warn('SimulationEngine: renderMessage failed', e); }
+      }
+
+      // schedule next emit with jitter
+      const jitter = Math.round((deterministicRnd() - 0.5) * baseIntervalMs * cfg.jitterFraction);
+      const nextDelay = Math.max(20, baseIntervalMs + jitter);
+      timer = setTimeout(emitNext, nextDelay);
+    };
+
+    // kick off first emit
+    timer = setTimeout(emitNext, 0);
   }
 
-  function stopLocalLoop(){
-    if(localTimer){ clearInterval(localTimer); localTimer = null; }
-  }
-
-  // when using MessagePool.streamToUI: call streamToUI with a hook that triggers TypingEngine for "typing before send" if requested.
-  // We cannot intercept internal streamToUI emission easily, but we can mimic typing by scheduling TypingEngine.triggerTyping() at intervals that align with rate.
-  function startStreamedMode(){
-    stopStreamedMode();
+  // start using MessagePool.streamToUI (fast) - only used when simulateTypingBeforeSend === false
+  function startStreamAPI(){
     if(!window.MessagePool || typeof window.MessagePool.streamToUI !== 'function'){
-      console.warn('MessagePool.streamToUI unavailable — falling back to local loop.');
-      return startLocalLoop();
+      console.warn('SimulationEngine: MessagePool.streamToUI not available, falling back to manual generator view.');
+      startManualStream();
+      return;
     }
 
-    // If simulateTypingBeforeSend is false, just delegate to streamToUI directly.
-    if(!cfg.simulateTypingBeforeSend){
-      streamController = window.MessagePool.streamToUI({
-        startIndex: nextIndex,
-        ratePerMin: cfg.msgsPerMin,
-        jitterMs: Math.round(60000/cfg.msgsPerMin*0.25),
-        onEmit: (m, idx) => { nextIndex = idx + 1; } // keep nextIndex in sync
-      });
-      return streamController;
-    }
-
-    // If simulateTypingBeforeSend is true, we cannot easily intercept streamToUI to delay emission,
-    // so we create our own lightweight streaming by using MessagePool.getRange or createGeneratorView in pages.
-    // Use createGeneratorView if available for efficiency.
-    if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
-      try{
-        generatorView = window.MessagePool.createGeneratorView({ pageSize: cfg.generatorPageSize, seedBase: cfg.seedBase, spanDays: (window.MessagePool.meta && window.MessagePool.meta.spanDays) || undefined });
-        generatorPage = null;
-        generatorPageIdx = 0;
-        generatorPageStart = nextIndex;
-        // set up local loop but this time drawing from generatorView pages (efficient paging)
-        stopLocalLoop();
-        const intervalMs = Math.max(20, Math.round(60000 / clamp(cfg.msgsPerMin, 1, 5000)));
-        localTimer = setInterval(async ()=>{
-          try{
-            if(!running) return;
-            // refill page buffer if exhausted
-            if(!generatorPage || generatorPageIdx >= generatorPage.length){
-              generatorPageStart = nextIndex;
-              generatorPage = generatorView.nextPage(generatorPageStart);
-              generatorPageIdx = 0;
-              if(!generatorPage || !generatorPage.length){
-                // no page available -> attempt to wrap to 0
-                nextIndex = 0;
-                generatorPageStart = nextIndex;
-                generatorPage = generatorView.nextPage(generatorPageStart);
-                generatorPageIdx = 0;
-                if(!generatorPage || !generatorPage.length) return;
-              }
-            }
-
-            // emit one or burst
-            if(rng() < cfg.burstChance){
-              const burstSize = Math.floor(cfg.burstSizeMin + rng() * (cfg.burstSizeMax - cfg.burstSizeMin + 1));
-              for(let i=0;i<burstSize;i++){
-                if(generatorPageIdx >= generatorPage.length){ break; }
-                const msg = generatorPage[generatorPageIdx++];
-                nextIndex++;
-                if(msg) await emitMessageWithTyping(msg);
-              }
-            } else {
-              if(generatorPageIdx < generatorPage.length){
-                const msg = generatorPage[generatorPageIdx++];
-                nextIndex++;
-                if(msg) await emitMessageWithTyping(msg);
-              }
-            }
-          }catch(e){ console.warn('streamedMode (generator) inner error', e); }
-        }, intervalMs);
-        return localTimer;
-      }catch(e){
-        console.warn('generatorView streaming failed, falling back to getRange/local loop', e);
-      }
-    }
-
-    // fallback: stream by repeatedly calling MessagePool.getRange( nextIndex, 1 ) in intervals
-    stopLocalLoop();
-    const intervalMs = Math.max(20, Math.round(60000 / clamp(cfg.msgsPerMin, 1, 5000)));
-    localTimer = setInterval(async ()=>{
-      try{
-        if(!running) return;
-        if(rng() < cfg.burstChance){
-          const burstSize = Math.floor(cfg.burstSizeMin + rng() * (cfg.burstSizeMax - cfg.burstSizeMin + 1));
-          for(let i=0;i<burstSize;i++){
-            const idx = nextIndex++;
-            const arr = window.MessagePool.getRange(idx, 1);
-            const msg = arr && arr[0];
-            if(msg) await emitMessageWithTyping(msg);
+    // Use streamToUI; pass an onEmit callback for instrumentation (it is called after renderMessage in the MessagePool implementation)
+    const opts = {
+      startIndex: pageIdx || 0,
+      ratePerMin: cfg.ratePerMin,
+      jitterMs: Math.round((60000 / Math.max(1, cfg.ratePerMin)) * cfg.jitterFraction),
+      onEmit: (m, idx) => {
+        pageIdx = idx + 1;
+        // occasional typing nudges to TypingEngine to keep UI lively (independent)
+        try{
+          if(Math.random() < 0.02){
+            const name = (m && (m.displayName || m.name)) ? (m.displayName || m.name) : null;
+            if(name) triggerTypingForNames([name], Math.round(200 + Math.random()*900));
           }
-        } else {
-          const idx = nextIndex++;
-          const arr = window.MessagePool.getRange(idx, 1);
-          const msg = arr && arr[0];
-          if(msg) await emitMessageWithTyping(msg);
-        }
-      }catch(e){ console.warn('streamToUI fallback local loop error', e); }
-    }, intervalMs);
-    return localTimer;
+        }catch(e){}
+      }
+    };
+
+    currentStreamer = MessagePool.streamToUI(opts);
   }
 
-  function stopStreamedMode(){
-    if(streamController && typeof streamController.stop === 'function'){ try{ streamController.stop(); }catch(e){} }
-    streamController = null;
-    // stop any local timers
-    stopLocalLoop();
-  }
-
-  /* ---------- Public API ---------- */
+  // public API
   const SimulationEngine = {
     configure(opts){
       opts = opts || {};
-      if(opts.seedBase !== undefined && opts.seedBase !== null){
-        cfg.seedBase = Number(opts.seedBase);
-        rng = xorshift32(cfg.seedBase);
-      } else {
-        // if user cleared seedBase, revert to Math.random
-        if(opts.seedBase === null) rng = Math.random;
-      }
-
-      // shallow merge of other opts
-      const keys = ['useStreamAPI','simulateTypingBeforeSend','msgsPerMin','typingBeforeMsMin','typingBeforeMsMax','burstChance','burstSizeMin','burstSizeMax','generatorPageSize'];
-      keys.forEach(k => { if(opts[k] !== undefined) cfg[k] = opts[k]; });
-
+      if(opts.seedBase !== undefined) cfg.seedBase = (opts.seedBase === null ? null : Number(opts.seedBase));
+      if(opts.useStreamAPI !== undefined) cfg.useStreamAPI = !!opts.useStreamAPI;
+      if(opts.simulateTypingBeforeSend !== undefined) cfg.simulateTypingBeforeSend = !!opts.simulateTypingBeforeSend;
+      if(opts.ratePerMin !== undefined) cfg.ratePerMin = Math.max(1, Number(opts.ratePerMin));
+      if(opts.pageSize !== undefined) cfg.pageSize = Math.max(1, Number(opts.pageSize));
+      if(opts.jitterFraction !== undefined) cfg.jitterFraction = clamp(Number(opts.jitterFraction), 0, 1);
+      if(opts.typingMinMs !== undefined) cfg.typingMinMs = Math.max(10, Number(opts.typingMinMs));
+      if(opts.typingMaxMs !== undefined) cfg.typingMaxMs = Math.max(cfg.typingMinMs, Number(opts.typingMaxMs));
+      if(opts.typingPerCharMs !== undefined) cfg.typingPerCharMs = Math.max(1, Number(opts.typingPerCharMs));
+      if(opts.simulateTypingFraction !== undefined) cfg.simulateTypingFraction = clamp(Number(opts.simulateTypingFraction), 0, 1);
       return Object.assign({}, cfg);
     },
 
     start(){
       if(running) return;
       running = true;
-      // ensure rng respects current seedBase
-      if(cfg.seedBase !== null && cfg.seedBase !== undefined) rng = xorshift32(cfg.seedBase);
-      else rng = Math.random;
+      // clear any previous timers/streamers
+      this.stop();
 
-      // initialize nextIndex (if MessagePool has state, try to resume near newest)
-      if(window.MessagePool && Array.isArray(window.MessagePool.messages) && window.MessagePool.messages.length){
-        // start near end if not previously set, to simulate "recent messages"
-        if(nextIndex <= 0) nextIndex = Math.max(0, window.MessagePool.messages.length - 60);
+      // Prefer generator/manual streaming when simulateTypingBeforeSend is true (because streamToUI renders messages directly)
+      if(cfg.useStreamAPI && !cfg.simulateTypingBeforeSend && window.MessagePool && typeof window.MessagePool.streamToUI === 'function'){
+        startStreamAPI();
       } else {
-        if(nextIndex <= 0) nextIndex = 0;
+        startManualStream();
       }
-
-      // if useStreamAPI and streamToUI present, try to start streamed mode
-      if(cfg.useStreamAPI && window.MessagePool && typeof window.MessagePool.streamToUI === 'function'){
-        startStreamedMode();
-      } else {
-        // fallback: local loop that reads messages individually
-        startLocalLoop();
-      }
-
-      console.info('SimulationEngine started', cfg);
+      return true;
     },
 
     stop(){
-      if(!running) return;
       running = false;
-      stopStreamedMode();
-      stopLocalLoop();
-      console.info('SimulationEngine stopped');
+      if(timer){ clearTimeout(timer); timer = null; }
+      if(currentStreamer && typeof currentStreamer.stop === 'function'){ try{ currentStreamer.stop(); }catch(e){} currentStreamer = null; }
+      return true;
     },
 
-    isRunning(){ return !!running; },
+    isRunning(){ return running; },
 
-    // emit a single message by absolute index (useful for tests)
-    async emitOnce(index){
-      if(typeof index !== 'number') { console.warn('emitOnce expects numeric index'); return null; }
-      const m = await getMessageAt(index);
-      if(m) await emitMessageWithTyping(m);
+    // emit a single message immediately (respects simulateTypingBeforeSend setting)
+    triggerOnce(){
+      if(!window.MessagePool) return null;
+      // small helper to obtain next message without advancing pageIdx too far
+      const view = (window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function') ?
+                    window.MessagePool.createGeneratorView({ pageSize: cfg.pageSize, seedBase: cfg.seedBase }) :
+                    (window.MessagePool && typeof window.MessagePool.getRange === 'function') ? {
+                      pageSize: cfg.pageSize,
+                      nextPage: (s) => window.MessagePool.getRange(s, cfg.pageSize),
+                      get: (i) => (window.MessagePool.getMessageByIndex ? window.MessagePool.getMessageByIndex(i) : (window.MessagePool.getRange ? window.MessagePool.getRange(i,1)[0] : null))
+                    } : null;
+      if(!view) return null;
+
+      const m = view.get ? view.get(pageIdx) : (view.nextPage ? (view.nextPage(pageIdx)[0]) : null);
+      if(!m) return null;
+      // advance index for next calls
+      pageIdx++;
+
+      const doTyping = cfg.simulateTypingBeforeSend && (Math.random() < cfg.simulateTypingFraction);
+      if(doTyping){
+        const name = m.displayName || m.name || 'Someone';
+        const typingDur = computeTypingDurationForMessage(m);
+        triggerTypingForNames([name], typingDur);
+        setTimeout(()=>{ try{ window.renderMessage && window.renderMessage(m, true); }catch(e){ console.warn('SimulationEngine.triggerOnce render failed', e); } }, typingDur + 80);
+      } else {
+        try{ window.renderMessage && window.renderMessage(m, true); }catch(e){ console.warn('SimulationEngine.triggerOnce render failed', e); }
+      }
       return m;
     },
 
-    // preview N messages synchronously using best available read API
-    previewOnce(count){
-      count = clamp(Number(count) || 20, 1, 1000);
-      if(window.MessagePool && typeof window.MessagePool.preGenerateTemplates === 'function'){
-        try{
-          return window.MessagePool.preGenerateTemplates(count, { seedBase: cfg.seedBase, spanDays: (window.MessagePool.meta && window.MessagePool.meta.spanDays) || undefined });
-        }catch(e){ console.warn('preGenerateTemplates failed', e); }
-      }
-      // fallback: synchronous getRange
-      if(window.MessagePool && typeof window.MessagePool.getRange === 'function'){
-        try{ return window.MessagePool.getRange(0, count); }catch(e){}
-      }
-      return [];
-    },
+    // setter helpers
+    setRate(r){ cfg.ratePerMin = Math.max(1, Number(r)); },
+    setUseStreamAPI(b){ cfg.useStreamAPI = !!b; },
+    setSimulateTypingBeforeSend(b){ cfg.simulateTypingBeforeSend = !!b; },
 
-    // reset internal index to a specific value
-    seekTo(index){
-      nextIndex = Math.max(0, Number(index) || 0);
-      // clear generator caches so streaming will reflect new index
-      generatorView = null; generatorPage = null; generatorPageIdx = 0; generatorPageStart = nextIndex;
-    }
+    // internal debug/state
+    _cfg(){ return Object.assign({}, cfg); },
+    _state(){ return { running, pageIdx }; }
   };
 
-  // attach the engine
+  // expose globally
   window.SimulationEngine = SimulationEngine;
 
-  // auto-configure: default deterministic seed if MessagePool has a seed
-  setTimeout(()=>{
-    try{
-      if(window.MessagePool && window.MessagePool.meta && window.MessagePool.meta.seedBase){
-        SimulationEngine.configure({ seedBase: window.MessagePool.meta.seedBase });
-      } else {
-        // keep default (non-deterministic)
-      }
-    }catch(e){}
-  }, 200);
-
-  console.info('SimulationEngine loaded — call SimulationEngine.configure(...) then .start() to run.');
+  // friendly auto-log
+  console.info('SimulationEngine loaded — uses MessagePool.createGeneratorView() when available. Defaults:', DEFAULTS);
 
 })();
