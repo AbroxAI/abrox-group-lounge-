@@ -1,488 +1,347 @@
-// ui-adapter.js
-// Full UI glue for Abrox + presence wiring that uses SyntheticPeople.simulatePresenceStep()
-// - Exposes window._abrox.setSampleMembers and window._abrox.showTyping
-// - Renders members list and messages
-// - Attaches interactions (context menu / long-press / pin / reply)
-// - Presence wiring updates #onlineCount periodically (diff updates for visible members)
-// - Demo: prefill chat from MessagePool.getRange(0,40) when both MessagePool and renderMessage are present
-// - Added: window._abrox.init(options), safer text insertion (avoids XSS), send-button wiring, presence controls
-(function uiAdapterGlobal(){
-  if(window._abrox && window._abrox._uiAdapterLoaded) return;
-  window._abrox = window._abrox || {};
-  window._abrox._uiAdapterLoaded = true;
+// simulation-engine.js
+// Demo SimulationEngine that wires MessagePool.createGeneratorView() + TypingEngine.triggerTyping()
+// - Default: useStreamAPI: true (efficient for very large pools)
+// - If simulateTypingBeforeSend: true -> manual streaming with typing-before-send delays (more natural, slower)
+// - Uses TypingEngine.triggerTyping() when available, otherwise falls back to window._abrox.showTyping()
+// - Deterministic option via seedBase
+// - Methods: configure, start, stop, simulateBurst, oneShot, simulateOnce, setRng
+//
+// Notes: When MessagePool.createGeneratorView() exists the engine will prefer it for streaming to avoid allocating huge arrays.
 
-  /* ---------- Helpers ---------- */
-  function escapeHtml(s){ return (''+s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
-  function formatTime(ts) {
-    const d = new Date(ts || Date.now());
-    return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+(function globalSimulationEngine(){
+  if(window.SimulationEngine) return;
+  const DEFAULTS = {
+    seedBase: null,               // null -> Math.random; number -> deterministic xorshift32
+    msgsPerMin: 45,               // average messages per minute when streaming
+    useStreamAPI: true,           // prefer MessagePool.streamToUI()/createGeneratorView().streamToUI() for very large pools
+    simulateTypingBeforeSend: true, // manual streaming by default for natural typing
+    typingDelayPerCharMs: 40,     // approx ms per character to simulate typing duration
+    typingDelayMinMs: 400,        // minimum typing indicator duration
+    typingDelayMaxMs: 2500,       // maximum typing indicator duration
+    burstChance: 0.12,            // chance at each tick to create a burst
+    burstMultiplier: 2.5,         // burst will increase rate by this factor
+    manualBatchSize: 1,           // when manual streaming, how many messages to emit at once (usually 1)
+    rngWarmSeedOffset: 97         // small offset used for deterministic per-message rng tweaks
+  };
+
+  // tiny deterministic PRNG (xorshift32)
+  function xorshift32(seed){
+    let x = (seed >>> 0) || 0x811c9dc5;
+    return function(){
+      x |= 0;
+      x ^= x << 13; x >>>= 0;
+      x ^= x >>> 17; x >>>= 0;
+      x ^= x << 5; x >>>= 0;
+      return (x >>> 0) / 4294967296;
+    };
   }
+
+  function now(){ return Date.now(); }
   function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
 
-  // presence helper (UI-visible)
-  window.presenceOf = function(m){
-    if(!m) return 'offline';
-    const d = Date.now() - (m.lastActive || 0);
-    if(d < 90*1000) return 'online';
-    if(d < 300*1000) return 'idle';
-    return 'offline';
-  };
+  const Engine = {
+    _cfg: Object.assign({}, DEFAULTS),
+    _running: false,
+    _streamHandle: null,
+    _manualLoopPromise: null,
+    _rnd: Math.random,
+    _manualIndex: 0,
 
-  /* ---------- Config / runtime flags (init can override) ---------- */
-  let AUTO_PREFILL = true;
-  let PRESENCE_INTERVAL_MS = 20_000;
-  let PRESENCE_OPTS = { percent: 0.01 };
-  let _presenceTicker = null;
-
-  /* ---------- Exposed: setSampleMembers (SyntheticPeople.injectToUI calls this) ---------- */
-  window._abrox.setSampleMembers = function(members){
-    try{
-      window.sampleMembers = members || [];
-      const pc = document.getElementById('memberCount');
-      if(pc) pc.textContent = (members.length||0).toLocaleString();
-      renderMemberWindow();
-    }catch(e){
-      console.warn('setSampleMembers failed', e);
-    }
-  };
-
-  /* ---------- Typing indicator hook (used by TypingEngine) ---------- */
-  window._abrox.showTyping = function(names){
-    try{
-      const typingRow = document.getElementById('typingRow');
-      const typingText = document.getElementById('typingText');
-      if(!typingRow || !typingText) return;
-      if(!names || !names.length){
-        typingRow.classList.remove('active');
-        document.getElementById('membersRow') && document.getElementById('membersRow').classList.remove('hidden');
-        return;
-      }
-      typingText.textContent = names.length === 1 ? `${names[0]} is typing…` : names.length === 2 ? `${names[0]} and ${names[1]} are typing…` : `${names.length} people are typing…`;
-      typingRow.classList.add('active');
-      document.getElementById('membersRow') && document.getElementById('membersRow').classList.add('hidden');
-      // auto-hide after short random interval (safety)
-      setTimeout(()=>{ typingRow.classList.remove('active'); document.getElementById('membersRow') && document.getElementById('membersRow').classList.remove('hidden'); }, 1000 + Math.random()*1800);
-    }catch(e){ console.error('showTyping error', e); }
-  };
-
-  /* ---------- Member window rendering (renders a visible slice) ---------- */
-  function renderMemberWindow(){
-    const memberListEl = document.getElementById('memberList');
-    if(!memberListEl) return;
-    memberListEl.innerHTML = '';
-    const slice = (window.sampleMembers || []).slice(0, 120);
-    slice.forEach(p => {
-      const div = document.createElement('div');
-      div.className = 'member-row';
-      div.setAttribute('role','listitem');
-      // store data-member-id for diff updates
-      div.setAttribute('data-member-id', p.id || p.name || '');
-
-      const presenceColor = presenceOf(p) === 'online' ? '#22c55e' : presenceOf(p) === 'idle' ? '#f59e0b' : '#94a3b8';
-      const avatarSrc = p.avatar || '';
-      div.innerHTML = `<div style="display:flex;gap:8px;align-items:center">
-        <div style="position:relative">
-          <img src="${escapeHtml(avatarSrc)}" class="w-10 h-10 rounded-full avatar" alt="${escapeHtml(p.displayName)}" loading="lazy" width="40" height="40">
-          <span class="presence-dot" style="position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:999px;background:${presenceColor};border:2px solid #1c1f26"></span>
-        </div>
-        <div style="min-width:0">
-          <div style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(p.displayName)}</div>
-          <div style="font-size:11px;color:var(--muted)">${escapeHtml(p.role || '')}</div>
-        </div>
-      </div>`;
-      memberListEl.appendChild(div);
-    });
-  }
-
-  /* ---------- Message rendering (safer: set content.textContent to avoid XSS) ---------- */
-  function ensureChatScrollToEnd(chatEl){
-    if(!chatEl) return;
-    if(chatEl.scrollTop + chatEl.clientHeight < chatEl.scrollHeight - 60){
-      const unreadBtn = document.getElementById('unreadBtn');
-      if(unreadBtn){
-        unreadBtn.textContent = '⬇ New messages';
-        unreadBtn.style.display = 'block';
-      }
-    } else {
-      chatEl.scrollTop = chatEl.scrollHeight;
-    }
-  }
-
-  window.renderMessage = function(m, isNew){
-    try{
-      const chat = document.getElementById('chat');
-      if(!chat || !m) return;
-      // date pill when day changes
-      const d = new Date(m.time || Date.now());
-      const day = d.toDateString();
-      if(chat._lastDate !== day){
-        const pill = document.createElement('div');
-        pill.className = 'date-pill';
-        pill.textContent = (day === (new Date()).toDateString() ? 'Today' : day);
-        chat.appendChild(pill);
-        chat._lastDate = day;
-      }
-
-      const grouped = false; // placeholder for grouping logic
-      const el = document.createElement('div');
-      el.className = 'msg ' + ((m.out) ? 'out' : 'in') + (grouped ? ' grouped' : '');
-      el.dataset.id = m.id || ('id_' + Math.random().toString(36).slice(2,9));
-
-      const badge = m.role === 'ADMIN' ? '<span class="role-pill admin">ADMIN</span>' : (m.role === 'MOD' ? '<span class="role-pill mod">MOD</span>' : '<span class="verified-bubble" title="Verified"><i data-lucide="award" style="width:12px;height:12px"></i></span>');
-      const avatarHtml = (!m.out) ? `<img class="avatar" src="${escapeHtml(m.avatar||'')}" alt="${escapeHtml(m.displayName||m.name||'')}" loading="lazy">` : '';
-
-      el.innerHTML = `${avatarHtml}
-        <div class="bubble" role="article">
-          ${!m.out ? `<div class="sender">${escapeHtml(m.displayName || m.name)} ${badge}</div>` : ''}
-          <div class="content" data-msg-id="${escapeHtml(String(m.id || ''))}"></div>
-          <div class="time"><i data-lucide="eye" class="w-3 h-3"></i> · ${formatTime(m.time || Date.now())}</div>
-        </div>`;
-
-      chat.appendChild(el);
-      // set the content safely
-      const contentEl = el.querySelector('.content');
-      if(contentEl){
-        try{ contentEl.textContent = typeof m.text === 'string' ? m.text : (m.text == null ? '' : String(m.text)); }catch(e){ contentEl.textContent = String(m.text); }
-      }
-      try{ lucide.createIcons(); }catch(e){}
-      ensureChatScrollToEnd(chat);
-      attachMessageInteractions(el, m);
-    }catch(err){
-      console.error('renderMessage error', err, m);
-    }
-  };
-
-  /* ---------- Message interactions (context menu, longpress) ---------- */
-  window.attachMessageInteractions = function(domEl, msg){
-    if(!domEl) return;
-    domEl.addEventListener('contextmenu', (ev) => {
-      ev.preventDefault(); showContextMenuAt(ev.clientX, ev.clientY, msg, domEl);
-    });
-    let touchTimer = null, startX=0, startY=0;
-    domEl.addEventListener('touchstart', (ev) => {
-      if(touchTimer) clearTimeout(touchTimer);
-      const t = ev.touches && ev.touches[0];
-      if(!t) return;
-      startX = t.clientX; startY = t.clientY;
-      touchTimer = setTimeout(() => { showContextMenuAt(t.clientX, t.clientY, msg, domEl); touchTimer = null; }, 520);
-    }, {passive:true});
-    domEl.addEventListener('touchmove', (ev) => {
-      if(!touchTimer) return;
-      const t = ev.touches && ev.touches[0];
-      if(!t) return;
-      if(Math.abs(t.clientX - startX) > 12 || Math.abs(t.clientY - startY) > 12){
-        clearTimeout(touchTimer); touchTimer = null;
-      }
-    }, {passive:true});
-    domEl.addEventListener('touchend', () => { if(touchTimer){ clearTimeout(touchTimer); touchTimer = null; } });
-  };
-
-  function showContextMenuAt(x,y,msg,anchorEl){
-    try{
-      document.querySelectorAll('.context-menu').forEach(n=>n.remove());
-      const menu = document.createElement('div');
-      menu.className = 'context-menu';
-      menu.style.position = 'fixed';
-      menu.style.left = x + 'px';
-      menu.style.top = y + 'px';
-      menu.style.zIndex = 9999;
-      menu.innerHTML = `<div class="menu-item" data-action="reply">Reply</div><div class="menu-item" data-action="pin">Pin</div>`;
-      document.body.appendChild(menu);
-      const rect = menu.getBoundingClientRect();
-      if(rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 8) + 'px';
-      if(rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 8) + 'px';
-      menu.querySelector('[data-action="reply"]').addEventListener('click', ()=>{ menu.remove(); setReplyTo(msg.id); });
-      menu.querySelector('[data-action="pin"]').addEventListener('click', ()=>{ menu.remove(); pinMessage(msg.id); });
-      setTimeout(()=>{ document.addEventListener('click', function closer(e){ if(!menu.contains(e.target)){ menu.remove(); document.removeEventListener('click', closer); } }); }, 10);
-    }catch(e){ console.warn('showContextMenuAt', e); }
-  }
-
-  /* ---------- Pin behavior ---------- */
-  window.pinMessage = function(id){
-    try{
-      const el = document.querySelector(`[data-id="${id}"]`);
-      let txt = 'Pinned message';
-      if(el && el.querySelector('.content')) txt = el.querySelector('.content').textContent;
-      const pinnedTextEl = document.getElementById('pinnedText');
-      if(pinnedTextEl) pinnedTextEl.textContent = txt.length > 160 ? txt.slice(0,157) + '...' : txt;
-      const banner = document.getElementById('pinnedBanner');
-      if(banner) banner.classList.remove('hidden');
-      try{ localStorage.setItem('pinned_message_id', id); localStorage.setItem('pinned_message_text', txt); }catch(e){}
-    }catch(e){ console.warn('pinMessage error', e); }
-  };
-
-  // unpin handler (wire to UI button if present)
-  (function wireUnpin(){
-    const unpinBtn = document.getElementById('unpinBtn');
-    if(unpinBtn){
-      unpinBtn.addEventListener('click', ()=>{ const pb = document.getElementById('pinnedBanner'); if(pb) pb.classList.add('hidden'); try{ localStorage.removeItem('pinned_message_id'); localStorage.removeItem('pinned_message_text'); }catch(e){} });
-    }
-  })();
-
-  /* ---------- Reply preview UI ---------- */
-  let replyTargetId = null;
-  window.setReplyTo = function(msgId){
-    try{
-      const target = document.querySelector(`[data-id="${msgId}"]`);
-      if(!target) return;
-      const senderText = target.querySelector('.sender') ? target.querySelector('.sender').textContent : 'Message';
-      const snippet = target.querySelector('.content') ? target.querySelector('.content').textContent.slice(0,120) : '';
-      const container = document.getElementById('replyPreviewContainer');
-      container.innerHTML = `<div class="reply-preview" id="replyPreview">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:700">${escapeHtml(senderText)}</div>
-          <div style="font-size:11px;opacity:.65;cursor:pointer" id="replyCancelBtn">Cancel</div>
-        </div>
-        <div class="snippet">${escapeHtml(snippet)}</div>
-      </div>`;
-      const cancel = document.getElementById('replyCancelBtn');
-      if(cancel) cancel.addEventListener('click', ()=>{ clearReplyPreview(); });
-      replyTargetId = msgId;
-      // visual focus: ensure footer is visible
-      const input = document.getElementById('input');
-      if(input) input.focus();
-    }catch(e){ console.warn('setReplyTo failed', e); }
-  };
-
-  function clearReplyPreview(){
-    const container = document.getElementById('replyPreviewContainer');
-    if(container) container.innerHTML = '';
-    replyTargetId = null;
-  }
-
-  /* ---------- Basic UI wiring: members sidebar toggle, unread button, send button wiring ---------- */
-  (function uiControls(){
-    const membersBtn = document.getElementById('membersBtn');
-    const sidebar = document.getElementById('sidebar');
-    const closeSidebar = document.getElementById('closeSidebar');
-    if(membersBtn && sidebar){
-      membersBtn.addEventListener('click', ()=>{
-        const isHidden = sidebar.classList.contains('translate-x-full');
-        if(isHidden){
-          sidebar.classList.remove('translate-x-full');
-          sidebar.setAttribute('aria-hidden','false');
-        } else {
-          sidebar.classList.add('translate-x-full');
-          sidebar.setAttribute('aria-hidden','true');
-        }
-      });
-    }
-    if(closeSidebar && sidebar){
-      closeSidebar.addEventListener('click', ()=>{ sidebar.classList.add('translate-x-full'); sidebar.setAttribute('aria-hidden','true'); });
-    }
-
-    const unreadBtn = document.getElementById('unreadBtn');
-    if(unreadBtn){
-      unreadBtn.addEventListener('click', ()=>{
-        const chat = document.getElementById('chat');
-        if(chat){ chat.scrollTop = chat.scrollHeight; unreadBtn.style.display = 'none'; }
-      });
-    }
-
-    // wire send button to simulate outgoing message (safe text insertion)
-    const sendBtn = document.getElementById('send');
-    const inputEl = document.getElementById('input');
-    if(sendBtn && inputEl){
-      sendBtn.addEventListener('click', ()=> {
-        const txt = (inputEl.value || '').trim();
-        if(!txt) return;
-        const m = {
-          id: 'out_' + Date.now(),
-          name: 'You',
-          displayName: 'You',
-          role: 'YOU',
-          avatar: '',
-          text: txt, // keep raw here; renderMessage will safely set textContent
-          out: true,
-          time: Date.now(),
-          replyTo: replyTargetId
-        };
-        window.renderMessage(m, true);
-        inputEl.value = '';
-        clearReplyPreview();
-        sendBtn.classList.add('hidden');
-      });
-      // show send when typing
-      inputEl.addEventListener('input', ()=>{
-        if(inputEl.value && inputEl.value.trim().length) sendBtn.classList.remove('hidden'); else sendBtn.classList.add('hidden');
-      });
-    }
-  })();
-
-  /* ---------- Presence wiring: simulatePresenceStep -> UI (#onlineCount) ----------
-     Uses incremental DOM updates for presence dots in visible member list to avoid full re-renders.
-  */
-  function _updateOnlineDisplay(){
-    try{
-      // nudge presence in SyntheticPeople (if available)
-      if(window.SyntheticPeople && typeof window.SyntheticPeople.simulatePresenceStep === 'function'){
-        try{ window.SyntheticPeople.simulatePresenceStep(PRESENCE_OPTS); }catch(e){}
-      }
-
-      // pick data source
-      const list = (window.sampleMembers && window.sampleMembers.length) ? window.sampleMembers : (window.SyntheticPeople && Array.isArray(window.SyntheticPeople.people) ? window.SyntheticPeople.people : []);
-      if(!list || !list.length){
-        const el = document.getElementById('onlineCount');
-        if(el) el.textContent = '0';
-        return;
-      }
-
-      // compute online count quickly
-      let online = 0;
-      for(let i=0;i<list.length;i++){
-        const p = list[i];
-        try{
-          if((window.presenceOf || function(m){ const d = Date.now() - (m.lastActive || 0); if(d < 90*1000) return 'online'; if(d < 300*1000) return 'idle'; return 'offline'; })(p) === 'online') online++;
-        }catch(e){}
-      }
-      const el = document.getElementById('onlineCount');
-      if(el) el.textContent = online.toLocaleString();
-
-      // Efficiently update visible member list presence dots (diff)
-      const memberListEl = document.getElementById('memberList');
-      if(memberListEl && memberListEl.children && memberListEl.children.length){
-        // build map of id -> presence
-        const presenceMap = new Map();
-        for(let i=0;i<list.length;i++){
-          const p = list[i];
-          const id = p.id || p.name || String(i);
-          presenceMap.set(id, window.presenceOf(p));
-        }
-        // iterate existing rows and patch presence dot
-        Array.from(memberListEl.children).forEach(row => {
-          try{
-            const mid = row.getAttribute('data-member-id') || '';
-            const pd = row.querySelector('.presence-dot');
-            if(!pd) return;
-            const state = presenceMap.get(mid) || 'offline';
-            const color = state === 'online' ? '#22c55e' : state === 'idle' ? '#f59e0b' : '#94a3b8';
-            pd.style.background = color;
-          }catch(e){}
-        });
+    configure(opts){
+      opts = opts || {};
+      Object.assign(this._cfg, opts);
+      // set RNG
+      if(this._cfg.seedBase !== null && this._cfg.seedBase !== undefined){
+        this.setRng(this._cfg.seedBase);
       } else {
-        // fallback: re-render entire member window if no DOM to diff
-        try{ renderMemberWindow(); }catch(e){}
+        this._rnd = Math.random;
       }
-    }catch(err){
-      console.warn('presenceWiring.updateOnlineDisplay error', err);
-    }
-  }
+      return Object.assign({}, this._cfg);
+    },
 
-  // start/stop presence ticker (respecting configured interval)
-  function startPresenceTicker(){
-    if(_presenceTicker) clearInterval(_presenceTicker);
-    _presenceTicker = setInterval(_updateOnlineDisplay, Math.max(1000, PRESENCE_INTERVAL_MS));
-    // initial tick soon
-    setTimeout(_updateOnlineDisplay, 600);
-  }
-  function stopPresenceTicker(){
-    if(_presenceTicker) { clearInterval(_presenceTicker); _presenceTicker = null; }
-  }
+    setRng(seed){
+      if(seed === null || seed === undefined) { this._rnd = Math.random; return; }
+      this._cfg.seedBase = Number(seed);
+      this._rnd = xorshift32(Number(seed));
+    },
 
-  // expose presence controls
-  window._abrox.presenceControls = {
-    stop: () => stopPresenceTicker(),
-    start: () => startPresenceTicker(),
-    tickNow: () => _updateOnlineDisplay(),
-    setPercent: (p) => { PRESENCE_OPTS.percent = clamp(Number(p) || 0.01, 0, 1); _updateOnlineDisplay(); },
-    setIntervalMs: (ms) => { PRESENCE_INTERVAL_MS = Math.max(500, Number(ms) || 20000); startPresenceTicker(); }
-  };
+    _rand(){ return (typeof this._rnd === 'function') ? this._rnd() : Math.random(); },
 
-  /* ---------- Auto-restore pinned message from localStorage ---------- */
-  (function restorePinned(){
-    try{
-      const pid = localStorage.getItem('pinned_message_id');
-      const ptxt = localStorage.getItem('pinned_message_text');
-      if(pid && ptxt){
-        const el = document.getElementById('pinnedText');
-        if(el) el.textContent = ptxt;
-        const banner = document.getElementById('pinnedBanner');
-        if(banner) banner.classList.remove('hidden');
+    _triggerTyping(names, duration){
+      try{
+        const dur = Math.max(150, Number(duration) || 800);
+        if(window.TypingEngine && typeof window.TypingEngine.triggerTyping === 'function'){
+          try{ window.TypingEngine.triggerTyping(names, dur); return; }catch(e){}
+        }
+        if(window._abrox && typeof window._abrox.showTyping === 'function'){
+          try{ window._abrox.showTyping(names); return; }catch(e){}
+        }
+        const typingRow = document.getElementById && document.getElementById('typingRow');
+        const typingText = document.getElementById && document.getElementById('typingText');
+        if(typingRow && typingText){
+          typingText.textContent = names.length === 1 ? `${names[0]} is typing…` : names.length === 2 ? `${names[0]} and ${names[1]} are typing…` : `${names.length} people are typing…`;
+          typingRow.classList.add('active');
+          setTimeout(()=> typingRow.classList.remove('active'), dur);
+        }
+      }catch(e){
+        console.warn('SimulationEngine._triggerTyping failed', e);
       }
-    }catch(e){}
-  })();
+    },
 
-  /* ---------- Demo: prefill chat from MessagePool.getRange(0,40) ---------- */
-  // Exposed as window._abrox.prefillFromMessagePool(start = 0, count = 40)
-  window._abrox.prefillFromMessagePool = function(start = 0, count = 40){
-    try{
-      if(!window.MessagePool || typeof window.MessagePool.getRange !== 'function'){
-        console.warn('prefillFromMessagePool: MessagePool.getRange not available');
-        return [];
+    _estimateTypingDurationForText(text){
+      try{
+        if(!text) return this._cfg.typingDelayMinMs;
+        const base = Math.max(0, (text.length || 0) * (this._cfg.typingDelayPerCharMs || 40));
+        const jitter = Math.floor(this._rand() * 350);
+        const dur = clamp(base + jitter, this._cfg.typingDelayMinMs, this._cfg.typingDelayMaxMs);
+        return dur;
+      }catch(e){
+        return this._cfg.typingDelayMinMs;
       }
-      if(typeof window.renderMessage !== 'function'){
-        console.warn('prefillFromMessagePool: renderMessage not available');
-        return [];
-      }
-      const msgs = window.MessagePool.getRange(Number(start) || 0, Number(count) || 40) || [];
-      // ensure chat cleared of previous date pills for clarity
-      const chat = document.getElementById('chat');
-      if(chat) chat.innerHTML = '';
-      for(let i=0;i<msgs.length;i++){
-        try{ window.renderMessage(msgs[i], false); }catch(e){ console.warn('renderMessage failed for prefill', e); }
-      }
-      return msgs;
-    }catch(e){
-      console.warn('prefillFromMessagePool error', e);
-      return [];
-    }
-  };
+    },
 
-  // Auto-run once shortly after load if both MessagePool and renderMessage are present.
-  // This prefill is conservative (40 messages) and only runs once unless re-invoked.
-  setTimeout(()=>{
-    try{
-      if(window.MessagePool && typeof window.MessagePool.getRange === 'function' && typeof window.renderMessage === 'function'){
-        // do not auto-run if user explicitly disabled via global flag
-        if(window._abrox && window._abrox.disableAutoPrefill) return;
-        if(!AUTO_PREFILL) return;
+    async _manualStreamLoop(startIndex){
+      this._manualIndex = (typeof startIndex === 'number' && startIndex >= 0) ? Number(startIndex) : 0;
+      const ratePerMin = clamp(Number(this._cfg.msgsPerMin) || 45, 1, 5000);
+      const avgIntervalMs = Math.round(60000 / ratePerMin);
+
+      this._running = true;
+      while(this._running){
         try{
-          const sample = window.MessagePool.getRange(0, 40);
-          if(sample && sample.length) {
-            // clear chat then render
-            const chat = document.getElementById('chat');
-            if(chat) chat.innerHTML = '';
-            sample.forEach(m => { try{ window.renderMessage(m, false); }catch(e){} });
+          const isBurst = this._rand() < (this._cfg.burstChance || 0.12);
+          const mult = isBurst ? (this._cfg.burstMultiplier || 2.5) : 1;
+          const toEmit = Math.max(1, Math.round((this._cfg.manualBatchSize || 1) * mult));
+
+          for(let e=0;e<toEmit && this._running; e++){
+            // pick next message using generator view or MessagePool
+            let msg = null;
+            const poolLen = (window.MessagePool && window.MessagePool.meta && window.MessagePool.meta.size) ? window.MessagePool.meta.size : (window.MessagePool && window.MessagePool.messages && window.MessagePool.messages.length) || 1;
+            // prefer generator view if available
+            if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
+              try{
+                // create a transient view (cheap) using current meta if needed
+                const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: window.MessagePool.meta.size || window.MessagePool.meta.size, seedBase: window.MessagePool.meta.seedBase || window.MessagePool.meta.seedBase, spanDays: window.MessagePool.meta.spanDays });
+                msg = view.getMessageByIndex(this._manualIndex % (view.size || poolLen));
+              }catch(e){}
+            } else if(window.MessagePool && typeof window.MessagePool.getMessageByIndex === 'function'){
+              msg = window.MessagePool.getMessageByIndex(this._manualIndex % (poolLen));
+            }
+
+            this._manualIndex++;
+
+            if(this._cfg.simulateTypingBeforeSend){
+              const names = [];
+              try{
+                if(msg && msg.displayName) names.push(msg.displayName);
+                if(this._rand() < 0.35 && window.SyntheticPeople && Array.isArray(window.SyntheticPeople.people) && window.SyntheticPeople.people.length){
+                  const rndIdx = Math.floor(this._rand() * window.SyntheticPeople.people.length);
+                  const extra = window.SyntheticPeople.people[rndIdx];
+                  if(extra && extra.displayName && !names.includes(extra.displayName)) names.push(extra.displayName);
+                }
+              }catch(e){}
+              const typingDur = this._estimateTypingDurationForText((msg && msg.text) ? msg.text : '');
+              this._triggerTyping(names.length ? names : ['Someone'], typingDur);
+              await sleep(Math.max(120, Math.round(typingDur * (0.75 + this._rand()*0.25))));
+            }
+
+            try{
+              if(msg){
+                window.renderMessage(msg, true);
+              }
+            }catch(e){
+              console.warn('SimulationEngine manual render failed', e);
+            }
           }
-        }catch(e){ console.warn('auto prefill failed', e); }
-      }
-    }catch(e){}
-  }, 700);
 
-  /* ---------- Public init & control API ---------- */
-  // options: { autoPrefill, presenceIntervalMs, presencePercent }
-  window._abrox.init = function(options){
-    try{
-      options = options || {};
-      if(typeof options.autoPrefill === 'boolean') AUTO_PREFILL = !!options.autoPrefill;
-      if(typeof options.presenceIntervalMs !== 'undefined') PRESENCE_INTERVAL_MS = Math.max(500, Number(options.presenceIntervalMs) || PRESENCE_INTERVAL_MS);
-      if(typeof options.presencePercent !== 'undefined') PRESENCE_OPTS.percent = clamp(Number(options.presencePercent) || PRESENCE_OPTS.percent, 0, 1);
-      // apply presence ticker settings
-      startPresenceTicker();
-      // optionally prefill if requested and components available
-      if(AUTO_PREFILL && options.autoPrefill && window.MessagePool && typeof window.MessagePool.getRange === 'function' && typeof window.renderMessage === 'function'){
-        window._abrox.prefillFromMessagePool(0, options.prefillCount || 40);
+          const nextMs = Math.max(20, Math.round(avgIntervalMs * (0.6 + this._rand()*0.8)));
+          await sleep(nextMs);
+        }catch(err){
+          console.warn('SimulationEngine manual loop error', err);
+          await sleep(500);
+        }
       }
-      return { autoPrefill: AUTO_PREFILL, presenceIntervalMs: PRESENCE_INTERVAL_MS, presencePercent: PRESENCE_OPTS.percent };
-    }catch(e){
-      console.warn('ui-adapter.init failed', e);
-      return null;
-    }
+    },
+
+    _startStreamAPI(){
+      // prefer generator view (no heavy allocation)
+      if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
+        try{
+          const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: window.MessagePool.meta.size || window.MessagePool.meta.size, seedBase: window.MessagePool.meta.seedBase || window.MessagePool.meta.seedBase, spanDays: window.MessagePool.meta.spanDays });
+          const rate = clamp(Number(this._cfg.msgsPerMin) || 45, 1, 5000);
+          this._streamHandle = view.streamToUI({
+            startIndex: 0,
+            ratePerMin: rate,
+            jitterMs: Math.round((60000 / rate) * 0.25),
+            onEmit: (msg, idx) => {
+              if(this._cfg.simulateTypingBeforeSend){
+                const names = (msg && msg.displayName) ? [msg.displayName] : ['Someone'];
+                const typingDur = clamp(this._estimateTypingDurationForText(msg && msg.text) * 0.6, 200, this._cfg.typingDelayMaxMs);
+                this._triggerTyping(names, typingDur);
+              }
+            }
+          });
+          this._running = true;
+          return;
+        }catch(e){
+          console.warn('SimulationEngine generator view streaming failed, falling back to MessagePool.streamToUI', e);
+        }
+      }
+
+      // fallback to MessagePool.streamToUI if available and messages allocated
+      if(window.MessagePool && typeof window.MessagePool.streamToUI === 'function'){
+        try{
+          const rate = clamp(Number(this._cfg.msgsPerMin) || 45, 1, 5000);
+          this._streamHandle = window.MessagePool.streamToUI({
+            startIndex: 0,
+            ratePerMin: rate,
+            jitterMs: Math.round((60000 / rate) * 0.25),
+            onEmit: (msg, idx) => {
+              if(this._cfg.simulateTypingBeforeSend){
+                const names = (msg && msg.displayName) ? [msg.displayName] : ['Someone'];
+                const typingDur = clamp(this._estimateTypingDurationForText(msg && msg.text) * 0.6, 200, this._cfg.typingDelayMaxMs);
+                this._triggerTyping(names, typingDur);
+              }
+            }
+          });
+          this._running = true;
+          return;
+        }catch(e){
+          console.warn('SimulationEngine._startStreamAPI failed, falling back to manual', e);
+        }
+      }
+
+      // final fallback: manual
+      return this._startManual();
+    },
+
+    _startManual(){
+      if(this._running) return;
+      this._running = true;
+      this._manualLoopPromise = this._manualStreamLoop(0);
+    },
+
+    start(){
+      if(this._running) return;
+      if(this._cfg.useStreamAPI && !this._cfg.simulateTypingBeforeSend){
+        this._startStreamAPI();
+      } else if(this._cfg.useStreamAPI && this._cfg.simulateTypingBeforeSend){
+        // prefer generator-based stream if available but we want typing -> manual gives most realistic typing
+        if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
+          // we still use generator view but simulate typing before each message by wrapping the view
+          this._startManual(); // manual still uses generator view internally
+        } else {
+          this._startManual();
+        }
+      } else {
+        this._startManual();
+      }
+      return true;
+    },
+
+    stop(){
+      this._running = false;
+      if(this._streamHandle && typeof this._streamHandle.stop === 'function'){
+        try{ this._streamHandle.stop(); }catch(e){}
+        this._streamHandle = null;
+      }
+      // manual loop will exit on next iteration because _running=false
+      return true;
+    },
+
+    async simulateBurst(opts){
+      opts = opts || {};
+      const size = clamp(Number(opts.size) || 8, 1, 1000);
+      const delay = clamp(Number(opts.delay) || 800, 50, 10_000);
+
+      if(this._cfg.simulateTypingBeforeSend || !this._cfg.useStreamAPI || !window.MessagePool){
+        for(let i=0;i<size;i++){
+          let msg = null;
+          const poolLen = (window.MessagePool && window.MessagePool.meta && window.MessagePool.meta.size) ? window.MessagePool.meta.size : (window.MessagePool && window.MessagePool.messages && window.MessagePool.messages.length) || 1;
+          if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
+            const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: window.MessagePool.meta.size, seedBase: window.MessagePool.meta.seedBase, spanDays: window.MessagePool.meta.spanDays });
+            msg = view.getMessageByIndex(Math.floor(this._rand() * view.size));
+          } else if(window.MessagePool && typeof window.MessagePool.getMessageByIndex === 'function'){
+            msg = window.MessagePool.getMessageByIndex(Math.floor(this._rand() * poolLen));
+          }
+          if(msg){
+            if(this._cfg.simulateTypingBeforeSend){
+              const dur = this._estimateTypingDurationForText(msg.text);
+              this._triggerTyping([msg.displayName || msg.name || 'Someone'], dur);
+              await sleep(Math.max(120, Math.round(dur * (0.6 + this._rand()*0.4))));
+            }
+            try{ window.renderMessage(msg, true); }catch(e){ console.warn('simulateBurst render failed', e); }
+          }
+          await sleep(delay + Math.round(this._rand() * (delay * 0.4)));
+        }
+        return;
+      }
+
+      // efficient path: use generator view streamToUI (stop shortly after)
+      try{
+        const view = window.MessagePool.createGeneratorView ? window.MessagePool.createGeneratorView({ size: window.MessagePool.meta.size || 1, seedBase: window.MessagePool.meta.seedBase }) : null;
+        if(view){
+          const startIndex = Math.max(0, Math.floor(this._rand() * (view.size || 1)));
+          const stream = view.streamToUI({ startIndex, ratePerMin: Math.max(1, Math.round((size / (delay/1000/60)) || this._cfg.msgsPerMin)), jitterMs: 50 });
+          await sleep(Math.max(120, size * (delay / Math.max(1, size))));
+          if(stream && typeof stream.stop === 'function') stream.stop();
+          return;
+        }
+      }catch(e){
+        console.warn('simulateBurst generator stream failed, falling back', e);
+      }
+
+      // last fallback: simulate manually
+      for(let i=0;i<size;i++){
+        const poolLen = (window.MessagePool && window.MessagePool.messages && window.MessagePool.messages.length) || 1;
+        const idx = Math.floor(this._rand() * (poolLen));
+        const msg = window.MessagePool ? window.MessagePool.getMessageByIndex(idx) : null;
+        if(msg){
+          if(this._cfg.simulateTypingBeforeSend){
+            const dur = this._estimateTypingDurationForText(msg.text);
+            this._triggerTyping([msg.displayName || msg.name || 'Someone'], dur);
+            await sleep(Math.max(120, Math.round(dur * (0.6 + this._rand()*0.4))));
+          }
+          try{ window.renderMessage(msg, true); }catch(e){}
+        }
+        await sleep(delay + Math.round(this._rand() * (delay * 0.4)));
+      }
+    },
+
+    async oneShot(index){
+      index = Number(index) || 0;
+      let msg = null;
+      if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
+        const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: window.MessagePool.meta.size || 1, seedBase: window.MessagePool.meta.seedBase });
+        msg = view.getMessageByIndex(index % (view.size || 1));
+      } else if(window.MessagePool && typeof window.MessagePool.getMessageByIndex === 'function'){
+        msg = window.MessagePool.getMessageByIndex(index);
+      }
+      if(!msg) return null;
+      if(this._cfg.simulateTypingBeforeSend){
+        const dur = this._estimateTypingDurationForText(msg.text);
+        this._triggerTyping([msg.displayName || msg.name || 'Someone'], dur);
+        await sleep(Math.max(120, Math.round(dur * (0.75 + this._rand()*0.25))));
+      }
+      try{ window.renderMessage(msg, true); }catch(e){ console.warn('oneShot render failed', e); }
+      return msg;
+    },
+
+    simulateOnce(){
+      if(this._cfg.useStreamAPI && !this._cfg.simulateTypingBeforeSend && window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
+        const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: window.MessagePool.meta.size || 1, seedBase: window.MessagePool.meta.seedBase });
+        const idx = Math.floor(this._rand() * (view.size || 1));
+        return this.oneShot(idx);
+      } else {
+        return this.simulateBurst({ size: 1, delay: 100 });
+      }
+    },
+
+    isRunning(){ return !!this._running; },
+
+    getConfig(){ return Object.assign({}, this._cfg); }
   };
 
-  // helper to toggle the global disable flag
-  window._abrox.setDisableAutoPrefill = function(disable){
-    window._abrox.disableAutoPrefill = !!disable;
-  };
-
-  /* ---------- Exports for testing/debugging ---------- */
-  window._abrox.renderMemberWindow = renderMemberWindow;
-  window._abrox.renderMessage = window.renderMessage;
-  window._abrox.clearReplyPreview = function(){ try{ clearReplyPreview(); }catch(e){} };
-
-  // start presence ticker now with current defaults
-  startPresenceTicker();
-
-  // friendly log
-  console.info('ui-adapter loaded — presence wiring active (diff updates). Demo prefill available via window._abrox.prefillFromMessagePool(start,count). Use window._abrox.init({...}) to configure.');
+  window.SimulationEngine = Engine;
+  console.info('SimulationEngine ready — generator view wired if available. simulateTypingBeforeSend is enabled by default.');
 })();
