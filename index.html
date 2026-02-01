@@ -59,7 +59,6 @@ html,body{height:100%}
   display:flex;gap:8px;margin-bottom:8px;align-items:flex-end;
   transition:transform .18s ease, opacity .18s ease;
   will-change: transform, opacity;
-  backface-visibility: hidden;
 }
 .msg.out{justify-content:flex-end}
 .grouped{margin-top:-6px}
@@ -197,7 +196,7 @@ html,body{height:100%}
 /* whatsapp-style lock icon: slide-up; initial off-screen and animated via transform */
 .input-shell .mic-lock-icon{
   position:absolute;left:12px;bottom:50%;transform:translateY(14px);display:flex;align-items:center;gap:6px;opacity:0;transition:transform .18s ease, opacity .18s ease;
-  pointer-events:none;
+  pointer-events:none;color:#fff;
 }
 .input-shell.locked .mic-lock-icon{transform:translateY(0);opacity:1}
 
@@ -337,22 +336,24 @@ section{-webkit-overflow-scrolling:touch}
 /* ================= INIT & TUNABLES ================= */
 requestAnimationFrame(()=>{ try{ lucide.createIcons(); }catch(e){} });
 
-// TUNABLES: adjust these to match exact feel
+// WhatsApp-like preset (applied)
 const TUNABLES = {
   WAVE: {
-    amplitude: 0.7,
-    glow: 24,
-    backOpacity: 0.42,
-    smooth: 0.92
+    amplitude: 0.72,   // 0.1 - 1.0
+    glow: 20,          // px shadow
+    backOpacity: 0.42, // background waveform faintness
+    smooth: 0.94       // 0-1 (1.0 -> very smooth)
   },
   LOCK: {
-    lockThreshold: 48,
-    slideDistance: 90,
+    lockThreshold: 60,   // px vertical swipe to consider "lock"
+    slideDistance: 120,  // px slide-up distance for more explicit feel
     slideEase: 160
   },
   SEEN: {
-    aggressiveness: 0.6,
-    baseOutgoing: 75
+    aggressiveness: 0.6,    // 0-1
+    baseOutgoing: 75,
+    incomingFraction: 0.45, // fraction of online users used as baseline for incoming message views
+    incomingMinBaseline: 48 // min baseline for incoming messages
   },
   ONLINE: {
     smoothFactorMin: 0.12,
@@ -410,14 +411,33 @@ let virtualOnlineCount = Number(localStorage.getItem('virtual_online') || 75);
 let pinnedMessageId = localStorage.getItem('pinned_message_id') || null;
 let replyTo = null;
 
-/* ================= MEMBERS / PRESENCE ================= */
+/* ================ UTIL: UI update for input area ================ */
+function updateInputUI(){
+  const hasText = !!input.value.trim();
+  if(recording && locked){
+    // recording locked: show send (send will send voice)
+    send.classList.remove('hidden');
+    mediaBtn.classList.add('hidden');
+    micBtn.classList.add('hidden');
+  } else if(hasText || replyTo){
+    send.classList.remove('hidden');
+    mediaBtn.classList.add('hidden');
+    micBtn.classList.add('hidden');
+  } else {
+    send.classList.add('hidden');
+    mediaBtn.classList.remove('hidden');
+    micBtn.classList.remove('hidden');
+  }
+}
+input.addEventListener('input', updateInputUI);
+
+/* ================= MEMBERS / PRESENCE / ONLINE ================= */
 function saveMemberCount(){ localStorage.setItem('member_count', String(persistedMemberCount)); }
 function saveVirtualOnline(){ localStorage.setItem('virtual_online', String(virtualOnlineCount)); }
 function tickMemberGrowth(){ if(Math.random() < 0.35){ persistedMemberCount += Math.random() < 0.7 ? 1 : 2; saveMemberCount(); } }
-// slower growth checks to reduce background churn
 setInterval(tickMemberGrowth, 45000 + Math.random()*60000);
 
-/* ================= REALISTIC ONLINE COUNT (time-aware, smoothed, bursts) ================= */
+/* realistic online */
 let onlineSpike = { until: 0, extra: 0 };
 function getDayActivityFactor() {
   const now = new Date();
@@ -462,7 +482,7 @@ function driftOnlineCount(){
 setInterval(driftOnlineCount, 5000);
 driftOnlineCount();
 
-/* ================= render members / presence ================= */
+/* render members */
 function presenceOf(m){ const d = Date.now() - m.lastActive; if(d < 90000) return 'online'; if(d < 300000) return 'idle'; return 'offline'; }
 function renderMembers(){ const q = (memberSearch.value||'').toLowerCase(); memberList.innerHTML = ''; sampleMembers.filter(m=>m.name.toLowerCase().includes(q)).slice(0,80).forEach(m=>{ const p = presenceOf(m); const color = p==='online'?'bg-green-500':p==='idle'?'bg-yellow-400':'bg-gray-500'; memberList.innerHTML += `
       <div class="flex gap-3 items-center" role="listitem">
@@ -483,18 +503,28 @@ renderMembers();
 function typingSimulation(){ if(Math.random() > 0.6) return (typingRow.classList.remove('active'), membersRow.classList.remove('hidden')); const onlinePool = sampleMembers.filter(m=>presenceOf(m) === 'online' && m.role!=='ADMIN'); if(onlinePool.length === 0) return; const count = Math.min(3, 1 + Math.floor(Math.random()*3)); const picks = []; for(let i=0;i<count && onlinePool.length;i++){ const idx = Math.floor(Math.random()*onlinePool.length); picks.push(onlinePool.splice(idx,1)[0]); } if(picks.length === 1){ typingText.textContent = `${picks[0].name} is typing…`; } else if(picks.length === 2){ typingText.textContent = `${picks[0].name} and ${picks[1].name} are typing…`; } else { typingText.textContent = `3 people are typing…`; } typingRow.classList.add('active'); membersRow.classList.add('hidden'); setTimeout(()=>{ typingRow.classList.remove('active'); membersRow.classList.remove('hidden'); }, 900 + Math.random()*2200); }
 setInterval(typingSimulation, 3500);
 
-/* ================= MESSAGE CORE & GLOBAL SEEN TICKER ================= */
+/* ================= MESSAGE CORE & SEEN RECEIPTS ================= */
 let lastSender=null, lastTime=0, lastDate=''; let unread=0;
 const seenCache = {}; // id -> {count, cap}
 
 function initSeenForMessage(msg){
   if(seenCache[msg.id]) return;
-  const base = msg.out ? TUNABLES.SEEN.baseOutgoing + Math.floor(Math.random()*6) : Math.max(3, Math.floor(virtualOnlineCount * (0.02 + Math.random()*0.06)));
-  const cap = Math.max(virtualOnlineCount, TUNABLES.SEEN.baseOutgoing);
-  seenCache[msg.id] = { count: base, cap };
+  // outgoing baseline starts at configured baseOutgoing + random small amount
+  if(msg.out){
+    const base = TUNABLES.SEEN.baseOutgoing + Math.floor(Math.random()*6);
+    seenCache[msg.id] = { count: base, cap: Math.max(virtualOnlineCount, base) };
+  } else {
+    // incoming: use fraction of online users, but never below incomingMinBaseline
+    const baseline = Math.max(TUNABLES.SEEN.incomingMinBaseline, Math.round(virtualOnlineCount * TUNABLES.SEEN.incomingFraction));
+    // small noise
+    const base = baseline - Math.floor(Math.random()*6);
+    const cap = Math.max(virtualOnlineCount, baseline + Math.floor(Math.random()*8));
+    seenCache[msg.id] = { count: Math.max(3, base), cap };
+  }
 }
 function getSeenCountValue(id){ return seenCache[id] ? seenCache[id].count : '·'; }
 
+/* periodically tick seen counts realistically */
 setInterval(()=>{
   const ids = Object.keys(seenCache);
   if(!ids.length) return;
@@ -513,12 +543,15 @@ setInterval(()=>{
   }
 }, 1600);
 
+/* ================= RENDER MESSAGE ================= */
 function postMessage(m){ m.id = crypto.randomUUID(); m.time = Date.now(); setTimeout(()=> renderMessage(m, true), m.out ? 10 : (200 + Math.random()*450)); }
 function dateLabel(d){ const today = new Date(); const diff = Math.floor((today - d)/(86400000)); if(diff===0) return 'Today'; if(diff===1) return 'Yesterday'; return d.toDateString(); }
 function scrollToMessageId(id){ const el = document.querySelector(`[data-id="${id}"]`); if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.transition = 'box-shadow .4s ease'; el.style.boxShadow = '0 0 0 3px rgba(107,219,167,0.12)'; setTimeout(()=>{ el.style.boxShadow = ''; }, 800); } }
 
 function renderMessage(m,isNew){
+  initSeenForMessage(m);
   const d = new Date(m.time);
+
   if(d.toDateString() !== lastDate){
     const pill = document.createElement('div');
     pill.className = 'date-pill';
@@ -542,8 +575,6 @@ function renderMessage(m,isNew){
 
   const avatarHtml = !m.out ? `<img class="avatar" src="${sampleMembers.find(x=>x.name===m.name)?.avatar||''}" alt="${m.name}">` : '';
 
-  initSeenForMessage(m);
-
   el.innerHTML = `
     ${avatarHtml}
     <div class="bubble">
@@ -552,12 +583,13 @@ function renderMessage(m,isNew){
       <div class="content">${m.text}</div>
       <div class="time">
         <i data-lucide="eye" class="w-3 h-3"></i>
-        <span>${getSeenCountValue(m.id)}</span>
+        <span>${ getSeenCountValue(m.id) }</span>
         · ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
       </div>
     </div>
   `;
   chat.appendChild(el);
+  try{ lucide.createIcons(); }catch(e){}
 
   attachMessageInteractions(el, m);
 
@@ -570,15 +602,14 @@ function renderMessage(m,isNew){
   }
 }
 
-setInterval(()=>{ try{ lucide.createIcons(); }catch(e){} }, 1800);
-
-/* interactions: long-press (cancellable on move) & context-menu */
+/* ================= interactions: long-press & context menu ================= */
 function attachMessageInteractions(domEl, msg){
   domEl.addEventListener('contextmenu', (ev) => {
     ev.preventDefault();
     showContextMenuAt(ev.clientX, ev.clientY, msg, domEl);
   });
 
+  // touch long-press cancel on move
   let touchTimer = null;
   let startX = 0, startY = 0;
   domEl.addEventListener('touchstart', (ev) => {
@@ -602,6 +633,7 @@ function attachMessageInteractions(domEl, msg){
   domEl.addEventListener('touchend', ()=>{ if(touchTimer) { clearTimeout(touchTimer); touchTimer = null; }});
 }
 
+/* context menu */
 function showContextMenuAt(x,y,msg,anchorEl){
   document.querySelectorAll('.context-menu').forEach(m=>m.remove());
   const menu = document.createElement('div');
@@ -616,19 +648,20 @@ function showContextMenuAt(x,y,msg,anchorEl){
   `;
   document.body.appendChild(menu);
 
+  // clamp within viewport
   const rect = menu.getBoundingClientRect();
   let left = x, top = y;
   if(left + rect.width > window.innerWidth - 8) left = window.innerWidth - rect.width - 8;
   if(top + rect.height > window.innerHeight - 8) top = window.innerHeight - rect.height - 8;
-  menu.style.left = `${Math.max(8, left)}px`;
-  menu.style.top = `${Math.max(8, top)}px`;
+  menu.style.left = `${Math.max(8,left)}px`;
+  menu.style.top = `${Math.max(8,top)}px`;
 
   menu.querySelector('[data-action="reply"]').addEventListener('click', ()=>{
-    document.querySelectorAll('.context-menu').forEach(m=>m.remove());
+    menu.remove();
     setReplyTo(msg.id);
   });
   menu.querySelector('[data-action="pin"]').addEventListener('click', ()=>{
-    document.querySelectorAll('.context-menu').forEach(m=>m.remove());
+    menu.remove();
     pinMessage(msg.id);
   });
 
@@ -639,12 +672,16 @@ function showContextMenuAt(x,y,msg,anchorEl){
   }, 10);
 }
 
-/* ================= PIN ================= */
+/* ================= PIN MESSAGE ================= */
 function pinMessage(id){
   const target = document.querySelector(`[data-id="${id}"]`);
   let msgContent = 'Pinned message';
-  if(target && target.querySelector('.content')) msgContent = target.querySelector('.content').textContent;
-  else { const existingText = localStorage.getItem('pinned_message_text'); if(existingText) msgContent = existingText; }
+  if(target && target.querySelector('.content')){
+    msgContent = target.querySelector('.content').textContent;
+  } else {
+    const existingText = localStorage.getItem('pinned_message_text');
+    if(existingText) msgContent = existingText;
+  }
   pinnedMessageId = id;
   localStorage.setItem('pinned_message_id', id);
   localStorage.setItem('pinned_message_text', msgContent);
@@ -652,19 +689,22 @@ function pinMessage(id){
   pinnedBanner.classList.remove('hidden');
   try{ lucide.createIcons(); }catch(e){}
 }
-function unpinMessage(){ pinnedMessageId = null; localStorage.removeItem('pinned_message_id'); localStorage.removeItem('pinned_message_text'); pinnedText.textContent = ''; pinnedBanner.classList.add('hidden'); }
-pinnedBanner.addEventListener('click', ()=>{ if(pinnedMessageId) scrollToMessageId(pinnedMessageId); });
+function unpinMessage(){
+  pinnedMessageId = null;
+  localStorage.removeItem('pinned_message_id');
+  localStorage.removeItem('pinned_message_text');
+  pinnedText.textContent = '';
+  pinnedBanner.classList.add('hidden');
+}
+pinnedBanner.addEventListener('click', ()=>{
+  if(pinnedMessageId) scrollToMessageId(pinnedMessageId);
+});
 unpinBtn.addEventListener('click', (e)=>{ e.stopPropagation(); unpinMessage(); });
+
 const storedPinnedText = localStorage.getItem('pinned_message_text');
-if(storedPinnedText){ pinnedText.textContent = storedPinnedText; pinnedBanner.classList.remove('hidden'); }
-if(pinnedMessageId){
-  const tryScroll = setInterval(()=>{
-    if(document.querySelector(`[data-id="${pinnedMessageId}"]`)){
-      clearInterval(tryScroll);
-      try{ lucide.createIcons(); }catch(e){}
-    }
-  }, 500);
-  setTimeout(()=> clearInterval(tryScroll), 10000);
+if(storedPinnedText){
+  pinnedText.textContent = storedPinnedText;
+  pinnedBanner.classList.remove('hidden');
 }
 
 /* ================= REPLY PREVIEW UI ================= */
@@ -678,29 +718,14 @@ function setReplyTo(msgId){
   replyPreviewContainer.innerHTML = `<div class="reply-preview" id="replyPreview"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:700">${sender}</div><div style="font-size:11px;opacity:.65;cursor:pointer" id="clearReply">✕</div></div><div class="snippet">${snippet}</div></div>`;
   document.getElementById('replyPreview').addEventListener('click', ()=> scrollToMessageId(msgId));
   document.getElementById('clearReply').addEventListener('click', (e)=> { e.stopPropagation(); clearReply(); });
-  send.classList.remove('hidden'); mediaBtn.classList.add('hidden'); micBtn.classList.add('hidden'); input.focus();
+  input.focus();
+  updateInputUI();
 }
-function clearReply(){ replyTo = null; replyPreviewContainer.innerHTML = ''; const has = input.value.trim(); if(!has){ send.classList.add('hidden'); mediaBtn.classList.remove('hidden'); micBtn.classList.remove('hidden'); } }
-
-/* ================= SEND HANDLING ================= */
-send.addEventListener('click', (ev) => {
-  if(recording && locked){
-    stopMic(true); return;
-  }
-  if(input.value.trim()){
-    postMessage({ name:'You', role:'VERIFIED', text: input.value.trim(), out:true, replyTo, replyMeta: getReplyMeta(replyTo) });
-    clearReply();
-    input.value = '';
-    send.classList.add('hidden');
-    mediaBtn.classList.remove('hidden');
-    micBtn.classList.remove('hidden');
-    input.focus();
-  }
-});
-function getReplyMeta(msgId){ if(!msgId) return null; const target = document.querySelector(`[data-id="${msgId}"]`); if(!target) return null; return { sender: target.querySelector('.sender') ? target.querySelector('.sender').textContent : 'Message', snippet: target.querySelector('.content') ? target.querySelector('.content').textContent.slice(0,120) : '' }; }
-
-input.addEventListener('keydown', (e) => { if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); if(!send.classList.contains('hidden')) send.click(); } });
-input.oninput = ()=>{ const has = input.value.trim(); if(has || replyTo){ send.classList.remove('hidden'); mediaBtn.classList.add('hidden'); micBtn.classList.add('hidden'); } else { send.classList.add('hidden'); mediaBtn.classList.remove('hidden'); micBtn.classList.remove('hidden'); } };
+function clearReply(){
+  replyTo = null;
+  replyPreviewContainer.innerHTML = '';
+  updateInputUI();
+}
 
 /* ================= EMOJI / MEDIA ================= */
 emojiBtn.onclick = ()=>window.EmojiPack && EmojiPack.openPicker(input);
@@ -721,100 +746,82 @@ fileInput.onchange = e=>{
   fileInput.value='';
 };
 
-/* ================= MIC + WAVEFORM (optimized) ================= */
+/* ================= MIC + WAVEFORM (WhatsApp behaviour) ================= */
 const canvas = document.getElementById('waveform');
 const ctx = canvas.getContext('2d');
 
 let audioCtx, analyser, micStream, mediaRecorder;
 let waveAnim = null, locked=false, recording=false, canceled=false;
 let chunks=[];
-let prevSamples = null;
-let resizeScheduled = false;
+let wavePrev = null; // smoothing buffer
 
 function resizeWave(){
-  if(resizeScheduled) return;
-  resizeScheduled = true;
-  requestAnimationFrame(()=>{
-    try{
-      const style = getComputedStyle(inputShell);
-      const padLeft = parseInt(style.paddingLeft || 12);
-      const padRight = parseInt(style.paddingRight || 12);
-      const total = inputShell.clientWidth - padLeft - padRight - 40;
-      const dpr = window.devicePixelRatio || 1;
-      const w = Math.max(180, total);
-      const h = Math.max(28, inputShell.clientHeight - 6);
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
-      ctx.setTransform(dpr,0,0,dpr,0,0);
-    }catch(e){}
-    resizeScheduled = false;
-  });
+  const style = getComputedStyle(inputShell);
+  const padLeft = parseInt(style.paddingLeft || 12);
+  const padRight = parseInt(style.paddingRight || 12);
+  const reserve = 60; // reserve for icons inside input shell
+  const total = Math.max(180, inputShell.clientWidth - padLeft - padRight - reserve);
+  canvas.width = Math.max(180, total);
+  canvas.height = Math.max(28, inputShell.clientHeight - 6);
+  // init prev array for smoothing
+  wavePrev = new Float32Array(Math.max(128, analyser ? analyser.fftSize : 2048));
 }
 window.addEventListener('resize', resizeWave);
 resizeWave();
 
+/* drawWave using tunables: amplitude, glow, smooth */
 function drawWave(){
-  if(!analyser || !recording) return;
+  if(!analyser || !wavePrev) { waveAnim = requestAnimationFrame(drawWave); return; }
   const bufferLength = analyser.fftSize;
-  const raw = new Uint8Array(bufferLength);
-  analyser.getByteTimeDomainData(raw);
-  const w = canvas.width / (window.devicePixelRatio || 1);
-  const h = canvas.height / (window.devicePixelRatio || 1);
-  ctx.clearRect(0,0,w,h);
+  const data = new Uint8Array(bufferLength);
+  analyser.getByteTimeDomainData(data);
 
-  const samples = new Float32Array(bufferLength);
-  for(let i=0;i<bufferLength;i++){ samples[i] = (raw[i] - 128) / 128; }
-  if(!prevSamples){ prevSamples = new Float32Array(bufferLength); prevSamples.set(samples); }
-  const smooth = TUNABLES.WAVE.smooth;
-  for(let i=0;i<bufferLength;i++){ samples[i] = prevSamples[i] * smooth + samples[i] * (1 - smooth); prevSamples[i] = samples[i]; }
+  // smoothing lerp from previous frame -> reduces jitter
+  const smooth = Math.max(0, Math.min(1, TUNABLES.WAVE.smooth));
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  const centerY = h/2;
-  const slice = w / bufferLength;
-
-  ctx.beginPath();
-  let x=0;
-  for(let i=0;i<bufferLength;i++){
-    const eased = samples[i] * (h * TUNABLES.WAVE.amplitude);
-    const y = centerY + eased;
-    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-    x += slice;
-  }
-  ctx.lineWidth = 2.6;
-  ctx.strokeStyle = 'rgba(59,130,246,0.98)';
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#3b82f6';
+  ctx.shadowColor = 'rgba(59,130,246,0.9)';
   ctx.shadowBlur = TUNABLES.WAVE.glow;
-  ctx.shadowColor = 'rgba(59,130,246,0.45)';
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  ctx.stroke();
 
-  // faint back layer
+  const slice = canvas.width / data.length;
+  let x=0;
+  const center = canvas.height/2;
   ctx.beginPath();
-  x=0;
-  for(let i=0;i<bufferLength;i++){
-    const y = centerY + samples[i] * (h * (TUNABLES.WAVE.amplitude * 0.38));
-    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  for(let i=0;i<data.length;i++){
+    // normalized sample between -1..1
+    const sample = (data[i] - 128) / 128;
+    // smooth between frames
+    const prev = wavePrev[i] || 0;
+    const smp = prev * smooth + sample * (1 - smooth);
+    wavePrev[i] = smp;
+    const amp = TUNABLES.WAVE.amplitude;
+    const y = center + smp * (canvas.height/2) * amp;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
     x += slice;
   }
-  ctx.lineWidth = 1.2;
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = `rgba(59,130,246,${TUNABLES.WAVE.backOpacity})`;
-  ctx.globalCompositeOperation = 'lighter';
   ctx.stroke();
-  ctx.globalCompositeOperation = 'source-over';
 
-  // center guide
+  // faint background line for extra softness
   ctx.beginPath();
-  ctx.lineWidth = 0.6;
-  ctx.strokeStyle = 'rgba(255,255,255,0.02)';
-  ctx.moveTo(0,centerY);
-  ctx.lineTo(w,centerY);
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = TUNABLES.WAVE.backOpacity;
+  for(let i=0, x2=0;i<data.length;i++){
+    const sample = (data[i] - 128) / 128;
+    const prev = wavePrev[i] || 0;
+    const smp = prev * smooth + sample * (1 - smooth);
+    const y = center + smp * (canvas.height/2) * (TUNABLES.WAVE.amplitude*0.6);
+    if(i===0) ctx.moveTo(x2,y); else ctx.lineTo(x2,y);
+    x2 += slice;
+  }
   ctx.stroke();
+  ctx.globalAlpha = 1;
 
   waveAnim = requestAnimationFrame(drawWave);
 }
 
+/* start/stop mic */
 async function startMic(){
   try{
     canceled = false;
@@ -825,6 +832,7 @@ async function startMic(){
     inputShell.classList.add('recording');
     inputShell.classList.remove('locked');
     micLockIcon.querySelector('span').textContent = 'Recording locked';
+
     input.style.display = 'none';
     canvas.style.display = 'block';
     cancelOverlay.classList.remove('visible');
@@ -833,11 +841,13 @@ async function startMic(){
     micStream = await navigator.mediaDevices.getUserMedia({audio:true});
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 1024; // smaller fft -> lower CPU
-    analyser.smoothingTimeConstant = 0.85; // extra smoothing at source
+    analyser.fftSize = 2048;
 
     const source = audioCtx.createMediaStreamSource(micStream);
     source.connect(analyser);
+
+    // ensure resize uses analyser size
+    resizeWave();
 
     let mime = 'audio/webm';
     try {
@@ -874,6 +884,10 @@ async function startMic(){
         chunks = [];
         try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){}
         if(audioCtx && audioCtx.state !== 'closed') audioCtx.close();
+        recording = false;
+        locked = false;
+        canceled = false;
+        updateInputUI();
         return;
       }
 
@@ -896,12 +910,12 @@ async function startMic(){
       locked = false;
       canceled = false;
       clearReply();
+      updateInputUI();
     };
 
     mediaRecorder.start();
-    resizeWave();
-    cancelAnimationFrame(waveAnim);
-    waveAnim = requestAnimationFrame(drawWave);
+    drawWave();
+    updateInputUI();
   }catch(err){
     console.error('Mic start error', err);
     recording = false;
@@ -918,12 +932,14 @@ async function startMic(){
 function stopMic(forceSend=false){
   if(!recording) return;
   if(forceSend) canceled = false;
-  if(canceled && mediaRecorder && mediaRecorder.state !== 'inactive'){
-    mediaRecorder.stop();
-    return;
-  }
   if(mediaRecorder && mediaRecorder.state !== 'inactive'){
     mediaRecorder.stop();
+  } else {
+    // fallback if recorder already inactive
+    try{ micStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+    recording = false; locked = false; canceled = false;
+    input.style.display='block'; canvas.style.display='none'; inputShell.classList.remove('recording');
+    micBtn.setAttribute('aria-pressed','false'); updateInputUI();
   }
 }
 function cancelRecording(){
@@ -935,14 +951,12 @@ function cancelRecording(){
     try{ micStream.getTracks().forEach(t=>t.stop()); }catch(e){}
     recording = false; canceled = false; locked = false;
     input.style.display='block'; canvas.style.display='none'; inputShell.classList.remove('recording');
-    micBtn.setAttribute('aria-pressed','false');
+    micBtn.setAttribute('aria-pressed','false'); updateInputUI();
   }
 }
 
-/* gestures + lock-slide visual feedback (smoother using rAF) */
+/* gesture handling */
 let startY = 0, startX = 0, lastTouchId = null;
-let lockAnimFrame = null;
-let lockProgress = 0;
 function startGesture(e){
   const touch = e.touches ? e.touches[0] : e;
   startY = touch.clientY;
@@ -951,18 +965,8 @@ function startGesture(e){
   canceled = false;
   cancelOverlay.classList.remove('visible');
   cancelOverlay.textContent = 'Swipe left to cancel';
-  micLockIcon.style.transition = `transform ${TUNABLES.LOCK.slideEase}ms ease, opacity ${TUNABLES.LOCK.slideEase}ms ease`;
-  micLockIcon.style.transform = 'translateY(14px)';
-  micLockIcon.style.opacity = 0;
-  if(lockAnimFrame) cancelAnimationFrame(lockAnimFrame);
-  lockProgress = 0;
-  updateLockVisual(0);
 }
-function updateLockVisual(prog){
-  const translate = (1 - prog) * 14;
-  micLockIcon.style.transform = `translateY(${translate}px)`;
-  micLockIcon.style.opacity = prog;
-}
+
 micBtn.addEventListener('touchstart', (e)=>{ e.preventDefault(); startGesture(e); startMic(); }, {passive:false});
 micBtn.addEventListener('mousedown', (e)=>{ if(e.button!==0) return; startGesture(e); startMic(); });
 
@@ -972,20 +976,17 @@ micBtn.addEventListener('touchmove', (e)=> {
   const dy = startY - t.clientY;
   const dx = t.clientX - startX;
 
-  const prog = Math.max(0, Math.min(1, dy / TUNABLES.LOCK.slideDistance));
-  lockProgress = prog;
-  if(lockAnimFrame) cancelAnimationFrame(lockAnimFrame);
-  lockAnimFrame = requestAnimationFrame(()=> updateLockVisual(lockProgress));
-
+  // swipe up to lock
   if(dy > TUNABLES.LOCK.lockThreshold && !locked && !canceled){
     locked = true;
     inputShell.classList.add('locked');
     micLockIcon.querySelector('span').textContent = 'Recording locked';
-    send.classList.remove('hidden');
+    send.classList.remove('hidden'); // show send button when locked
     micBtn.style.display = 'none';
     cancelOverlay.classList.remove('visible');
   }
 
+  // swipe left to cancel
   if(dx < -40 && !canceled && !locked){
     canceled = true;
     cancelOverlay.classList.add('visible');
@@ -1000,12 +1001,14 @@ micBtn.addEventListener('touchend', (e)=> {
   if(canceled){
     cancelRecording();
     cancelOverlay.classList.remove('visible');
-    updateLockVisual(0);
     return;
   }
   if(locked){
+    // remain recording until user taps send
     recording = true;
-    updateLockVisual(1);
+    inputShell.classList.add('locked');
+    micLockIcon.querySelector('span').textContent = 'Recording locked';
+    updateInputUI();
     return;
   }
   if(recording && !locked){
@@ -1014,25 +1017,25 @@ micBtn.addEventListener('touchend', (e)=> {
 }, {passive:false});
 
 micBtn.addEventListener('mouseup', (e)=>{
-  if(canceled){ cancelRecording(); cancelOverlay.classList.remove('visible'); return; }
-  if(locked) return;
-  if(recording && !locked) stopMic();
-});
-
-/* unlock via tapping mic area while locked (convenience) */
-document.addEventListener('click', (e)=>{
-  if(!locked) return;
-  const inside = e.target.closest('#inputShell') || e.target.closest('#micBtn');
-  if(inside) {
+  if(canceled){
     cancelRecording();
-    updateLockVisual(0);
+    cancelOverlay.classList.remove('visible');
+    return;
+  }
+  if(locked){
+    return;
+  }
+  if(recording && !locked){
+    stopMic();
   }
 });
 
-/* visibility change cleanup */
+/* cleanup on visibility change */
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
-    if(recording) cancelRecording();
+    if(recording){
+      cancelRecording();
+    }
   }
 });
 
@@ -1043,7 +1046,7 @@ chat.addEventListener('touchstart', e =>{
   if(!msg) return;
   swipeX = e.touches[0].clientX;
   swipingEl = msg;
-}, {passive:true});
+});
 chat.addEventListener('touchmove', e =>{
   if(!swipingEl) return;
   const dx = e.touches[0].clientX - swipeX;
@@ -1051,7 +1054,7 @@ chat.addEventListener('touchmove', e =>{
     swipingEl.style.transform = `translateX(${Math.min(dx/6,20)}px)`;
     swipingEl.style.opacity = `${Math.max(0.65, 1 - dx/400)}`;
   }
-}, {passive:true});
+});
 chat.addEventListener('touchend', e =>{
   if(!swipingEl) return;
   const finalDx = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX - swipeX : 0;
@@ -1064,18 +1067,43 @@ chat.addEventListener('touchend', e =>{
   swipingEl = null;
 });
 
-/* ================= UI helpers & boot ================= */
+/* ================= SEND HANDLING (text + voice when locked) ================= */
+send.addEventListener('click', (ev) => {
+  if(recording && locked){
+    stopMic(true); // send the locked voice recording
+    return;
+  }
+  if(input.value.trim()){
+    postMessage({ name:'You', role:'VERIFIED', text: input.value.trim(), out:true, replyTo, replyMeta: getReplyMeta(replyTo) });
+    clearReply();
+    input.value = '';
+    updateInputUI();
+    input.focus();
+  }
+});
+
+/* helper: get reply meta */
+function getReplyMeta(msgId){
+  if(!msgId) return null;
+  const target = document.querySelector(`[data-id="${msgId}"]`);
+  if(!target) return null;
+  return {
+    sender: target.querySelector('.sender') ? target.querySelector('.sender').textContent : 'Message',
+    snippet: target.querySelector('.content') ? target.querySelector('.content').textContent.slice(0,120) : ''
+  };
+}
+
+/* ================= MISC UI interactions ================= */
 emojiBtn.onclick = ()=>window.EmojiPack && EmojiPack.openPicker(input);
 membersBtn.onclick = ()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick = ()=>sidebar.classList.add('translate-x-full');
+unreadBtn.addEventListener('click', ()=>{ chat.scrollTop = chat.scrollHeight; unread = 0; unreadBtn.style.display = 'none'; });
 
+/* ================= BOOT / SAMPLE MESSAGES ================= */
 if(!localStorage.getItem('joined')){
   localStorage.setItem('joined','1');
-  setTimeout(()=>{
-    postMessage({ name:'You', role:'VERIFIED', text:'👋 You joined the group', out:false });
-  },400);
+  setTimeout(()=> postMessage({ name:'You', role:'VERIFIED', text:'👋 You joined the group', out:false }), 400);
 }
-
 setTimeout(()=>{
   postMessage({name:ADMIN.name,role:'ADMIN',text:'Welcome everyone 👋',out:false});
   postMessage({name:MOD.name,role:'MOD',text:'Please follow the rules.',out:false});
@@ -1083,24 +1111,7 @@ setTimeout(()=>{
   postMessage({name:'Member_2',role:'VERIFIED',text:'Does anyone share indicators?',out:false});
 },600);
 
-unreadBtn.addEventListener('click', ()=>{
-  chat.scrollTop = chat.scrollHeight;
-  unread = 0;
-  unreadBtn.style.display = 'none';
-});
-
-setTimeout(()=>{
-  if(chat.children.length<=1){
-    postMessage({
-      name:ADMIN.name,
-      role:'ADMIN',
-      text:'Chat initialized successfully.',
-      out:false
-    });
-  }
-  try{ lucide.createIcons(); }catch(e){}
-}, 900);
-
+/* reply-preview click handler */
 chat.addEventListener('click', (e)=>{
   const rp = e.target.closest('.reply-preview');
   if(rp && rp.dataset && rp.dataset.replyTo){
@@ -1109,18 +1120,11 @@ chat.addEventListener('click', (e)=>{
   }
 });
 
-window.addEventListener('beforeunload', ()=>{
-  try{ if(recording) cancelRecording(); }catch(e){}
-});
+/* housekeeping */
+window.addEventListener('beforeunload', ()=>{ try{ if(recording) cancelRecording(); }catch(e){} });
 
-/* expose small helper for debugging */
-window._abrox = {
-  postMessage,
-  renderMessage,
-  pinMessage,
-  unpinMessage,
-  setReplyTo: (id)=> setReplyTo(id)
-};
+/* expose helper for debugging */
+window._abrox = { postMessage, renderMessage, pinMessage, unpinMessage, setReplyTo: (id)=> setReplyTo(id) };
 </script>
 </body>
 </html>
