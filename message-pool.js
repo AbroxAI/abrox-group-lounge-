@@ -6,7 +6,13 @@
 // - Integrates with SyntheticPeople for senders/avatars/roles
 // - Methods: generatePool, regenerateAndInject, getMessageByIndex, getRange, pickRandom,
 //            streamToUI (simulate live emission), exportToJSON, estimatePoolForDuration, preGenerateTemplates
-// - Added: createGeneratorView() for lazy generation & paging (no full materialization)
+// - New: createGeneratorView(opts) -> lightweight paging + streamToUI without full pool allocation
+//
+// Usage (example):
+//   MessagePool.generatePool({ size:100000, seedBase:4000, spanDays:730 });
+//   const view = MessagePool.createGeneratorView({ size: 100000, seedBase: 4000 });
+//   view.getRange(0, 50);
+//   view.streamToUI({ startIndex:0, ratePerMin:45, onEmit: (m,i)=> window.renderMessage(m,true) });
 
 (function globalMessagePool(){
   if(window.MessagePool) return;
@@ -70,11 +76,7 @@
   };
 
   /* ---------- Helpers ---------- */
-  // pickFrom expects an RNG function as second arg
-  function pickFrom(arr, rnd){
-    if(!arr || !arr.length) return null;
-    return arr[Math.floor(rnd()*arr.length)];
-  }
+  function pickFrom(arr, rnd) { if(!arr || !arr.length) return null; return arr[Math.floor((typeof rnd === 'function' ? rnd() : Math.random())*arr.length)]; }
   function renderTemplate(template, env){ return template.replace(/\{(\w+)\}/g, (m,k)=> env[k] !== undefined ? env[k] : m); }
   function fmtPrice(v){ return (Math.round(v*100)/100).toLocaleString(); }
   function fmtPercent(p){ return (Math.round(p*100)/100).toFixed(2) + '%'; }
@@ -84,7 +86,7 @@
     if(token === 'BTC') base = 30000;
     if(token === 'ETH') base = 2000;
     if(token === 'DOGE') base = 0.08;
-    const jitter = (rnd()-0.5) * base * 0.12;
+    const jitter = ((typeof rnd === 'function' ? rnd() : Math.random())-0.5) * base * 0.12;
     return Math.max(0.0001, base + jitter);
   }
 
@@ -241,9 +243,8 @@
         while(lru.has(h) && attempts < 6){
           // regenerate with slight seed tweak to vary wording
           const alt = this._generateMessageForIndex(i + attempts + 1, { size, seedBase: seedBase + attempts + 1, spanDays });
-          // use a seeded RNG when calling pickFrom for variety
-          const altRnd = xorshift32(seedBase + attempts + i);
-          m.text = alt.text + ((attempts % 2 === 0) ? (' ' + pickFrom(EMOJI, altRnd)) : '');
+          // FIX: pass a RNG function into pickFrom (not a numeric sample)
+          m.text = alt.text + ((attempts % 2 === 0) ? (' ' + pickFrom(EMOJI, xorshift32(seedBase + attempts + i))) : '');
           h = contentHash(m.text);
           attempts++;
         }
@@ -271,12 +272,43 @@
       return pool;
     },
 
-    // getters
-    getMessageByIndex(i){ if(!this.messages || !this.messages.length) return null; if(i<0||i>=this.messages.length) return null; return this.messages[i]; },
-    getRange(start, count){ if(!this.messages || !this.messages.length) return []; start = clamp(start,0, Math.max(0,this.messages.length-1)); count = clamp(count,0,this.messages.length-start); return this.messages.slice(start, start+count); },
-    pickRandom(filter){ const pool = filter ? this.messages.filter(filter) : this.messages; if(!pool || !pool.length) return null; return pool[Math.floor(Math.random()*pool.length)]; },
+    getMessageByIndex(i){
+      if(this.messages && this.messages.length){
+        if(i < 0 || i >= this.messages.length) return null;
+        return this.messages[i];
+      }
+      // if no messages array allocated, create on-the-fly using meta
+      if(typeof i !== 'number' || i < 0) return null;
+      return this._generateMessageForIndex(i, { size: this.meta.size, seedBase: this.meta.seedBase, spanDays: this.meta.spanDays });
+    },
 
-    // stream messages to UI like a live feed
+    // existing getRange (works against allocated pool)
+    getRange(start, count){
+      if(this.messages && this.messages.length) {
+        start = clamp(start,0, Math.max(0,this.messages.length-1));
+        count = clamp(count,0,this.messages.length-start);
+        return this.messages.slice(start, start+count);
+      }
+      // generate on-demand
+      start = clamp(start, 0, Math.max(0,(this.meta.size||DEFAULT.size)-1));
+      count = clamp(count, 0, (this.meta.size||DEFAULT.size) - start);
+      const out = [];
+      for(let i=0;i<count;i++){
+        out.push(this._generateMessageForIndex(start + i, { size: this.meta.size, seedBase: this.meta.seedBase, spanDays: this.meta.spanDays }));
+      }
+      return out;
+    },
+
+    pickRandom(filter){ 
+      const pool = filter ? (this.messages && this.messages.length ? this.messages.filter(filter) : null) : (this.messages && this.messages.length ? this.messages : null);
+      if(pool && pool.length) return pool[Math.floor(Math.random()*pool.length)];
+      // fallback: try generating a random index
+      const size = this.meta.size || DEFAULT.size;
+      const idx = Math.floor(Math.random() * size);
+      return this.getMessageByIndex(idx);
+    },
+
+    // stream messages to UI like a live feed (existing array-based implementation)
     // opts: { startIndex, ratePerMin, jitterMs, onEmit(msg,idx) }
     streamToUI(opts){
       opts = opts || {};
@@ -294,8 +326,7 @@
         if(stopped) return;
         const m = this.messages[idx];
         if(m){
-          try{ window.renderMessage(m, true); }catch(e){ console.warn('renderMessage error', e); }
-          if(typeof opts.onEmit === 'function') opts.onEmit(m, idx);
+          try{ if(typeof opts.onEmit === 'function') opts.onEmit(m, idx); else window.renderMessage(m, true); }catch(e){ console.warn('renderMessage error', e); }
         }
         idx++;
         if(idx >= this.messages.length){
@@ -305,6 +336,74 @@
       }, Math.max(20, intervalMs + (Math.random() * jitter - jitter/2)));
 
       return { stop: function(){ stopped = true; clearInterval(timer); } };
+    },
+
+    // NEW: create a generator view that generates messages on demand and provides lightweight paging + stream
+    // opts: { size, seedBase, spanDays, attachmentFraction, replyFraction }
+    createGeneratorView(opts){
+      opts = opts || {};
+      const size = clamp(Number(opts.size || this.meta.size || DEFAULT.size), 1, 10_000_000);
+      const seedBase = Number(opts.seedBase || this.meta.seedBase || DEFAULT.seedBase);
+      const spanDays = Number(opts.spanDays || this.meta.spanDays || DEFAULT.spanDays);
+      const replyFraction = Number(opts.replyFraction || this.meta.replyFraction || DEFAULT.replyFraction);
+      const attachmentFraction = Number(opts.attachmentFraction || this.meta.attachmentFraction || DEFAULT.attachmentFraction);
+
+      // generator object
+      const self = this;
+      let streamTicker = null;
+      let stopped = false;
+
+      return {
+        size,
+        seedBase,
+        spanDays,
+        getMessageByIndex(i){
+          if(typeof i !== 'number' || i < 0) return null;
+          return self._generateMessageForIndex(i, { size, seedBase, spanDays, replyFraction, attachmentFraction });
+        },
+        getRange(start, count){
+          start = clamp(Number(start) || 0, 0, Math.max(0, size-1));
+          count = clamp(Number(count) || 0, 0, Math.max(0, size - start));
+          const out = [];
+          for(let j=0;j<count;j++){
+            out.push(self._generateMessageForIndex(start + j, { size, seedBase, spanDays, replyFraction, attachmentFraction }));
+          }
+          return out;
+        },
+        // streamToUI similar API to MessagePool.streamToUI but generates on the fly
+        // opts: { startIndex, ratePerMin, jitterMs, onEmit(msg,idx) }
+        streamToUI(opts){
+          opts = opts || {};
+          const startIndex = clamp(Number(opts.startIndex || 0), 0, Math.max(0,size-1));
+          const ratePerMin = clamp(Number(opts.ratePerMin || 45), 1, 5000);
+          const intervalMs = Math.round(60000 / ratePerMin);
+          const jitter = Number(opts.jitterMs || Math.round(intervalMs * 0.25));
+          let idx = startIndex;
+          stopped = false;
+          const timer = setInterval(()=>{
+            if(stopped) return;
+            const m = self._generateMessageForIndex(idx % size, { size, seedBase, spanDays, replyFraction, attachmentFraction });
+            if(m){
+              try{ if(typeof opts.onEmit === 'function') opts.onEmit(m, idx); else window.renderMessage(m, true); }catch(e){ console.warn('generator view render error', e); }
+            }
+            idx++;
+            if(idx >= size){
+              idx = Math.max(0, Math.floor(Math.random() * Math.min(1000, size)));
+            }
+          }, Math.max(20, intervalMs + (Math.random() * jitter - jitter/2)));
+
+          return { stop: function(){ stopped = true; clearInterval(timer);} };
+        },
+        // synchronous iterator for pages (useful for UI virtual lists)
+        createPageIterator(pageSize){
+          pageSize = Math.max(1, Math.floor(pageSize || 50));
+          let page = 0;
+          return {
+            next(){ const start = page * pageSize; const out = []; for(let i=0;i<pageSize && start+i < size;i++) out.push(self._generateMessageForIndex(start + i, { size, seedBase, spanDays, replyFraction, attachmentFraction })); page++; return { value: out, done: start >= size }; },
+            reset(){ page = 0; }
+          };
+        }
+      };
     },
 
     // export to JSON (careful — large)
@@ -331,81 +430,6 @@
         out.push(m.text);
       }
       return out;
-    },
-
-    /**
-     * createGeneratorView()
-     * Lightweight generator view (no full pool allocation).
-     * Useful for UI virtual lists or lazy streaming for very large pools.
-     *
-     * Usage:
-     *   const gv = MessagePool.createGeneratorView();
-     *   const page = gv.getPage(0, 50); // returns array of generated messages
-     *   const s = gv.stream({ start:0, ratePerMin: 30, onEmit: (msg, idx) => ... });
-     *   s.stop();
-     */
-    createGeneratorView(){
-      const self = this;
-      return {
-        size: function(){ return (self.meta && self.meta.size) ? Number(self.meta.size) : Number((self.meta && self.meta.size) || 0); },
-
-        // get single item (generates message for index i)
-        getItem: function(i){
-          const idx = Math.floor(Number(i) || 0);
-          if(idx < 0 || idx >= this.size()) return null;
-          return self._generateMessageForIndex(idx, { size: this.size(), seedBase: self.meta.seedBase, spanDays: self.meta.spanDays });
-        },
-
-        // getPage(start, count) -> array of message objects (lazy gen)
-        getPage: function(start, count){
-          start = clamp(Number(start) || 0, 0, Math.max(0, this.size()-1));
-          count = clamp(Number(count) || 0, 0, Math.max(0, this.size() - start));
-          const out = [];
-          for(let i = start; i < start + count; i++){
-            out.push(self._generateMessageForIndex(i, { size: this.size(), seedBase: self.meta.seedBase, spanDays: self.meta.spanDays }));
-          }
-          return out;
-        },
-
-        // lightweight stream that generates messages on the fly (does NOT require materialized pool)
-        // opts: { start, ratePerMin, jitterMs, onEmit(msg, idx) }
-        stream: function(opts){
-          opts = opts || {};
-          const size = this.size();
-          if(!size) {
-            console.warn('GeneratorView.stream: pool size unknown or zero.');
-            return { stop: () => {} };
-          }
-          let idx = clamp(Number(opts.start || 0), 0, Math.max(0, size-1));
-          const ratePerMin = clamp(Number(opts.ratePerMin || 45), 1, 5000);
-          const intervalMs = Math.max(20, Math.round(60000 / ratePerMin));
-          const jitter = Number(opts.jitterMs || Math.round(intervalMs * 0.25));
-          let stopped = false;
-
-          const timer = setInterval(()=>{
-            if(stopped) return;
-            const msg = self._generateMessageForIndex(idx, { size, seedBase: self.meta.seedBase, spanDays: self.meta.spanDays });
-            try{
-              if(typeof opts.onEmit === 'function') opts.onEmit(msg, idx);
-              else if(typeof window.renderMessage === 'function') window.renderMessage(msg, true);
-            }catch(e){ console.warn('GeneratorView.stream emit error', e); }
-            idx++;
-            if(idx >= size){
-              idx = Math.max(0, Math.floor(Math.random() * Math.min(1000, size)));
-            }
-          }, intervalMs + (Math.random() * jitter - jitter/2));
-
-          return {
-            stop: function(){ stopped = true; clearInterval(timer); }
-          };
-        },
-
-        // small helper: estimate pages given a page size
-        estimatePages: function(pageSize){
-          pageSize = Math.max(1, Number(pageSize) || 50);
-          return Math.ceil(this.size() / pageSize);
-        }
-      };
     }
   };
 
