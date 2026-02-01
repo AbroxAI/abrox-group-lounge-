@@ -863,7 +863,18 @@ window._abrox = {
 function presenceOf(m){ const d = Date.now() - m.lastActive; if(d < 90000) return 'online'; if(d < 300000) return 'idle'; return 'offline'; }
 function formatTimeSeconds(s){ return formatTime(s); }
 
-/* End of script */
+/* End of UI script */
 </script>
+
+<!-- ======= Simulation scripts (connect here) =======
+     Place the 5 files in js/ or adjust paths.
+     Order matters: PeopleStore -> MessageBank -> TypingEngine -> Simulation -> Connector
+-->
+<script src="js/synthetic-people.js"></script>
+<script src="js/message-bank.js"></script>
+<script src="js/typing-engine.js"></script>
+<script src="js/simulation-engine.js"></script>
+<script src="js/sim-connector.js"></script>
+
 </body>
 </html>
