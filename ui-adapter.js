@@ -1,18 +1,17 @@
-// ui-adapter.js
+ // ui-adapter.js
 // Full UI glue for Abrox + presence wiring that uses SyntheticPeople.simulatePresenceStep()
 // - Exposes window._abrox.setSampleMembers and window._abrox.showTyping
 // - Renders members list and messages
 // - Attaches interactions (context menu / long-press / pin / reply)
-// - Presence wiring updates #onlineCount periodically (diff updates for visible members)
-// - Demo: prefill chat from MessagePool.getRange(0,40) when both MessagePool and renderMessage are present
-// - Added: window._abrox.init(options), safer text insertion (avoids XSS), send-button wiring, presence controls
+// - Presence wiring updates #onlineCount periodically
+// - Demo: prefill chat from MessagePool.createGeneratorView()/getRange (preferred) or MessagePool.getRange (fallback)
 (function uiAdapterGlobal(){
   if(window._abrox && window._abrox._uiAdapterLoaded) return;
   window._abrox = window._abrox || {};
   window._abrox._uiAdapterLoaded = true;
 
   /* ---------- Helpers ---------- */
-  function escapeHtml(s){ return (''+s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+  function escapeHtml(s){ return (''+s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;', '"':'&quot;', "'":'&#39;'})[c]); }
   function formatTime(ts) {
     const d = new Date(ts || Date.now());
     return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
@@ -27,12 +26,6 @@
     if(d < 300*1000) return 'idle';
     return 'offline';
   };
-
-  /* ---------- Config / runtime flags (init can override) ---------- */
-  let AUTO_PREFILL = true;
-  let PRESENCE_INTERVAL_MS = 20_000;
-  let PRESENCE_OPTS = { percent: 0.01 };
-  let _presenceTicker = null;
 
   /* ---------- Exposed: setSampleMembers (SyntheticPeople.injectToUI calls this) ---------- */
   window._abrox.setSampleMembers = function(members){
@@ -65,7 +58,7 @@
     }catch(e){ console.error('showTyping error', e); }
   };
 
-  /* ---------- Member window rendering (renders a visible slice) ---------- */
+  /* ---------- Member window rendering ---------- */
   function renderMemberWindow(){
     const memberListEl = document.getElementById('memberList');
     if(!memberListEl) return;
@@ -75,15 +68,13 @@
       const div = document.createElement('div');
       div.className = 'member-row';
       div.setAttribute('role','listitem');
-      // store data-member-id for diff updates
-      div.setAttribute('data-member-id', p.id || p.name || '');
 
       const presenceColor = presenceOf(p) === 'online' ? '#22c55e' : presenceOf(p) === 'idle' ? '#f59e0b' : '#94a3b8';
       const avatarSrc = p.avatar || '';
       div.innerHTML = `<div style="display:flex;gap:8px;align-items:center">
         <div style="position:relative">
           <img src="${escapeHtml(avatarSrc)}" class="w-10 h-10 rounded-full avatar" alt="${escapeHtml(p.displayName)}" loading="lazy" width="40" height="40">
-          <span class="presence-dot" style="position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:999px;background:${presenceColor};border:2px solid #1c1f26"></span>
+          <span style="position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:999px;background:${presenceColor};border:2px solid #1c1f26"></span>
         </div>
         <div style="min-width:0">
           <div style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(p.displayName)}</div>
@@ -94,7 +85,7 @@
     });
   }
 
-  /* ---------- Message rendering (safer: set content.textContent to avoid XSS) ---------- */
+  /* ---------- Message rendering ---------- */
   function ensureChatScrollToEnd(chatEl){
     if(!chatEl) return;
     if(chatEl.scrollTop + chatEl.clientHeight < chatEl.scrollHeight - 60){
@@ -134,16 +125,11 @@
       el.innerHTML = `${avatarHtml}
         <div class="bubble" role="article">
           ${!m.out ? `<div class="sender">${escapeHtml(m.displayName || m.name)} ${badge}</div>` : ''}
-          <div class="content" data-msg-id="${escapeHtml(String(m.id || ''))}"></div>
+          <div class="content">${m.text}</div>
           <div class="time"><i data-lucide="eye" class="w-3 h-3"></i> · ${formatTime(m.time || Date.now())}</div>
         </div>`;
 
       chat.appendChild(el);
-      // set the content safely
-      const contentEl = el.querySelector('.content');
-      if(contentEl){
-        try{ contentEl.textContent = typeof m.text === 'string' ? m.text : (m.text == null ? '' : String(m.text)); }catch(e){ contentEl.textContent = String(m.text); }
-      }
       try{ lucide.createIcons(); }catch(e){}
       ensureChatScrollToEnd(chat);
       attachMessageInteractions(el, m);
@@ -215,7 +201,7 @@
   (function wireUnpin(){
     const unpinBtn = document.getElementById('unpinBtn');
     if(unpinBtn){
-      unpinBtn.addEventListener('click', ()=>{ const pb = document.getElementById('pinnedBanner'); if(pb) pb.classList.add('hidden'); try{ localStorage.removeItem('pinned_message_id'); localStorage.removeItem('pinned_message_text'); }catch(e){} });
+      unpinBtn.addEventListener('click', ()=>{ document.getElementById('pinnedBanner').classList.add('hidden'); try{ localStorage.removeItem('pinned_message_id'); localStorage.removeItem('pinned_message_text'); }catch(e){} });
     }
   })();
 
@@ -250,7 +236,7 @@
     replyTargetId = null;
   }
 
-  /* ---------- Basic UI wiring: members sidebar toggle, unread button, send button wiring ---------- */
+  /* ---------- Basic UI wiring: members sidebar toggle, unread button ---------- */
   (function uiControls(){
     const membersBtn = document.getElementById('membersBtn');
     const sidebar = document.getElementById('sidebar');
@@ -279,7 +265,7 @@
       });
     }
 
-    // wire send button to simulate outgoing message (safe text insertion)
+    // optionally wire send button to simulate outgoing message (non-destructive)
     const sendBtn = document.getElementById('send');
     const inputEl = document.getElementById('input');
     if(sendBtn && inputEl){
@@ -292,15 +278,14 @@
           displayName: 'You',
           role: 'YOU',
           avatar: '',
-          text: txt, // keep raw here; renderMessage will safely set textContent
+          text: escapeHtml(txt),
           out: true,
           time: Date.now(),
           replyTo: replyTargetId
         };
-        window.renderMessage(m, true);
+        renderMessage(m, true);
         inputEl.value = '';
         clearReplyPreview();
-        sendBtn.classList.add('hidden');
       });
       // show send when typing
       inputEl.addEventListener('input', ()=>{
@@ -309,84 +294,53 @@
     }
   })();
 
-  /* ---------- Presence wiring: simulatePresenceStep -> UI (#onlineCount) ----------
-     Uses incremental DOM updates for presence dots in visible member list to avoid full re-renders.
-  */
-  function _updateOnlineDisplay(){
-    try{
-      // nudge presence in SyntheticPeople (if available)
-      if(window.SyntheticPeople && typeof window.SyntheticPeople.simulatePresenceStep === 'function'){
-        try{ window.SyntheticPeople.simulatePresenceStep(PRESENCE_OPTS); }catch(e){}
-      }
+  /* ---------- Presence wiring: simulatePresenceStep -> UI (#onlineCount) ---------- */
+  (function presenceWiring(){
+    const PRESENCE_INTERVAL_MS = 20_000;
+    const PRESENCE_OPTS = { percent: 0.01 }; // default: nudge ~1% per tick
 
-      // pick data source
-      const list = (window.sampleMembers && window.sampleMembers.length) ? window.sampleMembers : (window.SyntheticPeople && Array.isArray(window.SyntheticPeople.people) ? window.SyntheticPeople.people : []);
-      if(!list || !list.length){
-        const el = document.getElementById('onlineCount');
-        if(el) el.textContent = '0';
-        return;
-      }
+    function updateOnlineDisplay(){
+      try{
+        if(window.SyntheticPeople && typeof window.SyntheticPeople.simulatePresenceStep === 'function'){
+          try{ window.SyntheticPeople.simulatePresenceStep(PRESENCE_OPTS); }catch(e){}
+        }
 
-      // compute online count quickly
-      let online = 0;
-      for(let i=0;i<list.length;i++){
-        const p = list[i];
-        try{
-          if((window.presenceOf || function(m){ const d = Date.now() - (m.lastActive || 0); if(d < 90*1000) return 'online'; if(d < 300*1000) return 'idle'; return 'offline'; })(p) === 'online') online++;
-        }catch(e){}
-      }
-      const el = document.getElementById('onlineCount');
-      if(el) el.textContent = online.toLocaleString();
+        const list = (window.sampleMembers && window.sampleMembers.length) ? window.sampleMembers : (window.SyntheticPeople && Array.isArray(window.SyntheticPeople.people) ? window.SyntheticPeople.people : []);
+        if(!list || !list.length){
+          const el = document.getElementById('onlineCount');
+          if(el) el.textContent = '0';
+          return;
+        }
 
-      // Efficiently update visible member list presence dots (diff)
-      const memberListEl = document.getElementById('memberList');
-      if(memberListEl && memberListEl.children && memberListEl.children.length){
-        // build map of id -> presence
-        const presenceMap = new Map();
+        let online = 0;
         for(let i=0;i<list.length;i++){
           const p = list[i];
-          const id = p.id || p.name || String(i);
-          presenceMap.set(id, window.presenceOf(p));
-        }
-        // iterate existing rows and patch presence dot
-        Array.from(memberListEl.children).forEach(row => {
           try{
-            const mid = row.getAttribute('data-member-id') || '';
-            const pd = row.querySelector('.presence-dot');
-            if(!pd) return;
-            const state = presenceMap.get(mid) || 'offline';
-            const color = state === 'online' ? '#22c55e' : state === 'idle' ? '#f59e0b' : '#94a3b8';
-            pd.style.background = color;
+            if((window.presenceOf || function(m){ const d = Date.now() - (m.lastActive || 0); if(d < 90*1000) return 'online'; if(d < 300*1000) return 'idle'; return 'offline'; })(p) === 'online') online++;
           }catch(e){}
-        });
-      } else {
-        // fallback: re-render entire member window if no DOM to diff
-        try{ renderMemberWindow(); }catch(e){}
+        }
+
+        const el = document.getElementById('onlineCount');
+        if(el) el.textContent = online.toLocaleString();
+        if(document.getElementById('memberList')) {
+          try{ renderMemberWindow(); }catch(e){}
+        }
+      }catch(err){
+        console.warn('presenceWiring.updateOnlineDisplay error', err);
       }
-    }catch(err){
-      console.warn('presenceWiring.updateOnlineDisplay error', err);
     }
-  }
 
-  // start/stop presence ticker (respecting configured interval)
-  function startPresenceTicker(){
-    if(_presenceTicker) clearInterval(_presenceTicker);
-    _presenceTicker = setInterval(_updateOnlineDisplay, Math.max(1000, PRESENCE_INTERVAL_MS));
-    // initial tick soon
-    setTimeout(_updateOnlineDisplay, 600);
-  }
-  function stopPresenceTicker(){
-    if(_presenceTicker) { clearInterval(_presenceTicker); _presenceTicker = null; }
-  }
+    // initial run + interval
+    setTimeout(updateOnlineDisplay, 600);
+    const presenceTicker = setInterval(updateOnlineDisplay, PRESENCE_INTERVAL_MS);
 
-  // expose presence controls
-  window._abrox.presenceControls = {
-    stop: () => stopPresenceTicker(),
-    start: () => startPresenceTicker(),
-    tickNow: () => _updateOnlineDisplay(),
-    setPercent: (p) => { PRESENCE_OPTS.percent = clamp(Number(p) || 0.01, 0, 1); _updateOnlineDisplay(); },
-    setIntervalMs: (ms) => { PRESENCE_INTERVAL_MS = Math.max(500, Number(ms) || 20000); startPresenceTicker(); }
-  };
+    // expose small control API
+    window._abrox.presenceControls = {
+      stop: () => clearInterval(presenceTicker),
+      tickNow: updateOnlineDisplay,
+      setPercent: (p) => { PRESENCE_OPTS.percent = clamp(Number(p) || 0.01, 0, 1); }
+    };
+  })();
 
   /* ---------- Auto-restore pinned message from localStorage ---------- */
   (function restorePinned(){
@@ -402,19 +356,39 @@
     }catch(e){}
   })();
 
-  /* ---------- Demo: prefill chat from MessagePool.getRange(0,40) ---------- */
+  /* ---------- Demo: prefill chat from MessagePool (generator view preferred) ---------- */
   // Exposed as window._abrox.prefillFromMessagePool(start = 0, count = 40)
   window._abrox.prefillFromMessagePool = function(start = 0, count = 40){
     try{
-      if(!window.MessagePool || typeof window.MessagePool.getRange !== 'function'){
-        console.warn('prefillFromMessagePool: MessagePool.getRange not available');
-        return [];
+      if(!window.MessagePool){ console.warn('prefillFromMessagePool: MessagePool not available'); return []; }
+
+      const s = Number(start) || 0;
+      const c = Math.max(0, Math.min(Number(count) || 40, 200));
+      let msgs = [];
+
+      // Prefer generator view when available (no large allocations)
+      if(typeof window.MessagePool.createGeneratorView === 'function'){
+        try{
+          const metaSize = (window.MessagePool.meta && window.MessagePool.meta.size) ? window.MessagePool.meta.size : (window.MessagePool.meta ? window.MessagePool.meta.size : 100000);
+          const seedBase = (window.MessagePool.meta && window.MessagePool.meta.seedBase) ? window.MessagePool.meta.seedBase : undefined;
+          const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: metaSize, seedBase: seedBase });
+          msgs = view.getRange(s, c);
+        }catch(e){
+          console.warn('prefillFromMessagePool: generator view failed, falling back', e);
+        }
       }
-      if(typeof window.renderMessage !== 'function'){
-        console.warn('prefillFromMessagePool: renderMessage not available');
-        return [];
+
+      // fallback: old getRange
+      if(!msgs || !msgs.length){
+        if(typeof window.MessagePool.getRange === 'function'){
+          try{ msgs = window.MessagePool.getRange(s, c) || []; }catch(e){ console.warn('prefillFromMessagePool fallback getRange failed', e); }
+        } else if(typeof window.MessagePool.getMessageByIndex === 'function'){
+          try{ for(let i=0;i<c;i++){ msgs.push(window.MessagePool.getMessageByIndex(s + i)); } }catch(e){ console.warn('prefillFromMessagePool fallback per-index failed', e); }
+        }
       }
-      const msgs = window.MessagePool.getRange(Number(start) || 0, Number(count) || 40) || [];
+
+      if(!msgs || !msgs.length){ console.warn('prefillFromMessagePool: no messages to prefill'); return []; }
+
       // ensure chat cleared of previous date pills for clarity
       const chat = document.getElementById('chat');
       if(chat) chat.innerHTML = '';
@@ -428,61 +402,40 @@
     }
   };
 
-  // Auto-run once shortly after load if both MessagePool and renderMessage are present.
-  // This prefill is conservative (40 messages) and only runs once unless re-invoked.
+  // Auto-run once shortly after load if generator view / MessagePool and renderMessage are present.
+  // This prefill is conservative (40 messages) and only runs once.
   setTimeout(()=>{
     try{
-      if(window.MessagePool && typeof window.MessagePool.getRange === 'function' && typeof window.renderMessage === 'function'){
-        // do not auto-run if user explicitly disabled via global flag
-        if(window._abrox && window._abrox.disableAutoPrefill) return;
-        if(!AUTO_PREFILL) return;
+      if(window._abrox && window._abrox.disableAutoPrefill) return;
+      if(!window.MessagePool || typeof window.renderMessage !== 'function') return;
+
+      // prefer generator view
+      if(typeof window.MessagePool.createGeneratorView === 'function'){
+        try{
+          const metaSize = (window.MessagePool.meta && window.MessagePool.meta.size) ? window.MessagePool.meta.size : (window.MessagePool.meta ? window.MessagePool.meta.size : 100000);
+          const seedBase = (window.MessagePool.meta && window.MessagePool.meta.seedBase) ? window.MessagePool.meta.seedBase : undefined;
+          const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: metaSize, seedBase: seedBase });
+          const sample = view.getRange(0, 40);
+          if(sample && sample.length){ const chat = document.getElementById('chat'); if(chat) chat.innerHTML = ''; sample.forEach(m => { try{ window.renderMessage(m, false); }catch(e){} }); }
+          return;
+        }catch(e){ console.warn('auto prefill (generator) failed', e); }
+      }
+
+      // fallback: MessagePool.getRange
+      if(typeof window.MessagePool.getRange === 'function'){
         try{
           const sample = window.MessagePool.getRange(0, 40);
-          if(sample && sample.length) {
-            // clear chat then render
-            const chat = document.getElementById('chat');
-            if(chat) chat.innerHTML = '';
-            sample.forEach(m => { try{ window.renderMessage(m, false); }catch(e){} });
-          }
-        }catch(e){ console.warn('auto prefill failed', e); }
+          if(sample && sample.length){ const chat = document.getElementById('chat'); if(chat) chat.innerHTML = ''; sample.forEach(m => { try{ window.renderMessage(m, false); }catch(e){} }); }
+        }catch(e){ console.warn('auto prefill (getRange) failed', e); }
       }
     }catch(e){}
   }, 700);
-
-  /* ---------- Public init & control API ---------- */
-  // options: { autoPrefill, presenceIntervalMs, presencePercent }
-  window._abrox.init = function(options){
-    try{
-      options = options || {};
-      if(typeof options.autoPrefill === 'boolean') AUTO_PREFILL = !!options.autoPrefill;
-      if(typeof options.presenceIntervalMs !== 'undefined') PRESENCE_INTERVAL_MS = Math.max(500, Number(options.presenceIntervalMs) || PRESENCE_INTERVAL_MS);
-      if(typeof options.presencePercent !== 'undefined') PRESENCE_OPTS.percent = clamp(Number(options.presencePercent) || PRESENCE_OPTS.percent, 0, 1);
-      // apply presence ticker settings
-      startPresenceTicker();
-      // optionally prefill if requested and components available
-      if(AUTO_PREFILL && options.autoPrefill && window.MessagePool && typeof window.MessagePool.getRange === 'function' && typeof window.renderMessage === 'function'){
-        window._abrox.prefillFromMessagePool(0, options.prefillCount || 40);
-      }
-      return { autoPrefill: AUTO_PREFILL, presenceIntervalMs: PRESENCE_INTERVAL_MS, presencePercent: PRESENCE_OPTS.percent };
-    }catch(e){
-      console.warn('ui-adapter.init failed', e);
-      return null;
-    }
-  };
-
-  // helper to toggle the global disable flag
-  window._abrox.setDisableAutoPrefill = function(disable){
-    window._abrox.disableAutoPrefill = !!disable;
-  };
 
   /* ---------- Exports for testing/debugging ---------- */
   window._abrox.renderMemberWindow = renderMemberWindow;
   window._abrox.renderMessage = window.renderMessage;
   window._abrox.clearReplyPreview = function(){ try{ clearReplyPreview(); }catch(e){} };
 
-  // start presence ticker now with current defaults
-  startPresenceTicker();
-
   // friendly log
-  console.info('ui-adapter loaded — presence wiring active (diff updates). Demo prefill available via window._abrox.prefillFromMessagePool(start,count). Use window._abrox.init({...}) to configure.');
+  console.info('ui-adapter loaded — presence wiring active. Demo prefill uses generator view when available.');
 })();
