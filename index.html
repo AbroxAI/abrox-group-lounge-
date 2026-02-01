@@ -106,30 +106,39 @@ tailwind.config = {
   margin-bottom:4px;display:flex;gap:6px;align-items:center
 }
 .time{
-  font-size:10px;opacity:.65;margin-top:6px;
-  display:flex;gap:6px;justify-content:flex-end;align-items:center
+  font-size:10px;
+  opacity:.55;
+  margin-top:6px;
+  display:flex;
+  gap:6px;
+  justify-content:flex-end;
+  align-items:center
 }
 
-/* badges */
-.verified-bubble{
-  display:inline-flex;align-items:center;gap:3px;
-  padding:1px 4px;border-radius:999px;
-  background:linear-gradient(180deg,#1b6d46,#125034);
-  font-size:9px
+/* ================= DATE PILLS ================= */
+.date-pill{
+  position:sticky;
+  top:8px;
+  z-index:10;
+  margin:16px auto;
+  width:max-content;
+  padding:4px 12px;
+  border-radius:999px;
+  background:rgba(0,0,0,.35);
+  backdrop-filter:blur(6px);
+  font-size:11px;
+  opacity:0;
+  animation:fadeDate .35s ease forwards;
 }
-.role-pill{font-size:9px;padding:1px 6px;border-radius:999px}
-.role-pill.admin{background:#7f1d1d}
-.role-pill.mod{background:#5b21b6}
+@keyframes fadeDate{to{opacity:1}}
 
-/* reply */
+/* ================= REPLY / REACTIONS ================= */
 .reply-preview{
   font-size:11px;opacity:.7;
   border-left:2px solid #6bdba7;
   padding-left:6px;margin-bottom:4px;
   cursor:pointer
 }
-
-/* reactions */
 .reactions{display:flex;gap:4px;margin-top:4px}
 .reaction{
   background:#1c1f26;border:1px solid #343a4a;
@@ -137,7 +146,7 @@ tailwind.config = {
   font-size:11px;cursor:pointer
 }
 
-/* pinned */
+/* ================= PIN ================= */
 .pinned-banner{
   background:#232833;border-bottom:1px solid #343a4a;
   padding:6px 16px;font-size:13px;
@@ -145,7 +154,35 @@ tailwind.config = {
 }
 .pinned-banner.hidden{display:none}
 
-/* unread */
+/* ================= INPUT / WAVEFORM ================= */
+.input-shell{
+  display:flex;
+  align-items:center;
+  background:#1c1f26;
+  border-radius:999px;
+  padding:6px 10px;
+  gap:8px;
+  width:100%;
+  position:relative;
+}
+
+.input-shell.recording{
+  padding:6px 14px;
+}
+
+#waveform{
+  flex:1;
+  height:28px;
+  display:none;
+}
+.input-shell.recording #waveform{
+  display:block;
+}
+.input-shell.recording input{
+  display:none;
+}
+
+/* ================= UNREAD ================= */
 #unreadBtn{
   position:fixed;bottom:90px;left:50%;
   transform:translateX(-50%);
@@ -158,10 +195,8 @@ tailwind.config = {
   z-index:40
 }
 
-/* sidebar */
+/* ================= SIDEBAR ================= */
 #sidebar{transition:transform .25s ease}
-
-/* sidebar search */
 #memberSearch{
   width:100%;
   padding:6px 10px;
@@ -170,19 +205,6 @@ tailwind.config = {
   border:1px solid #343a4a;
   font-size:12px;
   outline:none;
-}
-
-/* ================= WHATSAPP VOICE ================= */
-.waveform span{
-  width:3px;
-  height:10px;
-  background:#3b82f6;
-  border-radius:2px;
-  animation:wave 1.2s infinite ease-in-out;
-}
-@keyframes wave{
-  0%,100%{height:6px}
-  50%{height:16px}
 }
 
 section{-webkit-overflow-scrolling:touch}
@@ -209,7 +231,7 @@ section{-webkit-overflow-scrolling:touch}
   </div>
 
   <div class="members-row" id="membersRow">
-    Members: <strong>4,872</strong>
+    Members: <strong id="memberCount">4,872</strong>
     <span class="mx-2">•</span>
     Online: <strong id="onlineCount">0</strong>
   </div>
@@ -243,33 +265,25 @@ section{-webkit-overflow-scrolling:touch}
 <button id="unreadBtn">⬇ New messages</button>
 
 <footer class="bg-panel border-t border-border px-4 py-3">
-  <div class="flex items-center bg-bg rounded-full px-3 py-2 gap-2">
+  <div class="flex items-center gap-2">
     <button id="emojiBtn"><i data-lucide="smile"></i></button>
 
-    <input id="input"
-      class="flex-1 bg-transparent outline-none text-sm"
-      placeholder="Message">
-
-    <!-- Voice waveform -->
-    <div id="waveWrap" class="hidden flex gap-[2px] items-center waveform">
-      <span></span><span></span><span></span><span></span><span></span>
+    <div class="input-shell" id="inputShell">
+      <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
+      <canvas id="waveform"></canvas>
     </div>
 
     <div class="flex items-center gap-2 ml-auto">
       <button id="mediaBtn"><i data-lucide="paperclip"></i></button>
       <button id="micBtn"><i data-lucide="mic"></i></button>
-      <button id="send" class="hidden text-send">
-        <i data-lucide="send"></i>
-      </button>
+      <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
     </div>
   </div>
 </footer>
 
 </main>
 
-<aside id="sidebar"
-  class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full z-50 flex flex-col">
-
+<aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full z-50 flex flex-col">
   <div class="p-4 border-b border-border flex justify-between">
     <strong>Members</strong>
     <button id="closeSidebar"><i data-lucide="x"></i></button>
@@ -279,8 +293,7 @@ section{-webkit-overflow-scrolling:touch}
     <input id="memberSearch" placeholder="Search members…">
   </div>
 
-  <div id="memberList"
-    class="flex-1 overflow-y-auto p-3 space-y-3"></div>
+  <div id="memberList" class="flex-1 overflow-y-auto p-3 space-y-3"></div>
 </aside>
 
 <input type="file" id="fileInput" class="hidden">
@@ -289,54 +302,75 @@ section{-webkit-overflow-scrolling:touch}
 requestAnimationFrame(()=>lucide.createIcons());
 
 /* ================= CORE ================= */
-const chat=document.getElementById('chat');
-const input=document.getElementById('input');
-const send=document.getElementById('send');
-const emojiBtn=document.getElementById('emojiBtn');
-const mediaBtn=document.getElementById('mediaBtn');
-const micBtn=document.getElementById('micBtn');
-const fileInput=document.getElementById('fileInput');
-const unreadBtn=document.getElementById('unreadBtn');
-const waveWrap=document.getElementById('waveWrap');
+const chat = document.getElementById('chat');
+const input = document.getElementById('input');
+const send = document.getElementById('send');
+const emojiBtn = document.getElementById('emojiBtn');
+const mediaBtn = document.getElementById('mediaBtn');
+const micBtn = document.getElementById('micBtn');
+const fileInput = document.getElementById('fileInput');
+const unreadBtn = document.getElementById('unreadBtn');
+const inputShell = document.getElementById('inputShell');
 
-const membersRow=document.getElementById('membersRow');
-const typingRow=document.getElementById('typingRow');
-const typingText=document.getElementById('typingText');
-const onlineCountEl=document.getElementById('onlineCount');
+const membersRow = document.getElementById('membersRow');
+const typingRow = document.getElementById('typingRow');
+const typingText = document.getElementById('typingText');
+const onlineCountEl = document.getElementById('onlineCount');
+const memberCountEl = document.getElementById('memberCount');
 
-const sidebar=document.getElementById('sidebar');
-const membersBtn=document.getElementById('membersBtn');
-const closeSidebar=document.getElementById('closeSidebar');
-const memberList=document.getElementById('memberList');
-const memberSearch=document.getElementById('memberSearch');
+const sidebar = document.getElementById('sidebar');
+const membersBtn = document.getElementById('membersBtn');
+const closeSidebar = document.getElementById('closeSidebar');
+const memberList = document.getElementById('memberList');
+const memberSearch = document.getElementById('memberSearch');
 
 /* ================= MEMBERS ================= */
-const ADMIN={name:'Profit Hunter 🌐',role:'ADMIN',avatar:'assets/admin.jpg'};
-const MOD={name:'Kitty Star ⭐',role:'MOD',avatar:'assets/mod.jpg'};
-const members=[ADMIN,MOD,...Array.from({length:20},(_,i)=>({
-  name:`Member_${i+1}`,
-  role:'VERIFIED',
-  avatar:`https://randomuser.me/api/portraits/men/${i+20}.jpg`,
-  lastActive:Date.now()-Math.random()*300000
-}))];
+const ADMIN = { name:'Profit Hunter 🌐', role:'ADMIN', avatar:'assets/admin.jpg', lastActive:Date.now() };
+const MOD   = { name:'Kitty Star ⭐', role:'MOD', avatar:'assets/mod.jpg', lastActive:Date.now()-60000 };
 
-const ONLINE_LIMIT=90000;
-const IDLE_LIMIT=300000;
+let members = [ADMIN, MOD];
+let targetMembers = 4872;
+
+function addMemberSlowly(){
+  if(members.length >= targetMembers) return;
+  if(Math.random() > 0.35) return;
+  members.push({
+    name:`Member_${members.length+1}`,
+    role:'VERIFIED',
+    avatar:`https://randomuser.me/api/portraits/men/${members.length%90}.jpg`,
+    lastActive: Date.now() - Math.random()*600000
+  });
+}
+setInterval(addMemberSlowly, 5000);
+
+/* ================= PRESENCE ================= */
+const ONLINE_LIMIT = 90000;
+const IDLE_LIMIT   = 300000;
 
 function presence(m){
-  const d=Date.now()-m.lastActive;
-  if(d<ONLINE_LIMIT) return 'online';
-  if(d<IDLE_LIMIT) return 'idle';
+  const d = Date.now() - m.lastActive;
+  if(d < ONLINE_LIMIT) return 'online';
+  if(d < IDLE_LIMIT) return 'idle';
   return 'offline';
 }
 
+function driftPresence(){
+  members.forEach(m=>{
+    if(Math.random() < 0.25){
+      m.lastActive = Date.now() - Math.random()*400000;
+    }
+  });
+}
+setInterval(driftPresence, 4000);
+
+/* ================= MEMBER RENDER ================= */
 function renderMembers(){
-  const q=memberSearch.value.toLowerCase();
-  memberList.innerHTML='';
-  members.filter(m=>m.name.toLowerCase().includes(q)).forEach(m=>{
-    const p=presence(m);
-    const color=p==='online'?'bg-green-500':p==='idle'?'bg-yellow-400':'bg-gray-500';
-    memberList.innerHTML+=`
+  const q = memberSearch.value.toLowerCase();
+  memberList.innerHTML = '';
+  members.filter(m=>m.name.toLowerCase().includes(q)).slice(0,80).forEach(m=>{
+    const p = presence(m);
+    const color = p==='online'?'bg-green-500':p==='idle'?'bg-yellow-400':'bg-gray-500';
+    memberList.innerHTML += `
       <div class="flex gap-3 items-center">
         <div class="relative">
           <img src="${m.avatar}" class="w-9 h-9 rounded-full">
@@ -351,50 +385,43 @@ function renderMembers(){
         </div>
       </div>`;
   });
+
+  onlineCountEl.textContent = members.filter(m=>presence(m)==='online').length;
+  memberCountEl.textContent = members.length.toLocaleString();
 }
-
-/* online simulation */
-setInterval(()=>{
-  members.forEach(m=>Math.random()>.6&&(m.lastActive=Date.now()));
-  onlineCountEl.textContent=members.filter(m=>presence(m)==='online').length;
-  renderMembers();
-},4000);
-
-memberSearch.oninput=renderMembers;
+setInterval(renderMembers, 3000);
+memberSearch.oninput = renderMembers;
 
 /* ================= TYPING ================= */
-const typingMembers=members.map(m=>m.name).filter(n=>n!==ADMIN.name);
 function showTyping(){
-  const count=Math.floor(Math.random()*3)+1;
-  const names=[...typingMembers].sort(()=>.5-Math.random()).slice(0,count);
-  typingText.textContent=
-    names.length===1?`${names[0]} is typing…`:
-    names.length===2?`${names[0]} and ${names[1]} are typing…`:
-    `${names.length} people are typing…`;
+  if(Math.random() > 0.4) return;
+  const pool = members.filter(m=>presence(m)==='online' && m.role!=='ADMIN');
+  if(!pool.length) return;
+  const pick = pool[Math.floor(Math.random()*pool.length)];
+  typingText.textContent = `${pick.name} is typing…`;
   typingRow.classList.add('active');
   membersRow.classList.add('hidden');
   setTimeout(()=>{
     typingRow.classList.remove('active');
     membersRow.classList.remove('hidden');
-  },1500+Math.random()*1500);
+  },1200+Math.random()*1000);
 }
-setInterval(()=>Math.random()>.4&&showTyping(),5000);
+setInterval(showTyping, 5000);
 
 /* ================= INPUT ================= */
-input.oninput=()=>{
-  const has=input.value.trim();
-  send.classList.toggle('hidden',!has);
-  mediaBtn.classList.toggle('hidden',!!has);
-  micBtn.classList.toggle('hidden',!!has);
-  waveWrap.classList.add('hidden');
+input.oninput = ()=>{
+  const has = input.value.trim();
+  send.classList.toggle('hidden', !has);
+  mediaBtn.classList.toggle('hidden', !!has);
+  micBtn.classList.toggle('hidden', !!has);
 };
 
 /* ================= SEND ================= */
-let replyTo=null;
-send.onclick=()=>{
-  if(!input.value.trim())return;
-  postMessage({name:'You',role:'VERIFIED',text:input.value,out:true,replyTo});
-  replyTo=null;
+let replyTo = null;
+send.onclick = ()=>{
+  if(!input.value.trim()) return;
+  postMessage({ name:'You', role:'VERIFIED', text:input.value, out:true, replyTo });
+  replyTo = null;
   input.value='';
   send.classList.add('hidden');
   mediaBtn.classList.remove('hidden');
@@ -402,112 +429,76 @@ send.onclick=()=>{
 };
 
 /* ================= EMOJI ================= */
-emojiBtn.onclick=()=>window.EmojiPack&&EmojiPack.openPicker(input);
+emojiBtn.onclick = ()=>window.EmojiPack && EmojiPack.openPicker(input);
 
 /* ================= MEDIA ================= */
-mediaBtn.onclick=()=>fileInput.click();
-fileInput.onchange=e=>{
-  if(!e.target.files.length)return;
-  const f=e.target.files[0];
-  const url=URL.createObjectURL(f);
-  const html=f.type.startsWith('image/')
-    ? `<img src="${url}" class="rounded-lg max-w-full">`
-    : `📎 ${f.name}`;
-  postMessage({name:'You',role:'VERIFIED',text:html,out:true});
+mediaBtn.onclick = ()=>fileInput.click();
+fileInput.onchange = e=>{
+  if(!e.target.files.length) return;
+  const f = e.target.files[0];
+  const url = URL.createObjectURL(f);
+  postMessage({
+    name:'You',
+    role:'VERIFIED',
+    text: f.type.startsWith('image/') ?
+      `<img src="${url}" class="rounded-lg max-w-full">` :
+      `📎 ${f.name}`,
+    out:true
+  });
   fileInput.value='';
 };
 
-/* ================= VOICE (WHATSAPP STYLE) ================= */
-let recorder,voiceChunks=[],recording=false;
-
-micBtn.onmousedown=async()=>{
-  if(recording) return;
-  recording=true;
-  waveWrap.classList.remove('hidden');
-  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-  recorder=new MediaRecorder(stream);
-
-  recorder.ondataavailable=e=>voiceChunks.push(e.data);
-  recorder.onstop=()=>{
-    waveWrap.classList.add('hidden');
-    const blob=new Blob(voiceChunks,{type:'audio/webm'});
-    const url=URL.createObjectURL(blob);
-    postMessage({
-      name:'You',
-      role:'VERIFIED',
-      text:`<audio controls src="${url}"></audio>`,
-      out:true
-    });
-    voiceChunks=[];
-    stream.getTracks().forEach(t=>t.stop());
-  };
-  recorder.start();
-};
-
-micBtn.onmouseup=()=>{
-  if(recording){
-    recording=false;
-    recorder.stop();
-  }
-};
-</script>
-<script>
-/* ================= PIN ================= */
-let pinnedId=null;
-const pinnedBanner=document.getElementById('pinnedBanner');
-const pinnedText=document.getElementById('pinnedText');
-
-document.getElementById('unpinBtn').onclick=e=>{
-  e.stopPropagation();
-  pinnedId=null;
-  pinnedBanner.classList.add('hidden');
-  localStorage.removeItem('pinnedId');
-};
-
-pinnedBanner.onclick=()=>{
-  const el=document.querySelector(`[data-id="${pinnedId}"]`);
-  el && el.scrollIntoView({behavior:'smooth',block:'center'});
-};
-
-/* ================= MESSAGE ================= */
-let lastMeta=null,lastDate='',unread=0;
+/* ================= MESSAGE CORE ================= */
+let lastSender=null, lastTime=0, lastDate='';
+let unread=0;
 const seenCache={};
 
+function seenCount(msg){
+  if(!seenCache[msg.id]){
+    seenCache[msg.id] = 75 + Math.floor(Math.random()*12);
+    const grow = setInterval(()=>{
+      seenCache[msg.id] += Math.floor(Math.random()*3);
+      if(seenCache[msg.id] > onlineCountEl.textContent) clearInterval(grow);
+      const el=document.querySelector(`[data-id="${msg.id}"] .time`);
+      el && (el.querySelector('span').textContent = seenCache[msg.id]);
+    },2000+Math.random()*3000);
+  }
+  return seenCache[msg.id];
+}
+
 function postMessage(m){
-  m.id=crypto.randomUUID();
-  m.time=Date.now();
-  save(m);
-  render(m,true);
+  m.id = crypto.randomUUID();
+  m.time = Date.now();
+  renderMessage(m,true);
 }
 
-/* role-aware seen count */
-function seenCount(){
-  const admins=members.filter(m=>m.role==='ADMIN').length;
-  const mods=members.filter(m=>m.role==='MOD').length;
-  const verified=members.filter(m=>m.role==='VERIFIED' && presence(m)==='online').length;
-  return admins + mods + Math.max(75, Math.floor(verified * (0.35 + Math.random()*0.4)));
+function dateLabel(d){
+  const today = new Date();
+  const diff = Math.floor((today - d)/(86400000));
+  if(diff===0) return 'Today';
+  if(diff===1) return 'Yesterday';
+  return d.toDateString();
 }
 
-function render(m,isNew=false){
-  const d=new Date(m.time);
+function renderMessage(m,isNew){
+  const d = new Date(m.time);
 
-  /* date separator */
-  if(d.toDateString()!==lastDate){
-    const sep=document.createElement('div');
-    sep.className='text-center text-xs text-muted my-3';
-    sep.textContent=d.toDateString();
-    chat.appendChild(sep);
-    lastDate=d.toDateString();
+  if(d.toDateString() !== lastDate){
+    const pill = document.createElement('div');
+    pill.className = 'date-pill';
+    pill.textContent = dateLabel(d);
+    chat.appendChild(pill);
+    lastDate = d.toDateString();
   }
 
-  const grouped=lastMeta && lastMeta.sender===m.name && (d-lastMeta.time)<120000;
+  const grouped = lastSender===m.name && (m.time-lastTime)<120000;
+  lastSender = m.name;
+  lastTime = m.time;
 
   const badge =
     m.role==='ADMIN'?'<span class="role-pill admin">ADMIN</span>':
     m.role==='MOD'?'<span class="role-pill mod">MOD</span>':
     '<span class="verified-bubble"><i data-lucide="gem"></i></span>';
-
-  if(m.out && !seenCache[m.id]) seenCache[m.id]=seenCount();
 
   const el=document.createElement('div');
   el.className=`msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
@@ -516,65 +507,20 @@ function render(m,isNew=false){
   el.innerHTML=`
     ${!m.out?`<img class="avatar" src="${members.find(x=>x.name===m.name)?.avatar||''}">`:''}
     <div class="bubble">
-      ${m.replyTo?`<div class="reply-preview" data-jump="${m.replyTo}">↩ Reply</div>`:''}
+      ${m.replyTo?`<div class="reply-preview">↩ Reply</div>`:''}
       ${!grouped&&!m.out?`<div class="sender">${m.name} ${badge}</div>`:''}
       <div class="content">${m.text}</div>
-      <div class="reactions"></div>
       <div class="time">
         <i data-lucide="eye" class="w-3 h-3"></i>
-        ${m.out?seenCache[m.id]:'·'} ·
-        ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+        <span>${m.out?seenCount(m):'·'}</span>
+        · ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
       </div>
     </div>
   `;
-
   chat.appendChild(el);
   lucide.createIcons();
 
-  /* reply jump */
-  el.querySelectorAll('.reply-preview').forEach(r=>{
-    r.onclick=()=>{
-      const t=document.querySelector(`[data-id="${r.dataset.jump}"]`);
-      t && t.scrollIntoView({behavior:'smooth',block:'center'});
-    };
-  });
-
-  /* reactions */
-  el.querySelector('.bubble').ondblclick=()=>{
-    const box=el.querySelector('.reactions');
-    box.innerHTML = box.innerHTML ? '' : `<div class="reaction">👍 1</div>`;
-  };
-
-  /* context menu */
-  el.oncontextmenu=e=>{
-    e.preventDefault();
-    const menu=document.createElement('div');
-    menu.className='fixed bg-panel border border-border rounded-xl p-2 space-y-2 z-50';
-    menu.innerHTML=`
-      <button data-a="reply" class="flex gap-2"><i data-lucide="reply"></i>Reply</button>
-      <button data-a="pin" class="flex gap-2"><i data-lucide="pin"></i>Pin</button>
-    `;
-    menu.onclick=ev=>{
-      const a=ev.target.closest('button')?.dataset.a;
-      if(a==='reply') replyTo=m.id;
-      if(a==='pin'){
-        pinnedId=m.id;
-        pinnedText.textContent=el.querySelector('.content').textContent;
-        pinnedBanner.classList.remove('hidden');
-        localStorage.setItem('pinnedId',pinnedId);
-      }
-      menu.remove();
-    };
-    document.body.appendChild(menu);
-    menu.style.left=e.pageX+'px';
-    menu.style.top=e.pageY+'px';
-    lucide.createIcons();
-    document.addEventListener('click',()=>menu.remove(),{once:true});
-  };
-
-  lastMeta={sender:m.name,time:d};
-
-  if(isNew && chat.scrollTop+chat.clientHeight<chat.scrollHeight-40){
+  if(isNew && chat.scrollTop+chat.clientHeight<chat.scrollHeight-50){
     unread++;
     unreadBtn.textContent=`⬇ ${unread} new messages`;
     unreadBtn.style.display='block';
@@ -583,58 +529,15 @@ function render(m,isNew=false){
   }
 }
 
-/* ================= UNREAD ================= */
-unreadBtn.onclick=()=>{
-  chat.scrollTop=chat.scrollHeight;
-  unread=0;
-  unreadBtn.style.display='none';
-};
-
 /* ================= SIDEBAR ================= */
-membersBtn.onclick=()=>sidebar.classList.toggle('translate-x-full');
-closeSidebar.onclick=()=>sidebar.classList.add('translate-x-full');
+membersBtn.onclick = ()=>sidebar.classList.toggle('translate-x-full');
+closeSidebar.onclick = ()=>sidebar.classList.add('translate-x-full');
 
-/* ================= DB ================= */
-const DB='AbroxDB',STORE='messages';
-let db;
-
-const req=indexedDB.open(DB,1);
-req.onupgradeneeded=e=>{
-  e.target.result.createObjectStore(STORE,{keyPath:'id'});
-};
-
-req.onsuccess=e=>{
-  db=e.target.result;
-  db.transaction(STORE).objectStore(STORE).getAll().onsuccess=ga=>{
-    (ga.target.result||[])
-      .sort((a,b)=>a.time-b.time)
-      .forEach(m=>render(m));
-  };
-};
-
-function save(m){
-  try{
-    db.transaction(STORE,'readwrite').objectStore(STORE).put(m);
-  }catch{}
-}
-
-/* ================= RESTORE PIN ================= */
-const savedPin=localStorage.getItem('pinnedId');
-if(savedPin){
-  pinnedId=savedPin;
-  pinnedBanner.classList.remove('hidden');
-}
-
-/* ================= JOIN MESSAGE ================= */
+/* ================= JOIN ================= */
 if(!localStorage.getItem('joined')){
   localStorage.setItem('joined','1');
   setTimeout(()=>{
-    postMessage({
-      name:'System',
-      role:'ADMIN',
-      text:'👋 You joined the group',
-      out:false
-    });
+    postMessage({ name:'You', role:'VERIFIED', text:'👋 You joined the group', out:false });
   },400);
 }
 
@@ -643,4 +546,149 @@ setTimeout(()=>{
   postMessage({name:ADMIN.name,role:'ADMIN',text:'Welcome everyone 👋',out:false});
   postMessage({name:MOD.name,role:'MOD',text:'Please follow the rules.',out:false});
 },600);
+</script>
+<script>
+/* ================= MIC + WAVEFORM ================= */
+const canvas = document.getElementById('waveform');
+const ctx = canvas.getContext('2d');
+
+let audioCtx, analyser, micStream, mediaRecorder;
+let waveAnim, locked=false, recording=false;
+let chunks=[];
+
+function resizeWave(){
+  canvas.width = inputShell.offsetWidth;
+  canvas.height = inputShell.offsetHeight;
+}
+window.addEventListener('resize', resizeWave);
+resizeWave();
+
+function drawWave(){
+  const data = new Uint8Array(analyser.fftSize);
+  analyser.getByteTimeDomainData(data);
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#3b82f6';
+  ctx.beginPath();
+
+  const slice = canvas.width / data.length;
+  let x=0;
+  for(let i=0;i<data.length;i++){
+    const v = data[i]/128;
+    const y = (v*canvas.height)/2;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    x+=slice;
+  }
+  ctx.stroke();
+
+  waveAnim = requestAnimationFrame(drawWave);
+}
+
+async function startMic(){
+  recording=true;
+  locked=false;
+  input.style.display='none';
+  canvas.style.display='block';
+
+  micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+  audioCtx = new AudioContext();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+
+  const source = audioCtx.createMediaStreamSource(micStream);
+  source.connect(analyser);
+
+  mediaRecorder = new MediaRecorder(micStream);
+  mediaRecorder.ondataavailable = e=>chunks.push(e.data);
+  mediaRecorder.onstop = ()=>{
+    cancelAnimationFrame(waveAnim);
+    canvas.style.display='none';
+    input.style.display='block';
+
+    if(chunks.length){
+      const blob = new Blob(chunks,{type:'audio/webm'});
+      const url = URL.createObjectURL(blob);
+      postMessage({
+        name:'You',
+        role:'VERIFIED',
+        text:`<audio controls src="${url}"></audio>`,
+        out:true
+      });
+    }
+    chunks=[];
+    micStream.getTracks().forEach(t=>t.stop());
+  };
+
+  mediaRecorder.start();
+  drawWave();
+}
+
+function stopMic(){
+  if(!recording) return;
+  recording=false;
+  mediaRecorder.stop();
+}
+
+micBtn.addEventListener('touchstart',startMic);
+micBtn.addEventListener('mousedown',startMic);
+
+micBtn.addEventListener('touchend',()=>!locked&&stopMic());
+micBtn.addEventListener('mouseup',()=>!locked&&stopMic());
+
+/* ================= MIC LOCK ================= */
+let startY=0;
+micBtn.addEventListener('touchstart',e=>{
+  startY=e.touches[0].clientY;
+});
+micBtn.addEventListener('touchmove',e=>{
+  if(!recording) return;
+  const diff = startY - e.touches[0].clientY;
+  if(diff>60){
+    locked=true;
+  }
+});
+
+/* ================= SWIPE TO REPLY ================= */
+let swipeX=0, swipingEl=null;
+
+chat.addEventListener('touchstart',e=>{
+  const msg = e.target.closest('.msg');
+  if(!msg) return;
+  swipeX = e.touches[0].clientX;
+  swipingEl = msg;
+});
+
+chat.addEventListener('touchmove',e=>{
+  if(!swipingEl) return;
+  const dx = e.touches[0].clientX - swipeX;
+  if(dx>50){
+    swipingEl.style.transform='translateX(20px)';
+  }
+});
+
+chat.addEventListener('touchend',()=>{
+  if(swipingEl){
+    swipingEl.style.transform='';
+    replyTo = swipingEl.dataset.id;
+    swipingEl=null;
+  }
+});
+
+/* ================= TAP ANYWHERE CLOSE ================= */
+document.addEventListener('click',e=>{
+  document.querySelectorAll('.context-menu').forEach(m=>m.remove());
+});
+
+/* ================= BOOT SAFETY ================= */
+setTimeout(()=>{
+  if(chat.children.length<=1){
+    postMessage({
+      name:ADMIN.name,
+      role:'ADMIN',
+      text:'Chat initialized successfully.',
+      out:false
+    });
+  }
+},1200);
 </script>
