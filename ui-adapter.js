@@ -1,17 +1,18 @@
-// ui-adapter.js
+// ui-adapter.js (patched)
 // Full UI glue for Abrox + presence wiring that uses SyntheticPeople.simulatePresenceStep()
+// - Prefill now prefers MessagePool.createGeneratorView() (memory-light paging) when available
 // - Exposes window._abrox.setSampleMembers and window._abrox.showTyping
 // - Renders members list and messages
 // - Attaches interactions (context menu / long-press / pin / reply)
 // - Presence wiring updates #onlineCount periodically
-// - Demo: prefill chat using generator view (MessagePool.createGeneratorView) when available
+// - Demo: prefill chat from MessagePool via generator view when available
 (function uiAdapterGlobal(){
   if(window._abrox && window._abrox._uiAdapterLoaded) return;
   window._abrox = window._abrox || {};
   window._abrox._uiAdapterLoaded = true;
 
   /* ---------- Helpers ---------- */
-  function escapeHtml(s){ return (''+s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); }
+  function escapeHtml(s){ return (''+s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
   function formatTime(ts) {
     const d = new Date(ts || Date.now());
     return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
@@ -172,7 +173,7 @@
       menu.style.left = x + 'px';
       menu.style.top = y + 'px';
       menu.style.zIndex = 9999;
-      menu.innerHTML = `<div class="menu-item" data-action="reply">Reply</div><div class="menu-item" data-action="pin">Pin</div>`;
+      menu.innerHTML = `<div class=\"menu-item\" data-action=\"reply\">Reply</div><div class=\"menu-item\" data-action=\"pin\">Pin</div>`;
       document.body.appendChild(menu);
       const rect = menu.getBoundingClientRect();
       if(rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 8) + 'px';
@@ -214,13 +215,7 @@
       const senderText = target.querySelector('.sender') ? target.querySelector('.sender').textContent : 'Message';
       const snippet = target.querySelector('.content') ? target.querySelector('.content').textContent.slice(0,120) : '';
       const container = document.getElementById('replyPreviewContainer');
-      container.innerHTML = `<div class="reply-preview" id="replyPreview">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:700">${escapeHtml(senderText)}</div>
-          <div style="font-size:11px;opacity:.65;cursor:pointer" id="replyCancelBtn">Cancel</div>
-        </div>
-        <div class="snippet">${escapeHtml(snippet)}</div>
-      </div>`;
+      container.innerHTML = `<div class=\"reply-preview\" id=\"replyPreview\">\n        <div style=\"display:flex;justify-content:space-between;align-items:center\">\n          <div style=\"font-weight:700\">${escapeHtml(senderText)}</div>\n          <div style=\"font-size:11px;opacity:.65;cursor:pointer\" id=\"replyCancelBtn\">Cancel</div>\n        </div>\n        <div class=\"snippet\">${escapeHtml(snippet)}</div>\n      </div>`;
       const cancel = document.getElementById('replyCancelBtn');
       if(cancel) cancel.addEventListener('click', ()=>{ clearReplyPreview(); });
       replyTargetId = msgId;
@@ -356,83 +351,72 @@
     }catch(e){}
   })();
 
-  /* ---------- Generator-aware fetch helper ---------- */
-  function fetchMessagesViaGenerator(start, count){
-    try{
-      // prefer generator view if provided by MessagePool
-      if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
-        try{
-          const view = window.MessagePool.createGeneratorView({ pageSize: Math.max(1, count) });
-          // accept multiple possible method names on the view for compatibility
-          if(view){
-            if(typeof view.getRange === 'function') return view.getRange(start, count) || [];
-            if(typeof view.getPage === 'function'){
-              const pageIndex = Math.floor(start / count);
-              const page = view.getPage(pageIndex) || [];
-              const offset = start % count;
-              return page.slice(offset, offset + count);
-            }
-            if(typeof view.read === 'function') return view.read(start, count) || [];
-            if(typeof view.fetch === 'function') return view.fetch(start, count) || [];
-            // fallback: if view is an iterator-like with next(), collect items
-            if(typeof view.next === 'function'){
-              const out = [];
-              let iter = view.next();
-              while(out.length < count && iter){
-                out.push(iter);
-                iter = view.next();
-              }
-              return out;
-            }
-          }
-        }catch(err){
-          console.warn('fetchMessagesViaGenerator: generator view failed, falling back', err);
-        }
-      }
-    }catch(e){/* ignore */}
-
-    // fallback to the old direct getRange (may allocate larger pool)
-    try{
-      if(window.MessagePool && typeof window.MessagePool.getRange === 'function') return window.MessagePool.getRange(start, count) || [];
-    }catch(e){/* ignore */}
-    return [];
-  }
-
-  /* ---------- Demo: prefill chat using generator view when available ---------- */
+  /* ---------- Demo prefill using generator view when available ---------- */
   // Exposed as window._abrox.prefillFromMessagePool(start = 0, count = 40)
   window._abrox.prefillFromMessagePool = function(start = 0, count = 40){
     try{
-      if(typeof window.renderMessage !== 'function'){
-        console.warn('prefillFromMessagePool: renderMessage not available');
-        return [];
+      // prefer generator view (memory-light) when available
+      if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
+        try{
+          const pageSize = Math.max(1, Number(count) || 40);
+          const gv = window.MessagePool.createGeneratorView({ pageSize, cachePages: 4 });
+          // expose for debugging
+          window._abrox._messagePoolView = gv;
+          const page = gv.nextPage(Number(start) || 0);
+          const chat = document.getElementById('chat'); if(chat) chat.innerHTML = '';
+          page.forEach(m => { try{ window.renderMessage(m, false); }catch(e){ console.warn('renderMessage failed for prefill', e); } });
+          return page;
+        }catch(e){ console.warn('prefillFromMessagePool generatorView failed', e); }
       }
-      const msgs = fetchMessagesViaGenerator(Number(start) || 0, Number(count) || 40) || [];
-      const chat = document.getElementById('chat');
-      if(chat) chat.innerHTML = ''; // clear previous content
-      for(let i=0;i<msgs.length;i++){
-        try{ window.renderMessage(msgs[i], false); }catch(e){ console.warn('renderMessage failed for prefill', e); }
+
+      // fallback to getRange if generator view not present
+      if(window.MessagePool && typeof window.MessagePool.getRange === 'function'){
+        const msgs = window.MessagePool.getRange(Number(start) || 0, Number(count) || 40) || [];
+        const chat = document.getElementById('chat'); if(chat) chat.innerHTML = '';
+        for(let i=0;i<msgs.length;i++){
+          try{ window.renderMessage(msgs[i], false); }catch(e){ console.warn('renderMessage failed for prefill', e); }
+        }
+        return msgs;
       }
-      return msgs;
+
+      console.warn('prefillFromMessagePool: MessagePool not ready');
+      return [];
     }catch(e){
       console.warn('prefillFromMessagePool error', e);
       return [];
     }
   };
 
-  // Auto-run once shortly after load if both MessagePool (or generator) and renderMessage are present.
+  // Auto-run once shortly after load if both MessagePool and renderMessage are present.
+  // This prefill is conservative (40 messages) and prefers the generator view.
   setTimeout(()=>{
     try{
       if(typeof window.renderMessage !== 'function') return;
-      // do not auto-run if user explicitly disabled via global flag
       if(window._abrox && window._abrox.disableAutoPrefill) return;
-      // attempt generator-aware prefill
-      const sample = fetchMessagesViaGenerator(0, 40);
-      if(sample && sample.length){
-        const chat = document.getElementById('chat');
-        if(chat) chat.innerHTML = '';
-        sample.forEach(m => { try{ window.renderMessage(m, false); }catch(e){} });
+
+      if(window.MessagePool){
+        if(typeof window.MessagePool.createGeneratorView === 'function'){
+          try{
+            const gv = window.MessagePool.createGeneratorView({ pageSize: 40, cachePages: 4 });
+            window._abrox._messagePoolView = gv;
+            const page = gv.nextPage(0);
+            if(page && page.length){
+              const chat = document.getElementById('chat'); if(chat) chat.innerHTML = '';
+              page.forEach(m => { try{ window.renderMessage(m, false); }catch(e){} });
+            }
+            return;
+          }catch(e){ console.warn('auto prefill generatorView failed', e); }
+        }
+
+        // fallback
+        if(typeof window.MessagePool.getRange === 'function'){
+          try{
+            const sample = window.MessagePool.getRange(0, 40);
+            if(sample && sample.length){ const chat = document.getElementById('chat'); if(chat) chat.innerHTML = ''; sample.forEach(m => { try{ window.renderMessage(m, false); }catch(e){} }); }
+          }catch(e){ console.warn('auto prefill failed', e); }
+        }
       }
-    }catch(e){ console.warn('auto prefill failed', e); }
+    }catch(e){}
   }, 700);
 
   /* ---------- Exports for testing/debugging ---------- */
@@ -441,5 +425,5 @@
   window._abrox.clearReplyPreview = function(){ try{ clearReplyPreview(); }catch(e){} };
 
   // friendly log
-  console.info('ui-adapter loaded — presence wiring active. Demo prefill now uses generator view when available (window.MessagePool.createGeneratorView).');
+  console.info('ui-adapter loaded — presence wiring active. Demo prefill uses MessagePool.createGeneratorView() when available.');
 })();
