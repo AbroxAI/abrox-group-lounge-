@@ -1,30 +1,21 @@
 // simulation-engine.js
-// Demo SimulationEngine that wires MessagePool.createGeneratorView() + TypingEngine.triggerTyping()
-// - Default: useStreamAPI: true (efficient for very large pools)
-// - If simulateTypingBeforeSend: true -> manual streaming with typing-before-send delays (more natural, slower)
-// - Uses TypingEngine.triggerTyping() when available, otherwise falls back to window._abrox.showTyping()
-// - Deterministic option via seedBase
-// - Methods: configure, start, stop, simulateBurst, oneShot, simulateOnce, setRng
+// Demo SimulationEngine that wires MessagePool.streamToUI(), TypingEngine.triggerTyping()
+// and optionally uses MessagePool.createGeneratorView() for memory-light paging.
+// - Default: useStreamAPI: true, simulateTypingBeforeSend: true
+// - Deterministic: configure({ seedBase })
 //
-// Notes: When MessagePool.createGeneratorView() exists the engine will prefer it for streaming to avoid allocating huge arrays.
+// API:
+//   SimulationEngine.configure(opts)
+//   SimulationEngine.start()
+//   SimulationEngine.stop()
+//   SimulationEngine.isRunning()
+//   SimulationEngine.previewOnce(count)
+//   SimulationEngine.emitOnce(idx)  // emit a single message by index (for tests)
 
 (function globalSimulationEngine(){
   if(window.SimulationEngine) return;
-  const DEFAULTS = {
-    seedBase: null,               // null -> Math.random; number -> deterministic xorshift32
-    msgsPerMin: 45,               // average messages per minute when streaming
-    useStreamAPI: true,           // prefer MessagePool.streamToUI()/createGeneratorView().streamToUI() for very large pools
-    simulateTypingBeforeSend: true, // manual streaming by default for natural typing
-    typingDelayPerCharMs: 40,     // approx ms per character to simulate typing duration
-    typingDelayMinMs: 400,        // minimum typing indicator duration
-    typingDelayMaxMs: 2500,       // maximum typing indicator duration
-    burstChance: 0.12,            // chance at each tick to create a burst
-    burstMultiplier: 2.5,         // burst will increase rate by this factor
-    manualBatchSize: 1,           // when manual streaming, how many messages to emit at once (usually 1)
-    rngWarmSeedOffset: 97         // small offset used for deterministic per-message rng tweaks
-  };
 
-  // tiny deterministic PRNG (xorshift32)
+  // small xorshift PRNG for deterministic behaviour when seedBase provided
   function xorshift32(seed){
     let x = (seed >>> 0) || 0x811c9dc5;
     return function(){
@@ -36,312 +27,329 @@
     };
   }
 
-  function now(){ return Date.now(); }
   function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-  function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
 
-  const Engine = {
-    _cfg: Object.assign({}, DEFAULTS),
-    _running: false,
-    _streamHandle: null,
-    _manualLoopPromise: null,
-    _rnd: Math.random,
-    _manualIndex: 0,
+  const DEFAULTS = {
+    seedBase: null,               // null => non-deterministic Math.random
+    useStreamAPI: true,           // prefer streaming from MessagePool for huge pools
+    simulateTypingBeforeSend: true, // show typing indicator before emit
+    msgsPerMin: 45,               // emission rate when streaming locally/emulation
+    typingBeforeMsMin: 400,       // typing indicator min duration (ms)
+    typingBeforeMsMax: 1800,      // typing indicator max duration (ms)
+    burstChance: 0.08,            // chance a message event emits small burst instead of single msg
+    burstSizeMin: 2,
+    burstSizeMax: 4,
+    generatorPageSize: 200        // when createGeneratorView used, page size
+  };
 
+  let cfg = Object.assign({}, DEFAULTS);
+  let running = false;
+  let rng = Math.random;
+  let streamController = null;    // for streamToUI stop handle
+  let localTimer = null;         // fallback timer when not using MessagePool.streamToUI
+  let nextIndex = 0;             // next index to emit when using local generation
+  let generatorView = null;      // view returned by MessagePool.createGeneratorView
+  let generatorPage = null;      // current page buffer
+  let generatorPageIdx = 0;      // index within current buffer
+  let generatorPageStart = 0;    // absolute index of page start
+
+  // internal helper: choose typing hook
+  function showTyping(names, duration){
+    try{
+      if(window.TypingEngine && typeof window.TypingEngine.triggerTyping === 'function'){
+        try{ window.TypingEngine.triggerTyping(names, duration); return; }catch(e){}
+      }
+      if(window._abrox && typeof window._abrox.showTyping === 'function'){
+        try{ window._abrox.showTyping(names); return; }catch(e){}
+      }
+      // fallback: console
+      console.debug('Typing:', names, 'for', duration);
+    }catch(e){}
+  }
+
+  // getMessageAt: prefer generatorView -> MessagePool.getRange -> MessagePool._generateMessageForIndex (if exposed)
+  function getMessageAt(idx){
+    // generator view: if present, ensure page loaded
+    try{
+      if(generatorView && typeof generatorView.get === 'function'){
+        const itm = generatorView.get(idx);
+        if(itm) return Promise.resolve(itm);
+      }
+    }catch(e){ console.warn('generatorView.get failed', e); }
+
+    // fallback: MessagePool.getRange
+    if(window.MessagePool && typeof window.MessagePool.getRange === 'function'){
+      try{
+        const arr = window.MessagePool.getRange(idx, 1);
+        if(arr && arr.length) return Promise.resolve(arr[0]);
+      }catch(e){ console.warn('MessagePool.getRange failed', e); }
+    }
+
+    // last fallback: if MessagePool exposes a generator function _generateMessageForIndex (internal)
+    if(window.MessagePool && typeof window.MessagePool._generateMessageForIndex === 'function'){
+      try{
+        return Promise.resolve(window.MessagePool._generateMessageForIndex(idx, {}));
+      }catch(e){ console.warn('MessagePool._generateMessageForIndex failed', e); }
+    }
+
+    return Promise.resolve(null);
+  }
+
+  // helper: emit a single message to UI (renderMessage) with optional typing simulation
+  async function emitMessageWithTyping(msg){
+    if(!msg) return;
+    // optionally simulate typing
+    if(cfg.simulateTypingBeforeSend){
+      const who = (msg.displayName || msg.name || 'Someone');
+      const duration = Math.max(cfg.typingBeforeMsMin, Math.floor(cfg.typingBeforeMsMin + rng() * (cfg.typingBeforeMsMax - cfg.typingBeforeMsMin)));
+      showTyping([who], duration);
+      await new Promise(r => setTimeout(r, duration + 40));
+    }
+    // render
+    try{
+      if(typeof window.renderMessage === 'function'){
+        window.renderMessage(msg, true);
+      } else {
+        console.warn('renderMessage not available to emit message');
+      }
+    }catch(e){ console.warn('emitMessage render failed', e); }
+  }
+
+  // local stream loop (when not using MessagePool.streamToUI)
+  function startLocalLoop(){
+    stopLocalLoop();
+    const intervalMs = Math.max(20, Math.round(60000 / clamp(cfg.msgsPerMin, 1, 5000)));
+    localTimer = setInterval(async ()=>{
+      try{
+        if(!running) return;
+        // burst vs single
+        if(rng() < cfg.burstChance){
+          const burstSize = Math.floor(cfg.burstSizeMin + rng() * (cfg.burstSizeMax - cfg.burstSizeMin + 1));
+          for(let i=0;i<burstSize;i++){
+            const idx = nextIndex++;
+            const msg = await getMessageAt(idx);
+            if(msg) await emitMessageWithTyping(msg);
+          }
+        } else {
+          const idx = nextIndex++;
+          const msg = await getMessageAt(idx);
+          if(msg) await emitMessageWithTyping(msg);
+        }
+      }catch(e){ console.warn('localLoop error', e); }
+    }, intervalMs);
+    return localTimer;
+  }
+
+  function stopLocalLoop(){
+    if(localTimer){ clearInterval(localTimer); localTimer = null; }
+  }
+
+  // when using MessagePool.streamToUI: call streamToUI with a hook that triggers TypingEngine for "typing before send" if requested.
+  // We cannot intercept internal streamToUI emission easily, but we can mimic typing by scheduling TypingEngine.triggerTyping() at intervals that align with rate.
+  function startStreamedMode(){
+    stopStreamedMode();
+    if(!window.MessagePool || typeof window.MessagePool.streamToUI !== 'function'){
+      console.warn('MessagePool.streamToUI unavailable — falling back to local loop.');
+      return startLocalLoop();
+    }
+
+    // If simulateTypingBeforeSend is false, just delegate to streamToUI directly.
+    if(!cfg.simulateTypingBeforeSend){
+      streamController = window.MessagePool.streamToUI({
+        startIndex: nextIndex,
+        ratePerMin: cfg.msgsPerMin,
+        jitterMs: Math.round(60000/cfg.msgsPerMin*0.25),
+        onEmit: (m, idx) => { nextIndex = idx + 1; } // keep nextIndex in sync
+      });
+      return streamController;
+    }
+
+    // If simulateTypingBeforeSend is true, we cannot easily intercept streamToUI to delay emission,
+    // so we create our own lightweight streaming by using MessagePool.getRange or createGeneratorView in pages.
+    // Use createGeneratorView if available for efficiency.
+    if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
+      try{
+        generatorView = window.MessagePool.createGeneratorView({ pageSize: cfg.generatorPageSize, seedBase: cfg.seedBase, spanDays: (window.MessagePool.meta && window.MessagePool.meta.spanDays) || undefined });
+        generatorPage = null;
+        generatorPageIdx = 0;
+        generatorPageStart = nextIndex;
+        // set up local loop but this time drawing from generatorView pages (efficient paging)
+        stopLocalLoop();
+        const intervalMs = Math.max(20, Math.round(60000 / clamp(cfg.msgsPerMin, 1, 5000)));
+        localTimer = setInterval(async ()=>{
+          try{
+            if(!running) return;
+            // refill page buffer if exhausted
+            if(!generatorPage || generatorPageIdx >= generatorPage.length){
+              generatorPageStart = nextIndex;
+              generatorPage = generatorView.nextPage(generatorPageStart);
+              generatorPageIdx = 0;
+              if(!generatorPage || !generatorPage.length){
+                // no page available -> attempt to wrap to 0
+                nextIndex = 0;
+                generatorPageStart = nextIndex;
+                generatorPage = generatorView.nextPage(generatorPageStart);
+                generatorPageIdx = 0;
+                if(!generatorPage || !generatorPage.length) return;
+              }
+            }
+
+            // emit one or burst
+            if(rng() < cfg.burstChance){
+              const burstSize = Math.floor(cfg.burstSizeMin + rng() * (cfg.burstSizeMax - cfg.burstSizeMin + 1));
+              for(let i=0;i<burstSize;i++){
+                if(generatorPageIdx >= generatorPage.length){ break; }
+                const msg = generatorPage[generatorPageIdx++];
+                nextIndex++;
+                if(msg) await emitMessageWithTyping(msg);
+              }
+            } else {
+              if(generatorPageIdx < generatorPage.length){
+                const msg = generatorPage[generatorPageIdx++];
+                nextIndex++;
+                if(msg) await emitMessageWithTyping(msg);
+              }
+            }
+          }catch(e){ console.warn('streamedMode (generator) inner error', e); }
+        }, intervalMs);
+        return localTimer;
+      }catch(e){
+        console.warn('generatorView streaming failed, falling back to getRange/local loop', e);
+      }
+    }
+
+    // fallback: stream by repeatedly calling MessagePool.getRange( nextIndex, 1 ) in intervals
+    stopLocalLoop();
+    const intervalMs = Math.max(20, Math.round(60000 / clamp(cfg.msgsPerMin, 1, 5000)));
+    localTimer = setInterval(async ()=>{
+      try{
+        if(!running) return;
+        if(rng() < cfg.burstChance){
+          const burstSize = Math.floor(cfg.burstSizeMin + rng() * (cfg.burstSizeMax - cfg.burstSizeMin + 1));
+          for(let i=0;i<burstSize;i++){
+            const idx = nextIndex++;
+            const arr = window.MessagePool.getRange(idx, 1);
+            const msg = arr && arr[0];
+            if(msg) await emitMessageWithTyping(msg);
+          }
+        } else {
+          const idx = nextIndex++;
+          const arr = window.MessagePool.getRange(idx, 1);
+          const msg = arr && arr[0];
+          if(msg) await emitMessageWithTyping(msg);
+        }
+      }catch(e){ console.warn('streamToUI fallback local loop error', e); }
+    }, intervalMs);
+    return localTimer;
+  }
+
+  function stopStreamedMode(){
+    if(streamController && typeof streamController.stop === 'function'){ try{ streamController.stop(); }catch(e){} }
+    streamController = null;
+    // stop any local timers
+    stopLocalLoop();
+  }
+
+  /* ---------- Public API ---------- */
+  const SimulationEngine = {
     configure(opts){
       opts = opts || {};
-      Object.assign(this._cfg, opts);
-      // set RNG
-      if(this._cfg.seedBase !== null && this._cfg.seedBase !== undefined){
-        this.setRng(this._cfg.seedBase);
+      if(opts.seedBase !== undefined && opts.seedBase !== null){
+        cfg.seedBase = Number(opts.seedBase);
+        rng = xorshift32(cfg.seedBase);
       } else {
-        this._rnd = Math.random;
-      }
-      return Object.assign({}, this._cfg);
-    },
-
-    setRng(seed){
-      if(seed === null || seed === undefined) { this._rnd = Math.random; return; }
-      this._cfg.seedBase = Number(seed);
-      this._rnd = xorshift32(Number(seed));
-    },
-
-    _rand(){ return (typeof this._rnd === 'function') ? this._rnd() : Math.random(); },
-
-    _triggerTyping(names, duration){
-      try{
-        const dur = Math.max(150, Number(duration) || 800);
-        if(window.TypingEngine && typeof window.TypingEngine.triggerTyping === 'function'){
-          try{ window.TypingEngine.triggerTyping(names, dur); return; }catch(e){}
-        }
-        if(window._abrox && typeof window._abrox.showTyping === 'function'){
-          try{ window._abrox.showTyping(names); return; }catch(e){}
-        }
-        const typingRow = document.getElementById && document.getElementById('typingRow');
-        const typingText = document.getElementById && document.getElementById('typingText');
-        if(typingRow && typingText){
-          typingText.textContent = names.length === 1 ? `${names[0]} is typing…` : names.length === 2 ? `${names[0]} and ${names[1]} are typing…` : `${names.length} people are typing…`;
-          typingRow.classList.add('active');
-          setTimeout(()=> typingRow.classList.remove('active'), dur);
-        }
-      }catch(e){
-        console.warn('SimulationEngine._triggerTyping failed', e);
-      }
-    },
-
-    _estimateTypingDurationForText(text){
-      try{
-        if(!text) return this._cfg.typingDelayMinMs;
-        const base = Math.max(0, (text.length || 0) * (this._cfg.typingDelayPerCharMs || 40));
-        const jitter = Math.floor(this._rand() * 350);
-        const dur = clamp(base + jitter, this._cfg.typingDelayMinMs, this._cfg.typingDelayMaxMs);
-        return dur;
-      }catch(e){
-        return this._cfg.typingDelayMinMs;
-      }
-    },
-
-    async _manualStreamLoop(startIndex){
-      this._manualIndex = (typeof startIndex === 'number' && startIndex >= 0) ? Number(startIndex) : 0;
-      const ratePerMin = clamp(Number(this._cfg.msgsPerMin) || 45, 1, 5000);
-      const avgIntervalMs = Math.round(60000 / ratePerMin);
-
-      this._running = true;
-      while(this._running){
-        try{
-          const isBurst = this._rand() < (this._cfg.burstChance || 0.12);
-          const mult = isBurst ? (this._cfg.burstMultiplier || 2.5) : 1;
-          const toEmit = Math.max(1, Math.round((this._cfg.manualBatchSize || 1) * mult));
-
-          for(let e=0;e<toEmit && this._running; e++){
-            // pick next message using generator view or MessagePool
-            let msg = null;
-            const poolLen = (window.MessagePool && window.MessagePool.meta && window.MessagePool.meta.size) ? window.MessagePool.meta.size : (window.MessagePool && window.MessagePool.messages && window.MessagePool.messages.length) || 1;
-            // prefer generator view if available
-            if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
-              try{
-                // create a transient view (cheap) using current meta if needed
-                const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: window.MessagePool.meta.size || window.MessagePool.meta.size, seedBase: window.MessagePool.meta.seedBase || window.MessagePool.meta.seedBase, spanDays: window.MessagePool.meta.spanDays });
-                msg = view.getMessageByIndex(this._manualIndex % (view.size || poolLen));
-              }catch(e){}
-            } else if(window.MessagePool && typeof window.MessagePool.getMessageByIndex === 'function'){
-              msg = window.MessagePool.getMessageByIndex(this._manualIndex % (poolLen));
-            }
-
-            this._manualIndex++;
-
-            if(this._cfg.simulateTypingBeforeSend){
-              const names = [];
-              try{
-                if(msg && msg.displayName) names.push(msg.displayName);
-                if(this._rand() < 0.35 && window.SyntheticPeople && Array.isArray(window.SyntheticPeople.people) && window.SyntheticPeople.people.length){
-                  const rndIdx = Math.floor(this._rand() * window.SyntheticPeople.people.length);
-                  const extra = window.SyntheticPeople.people[rndIdx];
-                  if(extra && extra.displayName && !names.includes(extra.displayName)) names.push(extra.displayName);
-                }
-              }catch(e){}
-              const typingDur = this._estimateTypingDurationForText((msg && msg.text) ? msg.text : '');
-              this._triggerTyping(names.length ? names : ['Someone'], typingDur);
-              await sleep(Math.max(120, Math.round(typingDur * (0.75 + this._rand()*0.25))));
-            }
-
-            try{
-              if(msg){
-                window.renderMessage(msg, true);
-              }
-            }catch(e){
-              console.warn('SimulationEngine manual render failed', e);
-            }
-          }
-
-          const nextMs = Math.max(20, Math.round(avgIntervalMs * (0.6 + this._rand()*0.8)));
-          await sleep(nextMs);
-        }catch(err){
-          console.warn('SimulationEngine manual loop error', err);
-          await sleep(500);
-        }
-      }
-    },
-
-    _startStreamAPI(){
-      // prefer generator view (no heavy allocation)
-      if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
-        try{
-          const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: window.MessagePool.meta.size || window.MessagePool.meta.size, seedBase: window.MessagePool.meta.seedBase || window.MessagePool.meta.seedBase, spanDays: window.MessagePool.meta.spanDays });
-          const rate = clamp(Number(this._cfg.msgsPerMin) || 45, 1, 5000);
-          this._streamHandle = view.streamToUI({
-            startIndex: 0,
-            ratePerMin: rate,
-            jitterMs: Math.round((60000 / rate) * 0.25),
-            onEmit: (msg, idx) => {
-              if(this._cfg.simulateTypingBeforeSend){
-                const names = (msg && msg.displayName) ? [msg.displayName] : ['Someone'];
-                const typingDur = clamp(this._estimateTypingDurationForText(msg && msg.text) * 0.6, 200, this._cfg.typingDelayMaxMs);
-                this._triggerTyping(names, typingDur);
-              }
-            }
-          });
-          this._running = true;
-          return;
-        }catch(e){
-          console.warn('SimulationEngine generator view streaming failed, falling back to MessagePool.streamToUI', e);
-        }
+        // if user cleared seedBase, revert to Math.random
+        if(opts.seedBase === null) rng = Math.random;
       }
 
-      // fallback to MessagePool.streamToUI if available and messages allocated
-      if(window.MessagePool && typeof window.MessagePool.streamToUI === 'function'){
-        try{
-          const rate = clamp(Number(this._cfg.msgsPerMin) || 45, 1, 5000);
-          this._streamHandle = window.MessagePool.streamToUI({
-            startIndex: 0,
-            ratePerMin: rate,
-            jitterMs: Math.round((60000 / rate) * 0.25),
-            onEmit: (msg, idx) => {
-              if(this._cfg.simulateTypingBeforeSend){
-                const names = (msg && msg.displayName) ? [msg.displayName] : ['Someone'];
-                const typingDur = clamp(this._estimateTypingDurationForText(msg && msg.text) * 0.6, 200, this._cfg.typingDelayMaxMs);
-                this._triggerTyping(names, typingDur);
-              }
-            }
-          });
-          this._running = true;
-          return;
-        }catch(e){
-          console.warn('SimulationEngine._startStreamAPI failed, falling back to manual', e);
-        }
-      }
+      // shallow merge of other opts
+      const keys = ['useStreamAPI','simulateTypingBeforeSend','msgsPerMin','typingBeforeMsMin','typingBeforeMsMax','burstChance','burstSizeMin','burstSizeMax','generatorPageSize'];
+      keys.forEach(k => { if(opts[k] !== undefined) cfg[k] = opts[k]; });
 
-      // final fallback: manual
-      return this._startManual();
-    },
-
-    _startManual(){
-      if(this._running) return;
-      this._running = true;
-      this._manualLoopPromise = this._manualStreamLoop(0);
+      return Object.assign({}, cfg);
     },
 
     start(){
-      if(this._running) return;
-      if(this._cfg.useStreamAPI && !this._cfg.simulateTypingBeforeSend){
-        this._startStreamAPI();
-      } else if(this._cfg.useStreamAPI && this._cfg.simulateTypingBeforeSend){
-        // prefer generator-based stream if available but we want typing -> manual gives most realistic typing
-        if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
-          // we still use generator view but simulate typing before each message by wrapping the view
-          this._startManual(); // manual still uses generator view internally
-        } else {
-          this._startManual();
-        }
+      if(running) return;
+      running = true;
+      // ensure rng respects current seedBase
+      if(cfg.seedBase !== null && cfg.seedBase !== undefined) rng = xorshift32(cfg.seedBase);
+      else rng = Math.random;
+
+      // initialize nextIndex (if MessagePool has state, try to resume near newest)
+      if(window.MessagePool && Array.isArray(window.MessagePool.messages) && window.MessagePool.messages.length){
+        // start near end if not previously set, to simulate "recent messages"
+        if(nextIndex <= 0) nextIndex = Math.max(0, window.MessagePool.messages.length - 60);
       } else {
-        this._startManual();
+        if(nextIndex <= 0) nextIndex = 0;
       }
-      return true;
+
+      // if useStreamAPI and streamToUI present, try to start streamed mode
+      if(cfg.useStreamAPI && window.MessagePool && typeof window.MessagePool.streamToUI === 'function'){
+        startStreamedMode();
+      } else {
+        // fallback: local loop that reads messages individually
+        startLocalLoop();
+      }
+
+      console.info('SimulationEngine started', cfg);
     },
 
     stop(){
-      this._running = false;
-      if(this._streamHandle && typeof this._streamHandle.stop === 'function'){
-        try{ this._streamHandle.stop(); }catch(e){}
-        this._streamHandle = null;
-      }
-      // manual loop will exit on next iteration because _running=false
-      return true;
+      if(!running) return;
+      running = false;
+      stopStreamedMode();
+      stopLocalLoop();
+      console.info('SimulationEngine stopped');
     },
 
-    async simulateBurst(opts){
-      opts = opts || {};
-      const size = clamp(Number(opts.size) || 8, 1, 1000);
-      const delay = clamp(Number(opts.delay) || 800, 50, 10_000);
+    isRunning(){ return !!running; },
 
-      if(this._cfg.simulateTypingBeforeSend || !this._cfg.useStreamAPI || !window.MessagePool){
-        for(let i=0;i<size;i++){
-          let msg = null;
-          const poolLen = (window.MessagePool && window.MessagePool.meta && window.MessagePool.meta.size) ? window.MessagePool.meta.size : (window.MessagePool && window.MessagePool.messages && window.MessagePool.messages.length) || 1;
-          if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
-            const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: window.MessagePool.meta.size, seedBase: window.MessagePool.meta.seedBase, spanDays: window.MessagePool.meta.spanDays });
-            msg = view.getMessageByIndex(Math.floor(this._rand() * view.size));
-          } else if(window.MessagePool && typeof window.MessagePool.getMessageByIndex === 'function'){
-            msg = window.MessagePool.getMessageByIndex(Math.floor(this._rand() * poolLen));
-          }
-          if(msg){
-            if(this._cfg.simulateTypingBeforeSend){
-              const dur = this._estimateTypingDurationForText(msg.text);
-              this._triggerTyping([msg.displayName || msg.name || 'Someone'], dur);
-              await sleep(Math.max(120, Math.round(dur * (0.6 + this._rand()*0.4))));
-            }
-            try{ window.renderMessage(msg, true); }catch(e){ console.warn('simulateBurst render failed', e); }
-          }
-          await sleep(delay + Math.round(this._rand() * (delay * 0.4)));
-        }
-        return;
-      }
-
-      // efficient path: use generator view streamToUI (stop shortly after)
-      try{
-        const view = window.MessagePool.createGeneratorView ? window.MessagePool.createGeneratorView({ size: window.MessagePool.meta.size || 1, seedBase: window.MessagePool.meta.seedBase }) : null;
-        if(view){
-          const startIndex = Math.max(0, Math.floor(this._rand() * (view.size || 1)));
-          const stream = view.streamToUI({ startIndex, ratePerMin: Math.max(1, Math.round((size / (delay/1000/60)) || this._cfg.msgsPerMin)), jitterMs: 50 });
-          await sleep(Math.max(120, size * (delay / Math.max(1, size))));
-          if(stream && typeof stream.stop === 'function') stream.stop();
-          return;
-        }
-      }catch(e){
-        console.warn('simulateBurst generator stream failed, falling back', e);
-      }
-
-      // last fallback: simulate manually
-      for(let i=0;i<size;i++){
-        const poolLen = (window.MessagePool && window.MessagePool.messages && window.MessagePool.messages.length) || 1;
-        const idx = Math.floor(this._rand() * (poolLen));
-        const msg = window.MessagePool ? window.MessagePool.getMessageByIndex(idx) : null;
-        if(msg){
-          if(this._cfg.simulateTypingBeforeSend){
-            const dur = this._estimateTypingDurationForText(msg.text);
-            this._triggerTyping([msg.displayName || msg.name || 'Someone'], dur);
-            await sleep(Math.max(120, Math.round(dur * (0.6 + this._rand()*0.4))));
-          }
-          try{ window.renderMessage(msg, true); }catch(e){}
-        }
-        await sleep(delay + Math.round(this._rand() * (delay * 0.4)));
-      }
+    // emit a single message by absolute index (useful for tests)
+    async emitOnce(index){
+      if(typeof index !== 'number') { console.warn('emitOnce expects numeric index'); return null; }
+      const m = await getMessageAt(index);
+      if(m) await emitMessageWithTyping(m);
+      return m;
     },
 
-    async oneShot(index){
-      index = Number(index) || 0;
-      let msg = null;
-      if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
-        const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: window.MessagePool.meta.size || 1, seedBase: window.MessagePool.meta.seedBase });
-        msg = view.getMessageByIndex(index % (view.size || 1));
-      } else if(window.MessagePool && typeof window.MessagePool.getMessageByIndex === 'function'){
-        msg = window.MessagePool.getMessageByIndex(index);
+    // preview N messages synchronously using best available read API
+    previewOnce(count){
+      count = clamp(Number(count) || 20, 1, 1000);
+      if(window.MessagePool && typeof window.MessagePool.preGenerateTemplates === 'function'){
+        try{
+          return window.MessagePool.preGenerateTemplates(count, { seedBase: cfg.seedBase, spanDays: (window.MessagePool.meta && window.MessagePool.meta.spanDays) || undefined });
+        }catch(e){ console.warn('preGenerateTemplates failed', e); }
       }
-      if(!msg) return null;
-      if(this._cfg.simulateTypingBeforeSend){
-        const dur = this._estimateTypingDurationForText(msg.text);
-        this._triggerTyping([msg.displayName || msg.name || 'Someone'], dur);
-        await sleep(Math.max(120, Math.round(dur * (0.75 + this._rand()*0.25))));
+      // fallback: synchronous getRange
+      if(window.MessagePool && typeof window.MessagePool.getRange === 'function'){
+        try{ return window.MessagePool.getRange(0, count); }catch(e){}
       }
-      try{ window.renderMessage(msg, true); }catch(e){ console.warn('oneShot render failed', e); }
-      return msg;
+      return [];
     },
 
-    simulateOnce(){
-      if(this._cfg.useStreamAPI && !this._cfg.simulateTypingBeforeSend && window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
-        const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: window.MessagePool.meta.size || 1, seedBase: window.MessagePool.meta.seedBase });
-        const idx = Math.floor(this._rand() * (view.size || 1));
-        return this.oneShot(idx);
-      } else {
-        return this.simulateBurst({ size: 1, delay: 100 });
-      }
-    },
-
-    isRunning(){ return !!this._running; },
-
-    getConfig(){ return Object.assign({}, this._cfg); }
+    // reset internal index to a specific value
+    seekTo(index){
+      nextIndex = Math.max(0, Number(index) || 0);
+      // clear generator caches so streaming will reflect new index
+      generatorView = null; generatorPage = null; generatorPageIdx = 0; generatorPageStart = nextIndex;
+    }
   };
 
-  window.SimulationEngine = Engine;
-  console.info('SimulationEngine ready — generator view wired if available. simulateTypingBeforeSend is enabled by default.');
+  // attach the engine
+  window.SimulationEngine = SimulationEngine;
+
+  // auto-configure: default deterministic seed if MessagePool has a seed
+  setTimeout(()=>{
+    try{
+      if(window.MessagePool && window.MessagePool.meta && window.MessagePool.meta.seedBase){
+        SimulationEngine.configure({ seedBase: window.MessagePool.meta.seedBase });
+      } else {
+        // keep default (non-deterministic)
+      }
+    }catch(e){}
+  }, 200);
+
+  console.info('SimulationEngine loaded — call SimulationEngine.configure(...) then .start() to run.');
+
 })();
