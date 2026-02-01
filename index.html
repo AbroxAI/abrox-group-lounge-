@@ -5,11 +5,9 @@
 <title>Abrox – Private Lounge</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c1f26">
-
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="emoji-pack.js" defer></script>
-
 <script>
 tailwind.config = {
   theme: {
@@ -28,7 +26,6 @@ tailwind.config = {
   }
 }
 </script>
-
 <style>
 *{box-sizing:border-box}
 
@@ -37,8 +34,8 @@ tailwind.config = {
 
 /* members / typing rows */
 .members-row,.typing-row{
-padding:0 16px;height:22px;font-size:12px;
-display:flex;align-items:center
+  padding:0 16px;height:22px;font-size:12px;
+  display:flex;align-items:center
 }
 .members-row{color:#a0a6b5}
 .typing-row{gap:8px;font-weight:500;color:#6bdba7;display:none}
@@ -48,187 +45,175 @@ display:flex;align-items:center
 /* typing dots */
 .typing-dots{display:flex;gap:3px}
 .typing-dots span{
-width:4px;height:4px;border-radius:999px;
-background:#6bdba7;opacity:.25;
-animation:blink 1.4s infinite both
+  width:4px;height:4px;border-radius:999px;
+  background:#6bdba7;opacity:.25;
+  animation:blink 1.4s infinite both
 }
 .typing-dots span:nth-child(2){animation-delay:.15s}
 .typing-dots span:nth-child(3){animation-delay:.3s}
 @keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
 
 /* ================= CHAT ================= */
-.msg{display:flex;gap:10px;margin-bottom:10px;align-items:flex-end}
+.msg{display:flex;gap:8px;margin-bottom:8px;align-items:flex-end}
 .msg.out{justify-content:flex-end}
 .grouped{margin-top:-6px}
 
-.avatar{
-width:42px;
-height:42px;
-border-radius:999px
-}
+.avatar{width:36px;height:36px;border-radius:999px}
 .msg.grouped .avatar{visibility:hidden}
 
 .bubble{
-max-width:74%;
-padding:10px 16px;
-font-size:14px;
-line-height:1.55;
-position:relative;
-box-shadow:0 2px 8px rgba(0,0,0,.18)
+  max-width:74%;
+  padding:8px 14px;
+  font-size:14px;
+  line-height:1.45;
+  position:relative;
+  box-shadow:0 2px 8px rgba(0,0,0,.18)
 }
-
-/* incoming */
 .msg.in .bubble{
-background:#262b38;
-border-radius:10px 18px 18px 10px
+  background:#262b38;
+  border-radius:8px 18px 18px 8px
 }
 .msg.in .bubble::before{
-content:'';
-position:absolute;
-left:-7px;
-bottom:16px;
-width:12px;height:12px;
-background:#262b38;
-transform:rotate(45deg)
+  content:'';
+  position:absolute;
+  left:-6px;bottom:14px;
+  width:10px;height:10px;
+  background:#262b38;
+  transform:rotate(45deg)
 }
-
-/* outgoing */
 .msg.out .bubble{
-background:#2b3242;
-border:1px solid #343a4a;
-border-radius:18px 10px 10px 18px
+  background:#2b3242;
+  border:1px solid #343a4a;
+  border-radius:18px 8px 8px 18px
 }
 .msg.out .bubble::after{
-content:'';
-position:absolute;
-right:-7px;
-bottom:16px;
-width:12px;height:12px;
-background:#2b3242;
-transform:rotate(45deg)
+  content:'';
+  position:absolute;
+  right:-6px;bottom:14px;
+  width:10px;height:10px;
+  background:#2b3242;
+  transform:rotate(45deg)
 }
-
 .grouped.in .bubble::before,
 .grouped.out .bubble::after{display:none}
 
 /* meta */
 .sender{
-font-size:12px;
-font-weight:600;
-color:#6bdba7;
-margin-bottom:4px;
-display:flex;
-gap:6px;
-align-items:center
+  font-size:12px;font-weight:600;color:#6bdba7;
+  margin-bottom:4px;display:flex;gap:6px;align-items:center
 }
 .time{
-font-size:10px;
-opacity:.55;
-margin-top:6px;
-display:flex;
-gap:6px;
-justify-content:flex-end;
-align-items:center
+  font-size:10px;
+  opacity:.55;
+  margin-top:6px;
+  display:flex;
+  gap:6px;
+  justify-content:flex-end;
+  align-items:center
 }
 
 /* ================= DATE PILLS ================= */
 .date-pill{
-position:sticky;
-top:8px;
-z-index:10;
-margin:16px auto;
-width:max-content;
-padding:4px 12px;
-border-radius:999px;
-background:rgba(0,0,0,.35);
-backdrop-filter:blur(6px);
-font-size:11px;
-opacity:0;
-animation:fadeDate .35s ease forwards;
+  position:sticky;
+  top:8px;
+  z-index:10;
+  margin:16px auto;
+  width:max-content;
+  padding:4px 12px;
+  border-radius:999px;
+  background:rgba(0,0,0,.35);
+  backdrop-filter:blur(6px);
+  font-size:11px;
+  opacity:0;
+  animation:fadeDate .35s ease forwards;
 }
 @keyframes fadeDate{to{opacity:1}}
 
-/* ================= REPLY ================= */
+/* ================= REPLY / REACTIONS ================= */
 .reply-preview{
-font-size:11px;
-opacity:.75;
-border-left:2px solid #6bdba7;
-padding-left:6px;
-margin-bottom:4px;
-cursor:pointer
+  font-size:11px;opacity:.7;
+  border-left:2px solid #6bdba7;
+  padding-left:6px;margin-bottom:4px;
+  cursor:pointer
+}
+.reactions{display:flex;gap:4px;margin-top:4px}
+.reaction{
+  background:#1c1f26;border:1px solid #343a4a;
+  border-radius:999px;padding:1px 6px;
+  font-size:11px;cursor:pointer
 }
 
 /* ================= PIN ================= */
 .pinned-banner{
-background:#232833;
-border-bottom:1px solid #343a4a;
-padding:6px 16px;
-font-size:13px;
-display:flex;
-gap:8px;
-align-items:center;
-cursor:pointer
+  background:#232833;border-bottom:1px solid #343a4a;
+  padding:6px 16px;font-size:13px;
+  display:flex;gap:8px;align-items:center;cursor:pointer
 }
 .pinned-banner.hidden{display:none}
 
 /* ================= INPUT / WAVEFORM ================= */
 .input-shell{
-display:flex;
-align-items:center;
-background:#1c1f26;
-border-radius:999px;
-padding:6px 10px;
-gap:8px;
-width:100%;
-position:relative;
+  display:flex;
+  align-items:center;
+  background:#1c1f26;
+  border-radius:999px;
+  padding:6px 10px;
+  gap:8px;
+  width:100%;
+  position:relative;
 }
+
 .input-shell.recording{
-padding:6px 14px;
+  padding:6px 14px;
 }
 
 #waveform{
-flex:1;
-height:28px;
-display:none;
+  flex:1;
+  height:28px;
+  display:none;
 }
+.input-shell.recording #waveform{
+  display:block;
+}
+.input-shell.recording input{
+  display:none;
+}
+
+.input-shell .mic-lock-icon{
+  position:absolute;left:10px;top:50%;transform:translateY(-50%);display:none;align-items:center;gap:6px
+}
+.input-shell.locked .mic-lock-icon{display:flex}
 
 /* ================= UNREAD ================= */
 #unreadBtn{
-position:fixed;
-bottom:90px;
-left:50%;
-transform:translateX(-50%);
-background:#3b82f6;
-color:#fff;
-padding:8px 16px;
-border-radius:999px;
-font-size:12px;
-display:none;
-z-index:40
+  position:fixed;bottom:90px;left:50%;
+  transform:translateX(-50%);
+  background:#3b82f6;
+  color:#fff;
+  padding:6px 14px;
+  border-radius:999px;
+  font-size:12px;
+  display:none;
+  z-index:40
 }
 
 /* ================= SIDEBAR ================= */
 #sidebar{transition:transform .25s ease}
 #memberSearch{
-width:100%;
-padding:6px 10px;
-border-radius:999px;
-background:#1c1f26;
-border:1px solid #343a4a;
-font-size:12px;
-outline:none;
+  width:100%;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#1c1f26;
+  border:1px solid #343a4a;
+  font-size:12px;
+  outline:none;
 }
 
 section{-webkit-overflow-scrolling:touch}
 </style>
 </head>
-
 <body class="bg-bg text-white h-[100dvh] overflow-hidden">
-<div class="flex h-full">
-
-<main class="flex flex-col flex-1 border-r border-border">
-
-<header class="header">
+<div class="flex h-full">  <main class="flex flex-col flex-1 border-r border-border">  <header class="header">
   <div class="flex items-center justify-between px-4 py-3">
     <div class="flex gap-3 items-center">
       <img src="assets/logo.png" class="w-9 h-9 rounded">
@@ -241,31 +226,21 @@ section{-webkit-overflow-scrolling:touch}
       </div>
     </div>
     <button id="membersBtn"><i data-lucide="users"></i></button>
-  </div>
-
-  <div class="members-row" id="membersRow">
+  </div>    <div class="members-row" id="membersRow">
     Members: <strong id="memberCount">4,872</strong>
     <span class="mx-2">•</span>
-    Online: <strong id="onlineCount">75</strong>
-  </div>
-
-  <div class="typing-row" id="typingRow">
+    Online: <strong id="onlineCount">0</strong>
+  </div>    <div class="typing-row" id="typingRow">
     <div class="typing-dots"><span></span><span></span><span></span></div>
     <span id="typingText"></span>
-  </div>
-
-  <div class="px-4 text-xs text-muted pb-1">
+  </div>    <div class="px-4 text-xs text-muted pb-1">
     Demo discussion · Verification required
   </div>
-</header>
-
-<div id="pinnedBanner" class="pinned-banner hidden">
+</header>  <div id="pinnedBanner" class="pinned-banner hidden">
   <i data-lucide="pin"></i>
   <span id="pinnedText" class="flex-1 truncate"></span>
   <button id="unpinBtn"><i data-lucide="x"></i></button>
-</div>
-
-<section id="chat" class="flex-1 overflow-y-auto px-4 py-4">
+</div>  <section id="chat" class="flex-1 overflow-y-auto px-4 py-4">
   <div class="text-center text-muted text-sm mb-4">
     📌 <strong>Group Rules</strong><br>
     New members are read-only until verified<br>
@@ -273,48 +248,34 @@ section{-webkit-overflow-scrolling:touch}
     No screenshots in chat<br>
     Ignore unsolicited messages
   </div>
-</section>
-
-<button id="unreadBtn">⬇ New messages</button>
+</section>  <button id="unreadBtn">⬇ New messages</button>
 
 <footer class="bg-panel border-t border-border px-4 py-3">
   <div class="flex items-center gap-2">
-    <button id="emojiBtn"><i data-lucide="smile"></i></button>
+    <button id="emojiBtn"><i data-lucide="smile"></i></button>  <div class="input-shell" id="inputShell">
+  <div class="mic-lock-icon"><i data-lucide="lock"></i><span class="text-xs text-muted">Recording locked</span></div>
+  <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
+  <canvas id="waveform"></canvas>
+</div>
 
-    <div class="input-shell" id="inputShell">
-      <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message">
-      <canvas id="waveform"></canvas>
-    </div>
+<div class="flex items-center gap-2 ml-auto">
+  <button id="mediaBtn"><i data-lucide="paperclip"></i></button>
+  <button id="micBtn"><i data-lucide="mic"></i></button>
+  <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
+</div>
 
-    <div class="flex items-center gap-2 ml-auto">
-      <button id="mediaBtn"><i data-lucide="paperclip"></i></button>
-      <button id="micBtn"><i data-lucide="mic"></i></button>
-      <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
-    </div>
   </div>
-</footer>
-
-</main>
-
-<aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full z-50 flex flex-col">
+</footer>  </main>  <aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full z-50 flex flex-col">
   <div class="p-4 border-b border-border flex justify-between">
     <strong>Members</strong>
     <button id="closeSidebar"><i data-lucide="x"></i></button>
-  </div>
-
-  <div class="p-3">
+  </div>    <div class="p-3">
     <input id="memberSearch" placeholder="Search members…">
-  </div>
-
-  <div id="memberList" class="flex-1 overflow-y-auto p-3 space-y-3"></div>
-</aside>
-
-<input type="file" id="fileInput" class="hidden">
-
+  </div>    <div id="memberList" class="flex-1 overflow-y-auto p-3 space-y-3"></div>
+</aside>  <input type="file" id="fileInput" class="hidden">
 <script>
-requestAnimationFrame(()=>lucide.createIcons());
-
-/* ================= CORE ================= */
+/* ================= INIT ================= */
+requestAnimationFrame(()=>lucide.createIcons());  /* ================= CORE */
 const chat = document.getElementById('chat');
 const input = document.getElementById('input');
 const send = document.getElementById('send');
@@ -324,6 +285,7 @@ const micBtn = document.getElementById('micBtn');
 const fileInput = document.getElementById('fileInput');
 const unreadBtn = document.getElementById('unreadBtn');
 const inputShell = document.getElementById('inputShell');
+const micLockIcon = inputShell.querySelector('.mic-lock-icon');
 
 const membersRow = document.getElementById('membersRow');
 const typingRow = document.getElementById('typingRow');
@@ -341,21 +303,18 @@ const memberSearch = document.getElementById('memberSearch');
 const ADMIN = { name:'Profit Hunter 🌐', role:'ADMIN', avatar:'assets/admin.jpg', lastActive:Date.now() };
 const MOD   = { name:'Kitty Star ⭐', role:'MOD', avatar:'assets/mod.jpg', lastActive:Date.now()-60000 };
 
-let members = JSON.parse(localStorage.getItem('members')) || [ADMIN, MOD];
+let members = [ADMIN, MOD];
 let targetMembers = 4872;
 
 function addMemberSlowly(){
   if(members.length >= targetMembers) return;
   if(Math.random() > 0.35) return;
-
   members.push({
-    name:`Member_${members.length+1}`,
+    name: `Member_${members.length+1}`,
     role:'VERIFIED',
     avatar:`https://randomuser.me/api/portraits/men/${members.length%90}.jpg`,
-    lastActive:Date.now() - Math.random()*600000
+    lastActive: Date.now() - Math.random()*600000
   });
-
-  localStorage.setItem('members', JSON.stringify(members));
 }
 setInterval(addMemberSlowly, 5000);
 
@@ -381,69 +340,36 @@ setInterval(driftPresence, 4000);
 
 /* ================= MEMBER RENDER ================= */
 function renderMembers(){
-  const q = memberSearch.value.toLowerCase();
+  const q = (memberSearch.value||'').toLowerCase();
   memberList.innerHTML = '';
+  members.filter(m=>m.name.toLowerCase().includes(q)).slice(0,80).forEach(m=>{
+    const p = presence(m);
+    const color = p==='online'?'bg-green-500':p==='idle'?'bg-yellow-400':'bg-gray-500';
+    memberList.innerHTML += `    <div class="flex gap-3 items-center">   <div class="relative">   <img src="${m.avatar}" class="w-9 h-9 rounded-full">   <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${color}"></span>   </div>   <div>   <div class="text-sm">${m.name}</div>   <span class="text-[10px] px-2 py-[1px] rounded-full ${   m.role==='ADMIN'?'bg-red-600':   m.role==='MOD'?'bg-purple-600':'bg-green-600'   }">${m.role}</span>   </div>   </div>`;
+  });
 
-  members
-    .filter(m=>m.name.toLowerCase().includes(q))
-    .slice(0,80)
-    .forEach(m=>{
-      const p = presence(m);
-      const color =
-        p==='online'?'bg-green-500':
-        p==='idle'?'bg-yellow-400':'bg-gray-500';
-
-      memberList.innerHTML += `
-      <div class="flex gap-3 items-center">
-        <div class="relative">
-          <img src="${m.avatar}" class="w-9 h-9 rounded-full">
-          <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${color}"></span>
-        </div>
-        <div>
-          <div class="text-sm">${m.name}</div>
-          <span class="text-[10px] px-2 py-[1px] rounded-full ${
-            m.role==='ADMIN'?'bg-red-600':
-            m.role==='MOD'?'bg-purple-600':'bg-green-600'
-          }">${m.role}</span>
-        </div>
-      </div>`;
-    });
-
-  const online = members.filter(m=>presence(m)==='online').length;
-  onlineCountEl.textContent = online;
+  onlineCountEl.textContent = members.filter(m=>presence(m)==='online').length;
   memberCountEl.textContent = members.length.toLocaleString();
 }
 setInterval(renderMembers, 3000);
 memberSearch.oninput = renderMembers;
 
-/* ================= TYPING (MULTI-USER) ================= */
+/* ================= TYPING ================= */
 function showTyping(){
-  if(Math.random() > 0.45) return;
-
-  const pool = members.filter(m=>presence(m)==='online');
+  if(Math.random() > 0.4) return;
+  const pool = members.filter(m=>presence(m)==='online' && m.role!=='ADMIN');
   if(!pool.length) return;
-
-  const count = Math.min(3, 1 + Math.floor(Math.random()*3));
-  const picks = pool.sort(()=>0.5-Math.random()).slice(0,count);
-
-  let text =
-    picks.length===1 ? `${picks[0].name} is typing…` :
-    picks.length===2 ? `${picks[0].name} and ${picks[1].name} are typing…` :
-    `${picks.length} people are typing…`;
-
-  typingText.textContent = text;
+  const pick = pool[Math.floor(Math.random()*pool.length)];
+  typingText.textContent = `${pick.name} is typing…`;
   typingRow.classList.add('active');
   membersRow.classList.add('hidden');
-
   setTimeout(()=>{
     typingRow.classList.remove('active');
     membersRow.classList.remove('hidden');
-  },1200 + Math.random()*1200);
+  },1200+Math.random()*1000);
 }
 setInterval(showTyping, 5000);
-</script>
 
-<script>
 /* ================= INPUT ================= */
 input.oninput = ()=>{
   const has = input.value.trim();
@@ -454,29 +380,15 @@ input.oninput = ()=>{
 
 /* ================= SEND ================= */
 let replyTo = null;
-
 send.onclick = ()=>{
-  if(!input.value.trim() && !locked) return;
-
-  if(locked){
-    stopMic(true);
-    return;
-  }
-
-  postMessage({
-    name:'You',
-    role:'VERIFIED',
-    text:input.value,
-    out:true,
-    replyTo
-  });
-
+  if(!input.value.trim()) return;
+  postMessage({ name:'You', role:'VERIFIED', text:input.value, out:true, replyTo });
   replyTo = null;
-  clearReplyPreview();
   input.value='';
   send.classList.add('hidden');
   mediaBtn.classList.remove('hidden');
   micBtn.classList.remove('hidden');
+  input.focus();
 };
 
 /* ================= EMOJI ================= */
@@ -488,16 +400,12 @@ fileInput.onchange = e=>{
   if(!e.target.files.length) return;
   const f = e.target.files[0];
   const url = URL.createObjectURL(f);
-
   postMessage({
     name:'You',
     role:'VERIFIED',
-    text: f.type.startsWith('image/')
-      ? `<img src="${url}" class="rounded-lg max-w-full">`
-      : `📎 ${f.name}`,
+    text: f.type.startsWith('image/') ? `<img src="${url}" class="rounded-lg max-w-full">` : `📎 ${f.name}` ,
     out:true
   });
-
   fileInput.value='';
 };
 
@@ -508,19 +416,13 @@ const seenCache={};
 
 function seenCount(msg){
   if(!seenCache[msg.id]){
-    seenCache[msg.id] = 75 + Math.floor(Math.random()*8);
-
+    seenCache[msg.id] = 75 + Math.floor(Math.random()*12);
     const grow = setInterval(()=>{
-      const online = +onlineCountEl.textContent || 80;
-      if(seenCache[msg.id] < online){
-        seenCache[msg.id] += Math.random() < 0.6 ? 1 : 0;
-      }else{
-        clearInterval(grow);
-      }
-
-      const el = document.querySelector(`[data-id="${msg.id}"] .time span`);
-      el && (el.textContent = seenCache[msg.id]);
-    }, 2500 + Math.random()*2500);
+      seenCache[msg.id] += Math.floor(Math.random()*3);
+      if(seenCache[msg.id] > Number(onlineCountEl.textContent)) clearInterval(grow);
+      const el=document.querySelector(`[data-id="${msg.id}"] .time`);
+      el && (el.querySelector('span').textContent = seenCache[msg.id]);
+    },2000+Math.random()*3000);
   }
   return seenCache[msg.id];
 }
@@ -528,7 +430,7 @@ function seenCount(msg){
 function postMessage(m){
   m.id = crypto.randomUUID();
   m.time = Date.now();
-  setTimeout(()=>renderMessage(m,true), m.out ? 0 : 400 + Math.random()*800);
+  renderMessage(m,true);
 }
 
 function dateLabel(d){
@@ -555,38 +457,30 @@ function renderMessage(m,isNew){
   lastTime = m.time;
 
   const badge =
-    m.role==='ADMIN'?'<span class="text-[10px] px-2 py-[1px] rounded-full bg-red-600">ADMIN</span>':
-    m.role==='MOD'?'<span class="text-[10px] px-2 py-[1px] rounded-full bg-purple-600">MOD</span>':
-    '<i data-lucide="gem" class="w-3 h-3 opacity-80"></i>';
+    m.role==='ADMIN'?'<span class="role-pill admin">ADMIN</span>':
+    m.role==='MOD'?'<span class="role-pill mod">MOD</span>':
+    '<span class="verified-bubble"><i data-lucide="gem"></i></span>';
 
   const el=document.createElement('div');
-  el.className=`msg ${m.out?'out':'in'} ${grouped?'grouped':''}`;
-  el.dataset.id=m.id;
+  el.className = `msg ${m.out? 'out' : 'in'} ${grouped? 'grouped' : ''}`;
+  el.dataset.id = m.id;
 
-  el.innerHTML=`
-    ${!m.out?`<img class="avatar w-10 h-10" src="${members.find(x=>x.name===m.name)?.avatar||''}">`:''}
+  const avatarHtml = !m.out ? `<img class="avatar" src="${members.find(x=>x.name===m.name)?.avatar||''}">` : '';
+
+  el.innerHTML = `
+    ${avatarHtml}
     <div class="bubble">
-      ${m.replyTo?renderReplyPreview(m.replyTo):''}
-      ${!grouped&&!m.out?`<div class="sender">${m.name} ${badge}</div>`:''}
+      ${m.replyTo?`<div class="reply-preview">↩ Reply</div>`:''}
+      ${!grouped && !m.out?`<div class="sender">${m.name} ${badge}</div>`:''}
       <div class="content">${m.text}</div>
       <div class="time">
         <i data-lucide="eye" class="w-3 h-3"></i>
-        <span>${m.out?seenCount(m):'·'}</span>
+        <span>${m.out? seenCount(m) : '·'}</span>
         · ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
       </div>
     </div>
   `;
-
-  el.style.opacity=0;
-  el.style.transform='translateY(6px)';
   chat.appendChild(el);
-
-  requestAnimationFrame(()=>{
-    el.style.transition='.25s ease';
-    el.style.opacity=1;
-    el.style.transform='translateY(0)';
-  });
-
   lucide.createIcons();
 
   if(isNew && chat.scrollTop+chat.clientHeight<chat.scrollHeight-50){
@@ -598,21 +492,147 @@ function renderMessage(m,isNew){
   }
 }
 
-/* ================= REPLY ================= */
-const replyBar = document.createElement('div');
-replyBar.className = 'reply-preview hidden';
-inputShell.before(replyBar);
+/* ================= SIDEBAR ================= */
+membersBtn.onclick = ()=>sidebar.classList.toggle('translate-x-full');
+closeSidebar.onclick = ()=>sidebar.classList.add('translate-x-full');
 
-function renderReplyPreview(id){
-  const target = document.querySelector(`[data-id="${id}"] .content`);
-  if(!target) return '';
-  return `<div class="reply-preview">↩ ${target.textContent.slice(0,40)}</div>`;
+/* ================= JOIN ================= */
+if(!localStorage.getItem('joined')){
+  localStorage.setItem('joined','1');
+  setTimeout(()=>{
+    postMessage({ name:'You', role:'VERIFIED', text:'👋 You joined the group', out:false });
+  },400);
 }
 
-function clearReplyPreview(){
-  replyBar.classList.add('hidden');
-  replyBar.innerHTML='';
+/* ================= SAMPLE ================= */
+setTimeout(()=>{
+  postMessage({name:ADMIN.name,role:'ADMIN',text:'Welcome everyone 👋',out:false});
+  postMessage({name:MOD.name,role:'MOD',text:'Please follow the rules.',out:false});
+},600);
+</script>
+
+<script>
+/* ================= MIC + WAVEFORM ================= */
+const canvas = document.getElementById('waveform');
+const ctx = canvas.getContext('2d');
+
+let audioCtx, analyser, micStream, mediaRecorder;
+let waveAnim, locked=false, recording=false;
+let chunks=[];
+
+function resizeWave(){
+  canvas.width = Math.max(240, inputShell.offsetWidth - 100);
+  canvas.height = inputShell.offsetHeight;
 }
+window.addEventListener('resize', resizeWave);
+resizeWave();
+
+function drawWave(){
+  const bufferLength = analyser.fftSize;
+  const data = new Uint8Array(bufferLength);
+  analyser.getByteTimeDomainData(data);
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = window.getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#3b82f6';
+  ctx.beginPath();
+
+  const slice = canvas.width / data.length;
+  let x=0;
+  for(let i=0;i<data.length;i++){
+    const v = data[i]/128;
+    const y = (v*canvas.height)/2;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    x+=slice;
+  }
+  ctx.stroke();
+
+  waveAnim = requestAnimationFrame(drawWave);
+}
+
+async function startMic(){
+  try{
+    recording=true;
+    locked=false;
+    input.style.display='none';
+    canvas.style.display='block';
+    inputShell.classList.add('recording');
+    inputShell.classList.remove('locked');
+
+    micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+
+    const source = audioCtx.createMediaStreamSource(micStream);
+    source.connect(analyser);
+
+    mediaRecorder = new MediaRecorder(micStream);
+    mediaRecorder.ondataavailable = e=>chunks.push(e.data);
+    mediaRecorder.onstop = ()=>{
+      cancelAnimationFrame(waveAnim);
+      canvas.style.display='none';
+      input.style.display='block';
+      inputShell.classList.remove('recording');
+      inputShell.classList.remove('locked');
+
+      if(chunks.length){
+        const blob = new Blob(chunks,{type:'audio/webm'});
+        const url = URL.createObjectURL(blob);
+        postMessage({
+          name:'You',
+          role:'VERIFIED',
+          text:`<audio controls src="${url}"></audio>`,
+          out:true
+        });
+      }
+      chunks=[];
+      micStream.getTracks().forEach(t=>t.stop());
+      if(audioCtx && audioCtx.state !== 'closed') audioCtx.close();
+    };
+
+    mediaRecorder.start();
+    drawWave();
+  }catch(err){
+    console.error('Mic access error', err);
+    recording=false;
+    input.style.display='block';
+    canvas.style.display='none';
+    inputShell.classList.remove('recording');
+  }
+}
+
+function stopMic(){
+  if(!recording) return;
+  recording=false;
+  if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+}
+
+micBtn.addEventListener('touchstart', (e)=>{ startGesture(e); startMic(); });
+micBtn.addEventListener('mousedown', (e)=>{ startGesture(e); startMic(); });
+
+micBtn.addEventListener('touchend', ()=>{ if(!locked) stopMic(); else { stopMic(); } });
+micBtn.addEventListener('mouseup', ()=>{ if(!locked) stopMic(); else { stopMic(); } });
+
+/* ================= MIC LOCK ================= */
+let startY=0; let moved=false;
+function startGesture(e){
+  startY = (e.touches ? e.touches[0].clientY : e.clientY);
+  moved = false;
+}
+
+micBtn.addEventListener('touchmove',e=>{
+  if(!recording) return;
+  const currentY = e.touches[0].clientY;
+  const diff = startY - currentY;
+  if(diff>40){ // lowered threshold for better UX
+    locked=true;
+    inputShell.classList.add('locked');
+    micLockIcon.querySelector('span').textContent = 'Recording locked';
+    send.classList.remove('hidden');
+    micBtn.style.display='none';
+  }
+});
 
 /* ================= SWIPE TO REPLY ================= */
 let swipeX=0, swipingEl=null;
@@ -627,70 +647,38 @@ chat.addEventListener('touchstart',e=>{
 chat.addEventListener('touchmove',e=>{
   if(!swipingEl) return;
   const dx = e.touches[0].clientX - swipeX;
-  if(dx>60){
-    swipingEl.style.transform='translateX(25px)';
+  if(dx>20){
+    swipingEl.style.transform=`translateX(${Math.min(dx/6,20)}px)`;
+    swipingEl.style.opacity = `${Math.max(0.6, 1 - dx/300)}`;
   }
 });
 
 chat.addEventListener('touchend',()=>{
   if(swipingEl){
     swipingEl.style.transform='';
+    swipingEl.style.opacity='';
     replyTo = swipingEl.dataset.id;
-
-    const content = swipingEl.querySelector('.content')?.textContent || '';
-    replyBar.innerHTML = `↩ Replying to: ${content.slice(0,50)}`;
-    replyBar.classList.remove('hidden');
-
     swipingEl=null;
   }
 });
 
-/* ================= PIN ================= */
-let pinnedId = null;
-
-chat.addEventListener('contextmenu',e=>{
-  e.preventDefault();
-  const msg = e.target.closest('.msg');
-  if(!msg) return;
-
-  const menu = document.createElement('div');
-  menu.className='context-menu';
-  menu.style.cssText='position:fixed;z-index:100;background:#232833;border:1px solid #343a4a;border-radius:8px;padding:6px';
-
-  menu.innerHTML=`
-    <div class="px-3 py-2 cursor-pointer" id="replyOpt">Reply</div>
-    <div class="px-3 py-2 cursor-pointer" id="pinOpt">Pin</div>
-  `;
-
-  menu.style.left=e.clientX+'px';
-  menu.style.top=e.clientY+'px';
-  document.body.appendChild(menu);
-
-  menu.querySelector('#replyOpt').onclick=()=>{
-    replyTo = msg.dataset.id;
-    const c = msg.querySelector('.content').textContent;
-    replyBar.innerHTML = `↩ Replying to: ${c.slice(0,50)}`;
-    replyBar.classList.remove('hidden');
-    menu.remove();
-  };
-
-  menu.querySelector('#pinOpt').onclick=()=>{
-    pinnedId = msg.dataset.id;
-    pinnedBanner.classList.remove('hidden');
-    pinnedText.textContent = msg.querySelector('.content').textContent;
-    menu.remove();
-  };
+/* ================= TAP ANYWHERE CLOSE ================= */
+document.addEventListener('click',e=>{
+  document.querySelectorAll('.context-menu').forEach(m=>m.remove());
 });
 
-pinnedBanner.onclick=()=>{
-  if(!pinnedId) return;
-  document.querySelector(`[data-id="${pinnedId}"]`)?.scrollIntoView({behavior:'smooth'});
-};
-unpinBtn.onclick=()=>{
-  pinnedId=null;
-  pinnedBanner.classList.add('hidden');
-};
-</script>
+/* ================= BOOT SAFETY ================= */
+setTimeout(()=>{
+  if(chat.children.length<=1){
+    postMessage({
+      name:ADMIN.name,
+      role:'ADMIN',
+      text:'Chat initialized successfully.',
+      out:false
+    });
+  }
+}, 800);
 
+</script>
 </body>
 </html>
