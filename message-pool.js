@@ -6,13 +6,11 @@
 // - Integrates with SyntheticPeople for senders/avatars/roles
 // - Methods: generatePool, regenerateAndInject, getMessageByIndex, getRange, pickRandom,
 //            streamToUI (simulate live emission), exportToJSON, estimatePoolForDuration, preGenerateTemplates
-// - New: createGeneratorView(opts) -> lightweight paging + streamToUI without full pool allocation
 //
 // Usage (example):
 //   MessagePool.generatePool({ size:100000, seedBase:4000, spanDays:730 });
-//   const view = MessagePool.createGeneratorView({ size: 100000, seedBase: 4000 });
-//   view.getRange(0, 50);
-//   view.streamToUI({ startIndex:0, ratePerMin:45, onEmit: (m,i)=> window.renderMessage(m,true) });
+//   MessagePool.streamToUI({ startIndex:0, ratePerMin:45 });
+//   const window = MessagePool.getRange(0,50);
 
 (function globalMessagePool(){
   if(window.MessagePool) return;
@@ -76,7 +74,7 @@
   };
 
   /* ---------- Helpers ---------- */
-  function pickFrom(arr, rnd) { if(!arr || !arr.length) return null; return arr[Math.floor((typeof rnd === 'function' ? rnd() : Math.random())*arr.length)]; }
+  function pickFrom(arr, rnd) { if(!arr || !arr.length) return null; return arr[Math.floor(rnd()*arr.length)]; }
   function renderTemplate(template, env){ return template.replace(/\{(\w+)\}/g, (m,k)=> env[k] !== undefined ? env[k] : m); }
   function fmtPrice(v){ return (Math.round(v*100)/100).toLocaleString(); }
   function fmtPercent(p){ return (Math.round(p*100)/100).toFixed(2) + '%'; }
@@ -86,7 +84,7 @@
     if(token === 'BTC') base = 30000;
     if(token === 'ETH') base = 2000;
     if(token === 'DOGE') base = 0.08;
-    const jitter = ((typeof rnd === 'function' ? rnd() : Math.random())-0.5) * base * 0.12;
+    const jitter = (rnd()-0.5) * base * 0.12;
     return Math.max(0.0001, base + jitter);
   }
 
@@ -272,43 +270,12 @@
       return pool;
     },
 
-    getMessageByIndex(i){
-      if(this.messages && this.messages.length){
-        if(i < 0 || i >= this.messages.length) return null;
-        return this.messages[i];
-      }
-      // if no messages array allocated, create on-the-fly using meta
-      if(typeof i !== 'number' || i < 0) return null;
-      return this._generateMessageForIndex(i, { size: this.meta.size, seedBase: this.meta.seedBase, spanDays: this.meta.spanDays });
-    },
+    // getters
+    getMessageByIndex(i){ if(!this.messages || !this.messages.length) return null; if(i<0||i>=this.messages.length) return null; return this.messages[i]; },
+    getRange(start, count){ if(!this.messages || !this.messages.length) return []; start = clamp(start,0, Math.max(0,this.messages.length-1)); count = clamp(count,0,this.messages.length-start); return this.messages.slice(start, start+count); },
+    pickRandom(filter){ const pool = filter ? this.messages.filter(filter) : this.messages; if(!pool || !pool.length) return null; return pool[Math.floor(Math.random()*pool.length)]; },
 
-    // existing getRange (works against allocated pool)
-    getRange(start, count){
-      if(this.messages && this.messages.length) {
-        start = clamp(start,0, Math.max(0,this.messages.length-1));
-        count = clamp(count,0,this.messages.length-start);
-        return this.messages.slice(start, start+count);
-      }
-      // generate on-demand
-      start = clamp(start, 0, Math.max(0,(this.meta.size||DEFAULT.size)-1));
-      count = clamp(count, 0, (this.meta.size||DEFAULT.size) - start);
-      const out = [];
-      for(let i=0;i<count;i++){
-        out.push(this._generateMessageForIndex(start + i, { size: this.meta.size, seedBase: this.meta.seedBase, spanDays: this.meta.spanDays }));
-      }
-      return out;
-    },
-
-    pickRandom(filter){ 
-      const pool = filter ? (this.messages && this.messages.length ? this.messages.filter(filter) : null) : (this.messages && this.messages.length ? this.messages : null);
-      if(pool && pool.length) return pool[Math.floor(Math.random()*pool.length)];
-      // fallback: try generating a random index
-      const size = this.meta.size || DEFAULT.size;
-      const idx = Math.floor(Math.random() * size);
-      return this.getMessageByIndex(idx);
-    },
-
-    // stream messages to UI like a live feed (existing array-based implementation)
+    // stream messages to UI like a live feed
     // opts: { startIndex, ratePerMin, jitterMs, onEmit(msg,idx) }
     streamToUI(opts){
       opts = opts || {};
@@ -326,7 +293,8 @@
         if(stopped) return;
         const m = this.messages[idx];
         if(m){
-          try{ if(typeof opts.onEmit === 'function') opts.onEmit(m, idx); else window.renderMessage(m, true); }catch(e){ console.warn('renderMessage error', e); }
+          try{ window.renderMessage(m, true); }catch(e){ console.warn('renderMessage error', e); }
+          if(typeof opts.onEmit === 'function') opts.onEmit(m, idx);
         }
         idx++;
         if(idx >= this.messages.length){
@@ -336,74 +304,6 @@
       }, Math.max(20, intervalMs + (Math.random() * jitter - jitter/2)));
 
       return { stop: function(){ stopped = true; clearInterval(timer); } };
-    },
-
-    // NEW: create a generator view that generates messages on demand and provides lightweight paging + stream
-    // opts: { size, seedBase, spanDays, attachmentFraction, replyFraction }
-    createGeneratorView(opts){
-      opts = opts || {};
-      const size = clamp(Number(opts.size || this.meta.size || DEFAULT.size), 1, 10_000_000);
-      const seedBase = Number(opts.seedBase || this.meta.seedBase || DEFAULT.seedBase);
-      const spanDays = Number(opts.spanDays || this.meta.spanDays || DEFAULT.spanDays);
-      const replyFraction = Number(opts.replyFraction || this.meta.replyFraction || DEFAULT.replyFraction);
-      const attachmentFraction = Number(opts.attachmentFraction || this.meta.attachmentFraction || DEFAULT.attachmentFraction);
-
-      // generator object
-      const self = this;
-      let streamTicker = null;
-      let stopped = false;
-
-      return {
-        size,
-        seedBase,
-        spanDays,
-        getMessageByIndex(i){
-          if(typeof i !== 'number' || i < 0) return null;
-          return self._generateMessageForIndex(i, { size, seedBase, spanDays, replyFraction, attachmentFraction });
-        },
-        getRange(start, count){
-          start = clamp(Number(start) || 0, 0, Math.max(0, size-1));
-          count = clamp(Number(count) || 0, 0, Math.max(0, size - start));
-          const out = [];
-          for(let j=0;j<count;j++){
-            out.push(self._generateMessageForIndex(start + j, { size, seedBase, spanDays, replyFraction, attachmentFraction }));
-          }
-          return out;
-        },
-        // streamToUI similar API to MessagePool.streamToUI but generates on the fly
-        // opts: { startIndex, ratePerMin, jitterMs, onEmit(msg,idx) }
-        streamToUI(opts){
-          opts = opts || {};
-          const startIndex = clamp(Number(opts.startIndex || 0), 0, Math.max(0,size-1));
-          const ratePerMin = clamp(Number(opts.ratePerMin || 45), 1, 5000);
-          const intervalMs = Math.round(60000 / ratePerMin);
-          const jitter = Number(opts.jitterMs || Math.round(intervalMs * 0.25));
-          let idx = startIndex;
-          stopped = false;
-          const timer = setInterval(()=>{
-            if(stopped) return;
-            const m = self._generateMessageForIndex(idx % size, { size, seedBase, spanDays, replyFraction, attachmentFraction });
-            if(m){
-              try{ if(typeof opts.onEmit === 'function') opts.onEmit(m, idx); else window.renderMessage(m, true); }catch(e){ console.warn('generator view render error', e); }
-            }
-            idx++;
-            if(idx >= size){
-              idx = Math.max(0, Math.floor(Math.random() * Math.min(1000, size)));
-            }
-          }, Math.max(20, intervalMs + (Math.random() * jitter - jitter/2)));
-
-          return { stop: function(){ stopped = true; clearInterval(timer);} };
-        },
-        // synchronous iterator for pages (useful for UI virtual lists)
-        createPageIterator(pageSize){
-          pageSize = Math.max(1, Math.floor(pageSize || 50));
-          let page = 0;
-          return {
-            next(){ const start = page * pageSize; const out = []; for(let i=0;i<pageSize && start+i < size;i++) out.push(self._generateMessageForIndex(start + i, { size, seedBase, spanDays, replyFraction, attachmentFraction })); page++; return { value: out, done: start >= size }; },
-            reset(){ page = 0; }
-          };
-        }
-      };
     },
 
     // export to JSON (careful — large)
@@ -430,7 +330,159 @@
         out.push(m.text);
       }
       return out;
-    }
+    },
+
+    /* ---------- Memory-light paging view for large pools ---------- */
+    createGeneratorView(opts){
+      opts = opts || {};
+      const pageSize = Math.max(1, Number(opts.pageSize || 200));
+      const seedBase = (opts.seedBase !== undefined) ? Number(opts.seedBase) : (this.meta && this.meta.seedBase) || DEFAULT.seedBase;
+      const spanDays = (opts.spanDays !== undefined) ? Number(opts.spanDays) : (this.meta && this.meta.spanDays) || DEFAULT.spanDays;
+      const cachePagesMax = Math.max(3, Number(opts.cachePages || 12));
+      const allowWrap = !!opts.allowWrap; // if true, nextPage will wrap to 0 when past end (optional)
+
+      // attempt to determine total size if possible
+      const totalSize = (this.messages && this.messages.length) ? this.messages.length : (this.meta && this.meta.size) ? Number(this.meta.size) : null;
+
+      // LRU page cache (key = pageStartIndex)
+      const pageOrder = []; // queue of keys oldest -> newest
+      const pageCache = new Map();
+
+      function pushCache(key, page){
+        if(pageCache.has(key)) return;
+        pageCache.set(key, page);
+        pageOrder.push(key);
+        while(pageOrder.length > cachePagesMax){
+          const rem = pageOrder.shift();
+          pageCache.delete(rem);
+        }
+      }
+      function touchCache(key){
+        const i = pageOrder.indexOf(key);
+        if(i !== -1){
+          pageOrder.splice(i,1);
+          pageOrder.push(key);
+        }
+      }
+
+      // internal generator for a single index using the MessagePool's own generator
+      function genMessageAt(index){
+        // clamp to integer
+        index = Math.max(0, Math.floor(Number(index) || 0));
+        // respect known totalSize
+        if(totalSize !== null && index >= totalSize){
+          if(allowWrap) index = index % totalSize;
+          else return null;
+        }
+        // prefer existing in-memory pool if present
+        if(Array.isArray(this.messages) && this.messages.length && this.messages[index]){
+          return this.messages[index];
+        }
+        // call internal generator (keeps deterministic behavior)
+        if(typeof this._generateMessageForIndex === 'function'){
+          return this._generateMessageForIndex(index, { size: totalSize || undefined, seedBase: seedBase, spanDays: spanDays });
+        }
+        // last resort: null
+        return null;
+      }
+
+      // build a page starting at absolute index `start`
+      const makePage = (start) => {
+        start = Math.max(0, Math.floor(Number(start) || 0));
+        // if we know totalSize and start >= totalSize, optionally wrap
+        if(totalSize !== null && start >= totalSize){
+          if(allowWrap) start = start % totalSize;
+          else return [];
+        }
+        const out = [];
+        for(let i=0;i<pageSize;i++){
+          let idx = start + i;
+          if(totalSize !== null){
+            if(idx >= totalSize){
+              if(allowWrap) idx = idx % totalSize;
+              else break;
+            }
+          }
+          const m = genMessageAt.call(this, idx);
+          if(!m) break;
+          out.push(m);
+        }
+        return out;
+      };
+
+      const self = this; // preserve MessagePool context
+
+      return {
+        pageSize,
+        totalSize,
+
+        // get a single message (sync). Uses cache if page exists, otherwise generates inline.
+        get(index){
+          index = Math.max(0, Math.floor(Number(index) || 0));
+          const pageStart = Math.floor(index / pageSize) * pageSize;
+          if(pageCache.has(pageStart)){
+            touchCache(pageStart);
+            const page = pageCache.get(pageStart);
+            return page[index - pageStart] || null;
+          }
+          // try to generate the single message inline (cheaper than full page)
+          try{
+            return genMessageAt.call(self, index);
+          }catch(e){
+            console.warn('createGeneratorView.get failed for index', index, e);
+            return null;
+          }
+        },
+
+        // return a page array for start index (synchronous). Caches result.
+        nextPage(startIndex){
+          startIndex = Math.max(0, Math.floor(Number(startIndex) || 0));
+          const pageStart = Math.floor(startIndex / pageSize) * pageSize;
+          if(pageCache.has(pageStart)){
+            touchCache(pageStart);
+            return pageCache.get(pageStart).slice(); // return shallow copy
+          }
+          try{
+            const page = makePage.call(self, pageStart);
+            pushCache(pageStart, page);
+            return page.slice();
+          }catch(e){
+            console.warn('createGeneratorView.nextPage failed for', pageStart, e);
+            return [];
+          }
+        },
+
+        // prefetch N pages starting at startIndex (helpful to warm cache)
+        prefetch(startIndex, pages){
+          startIndex = Math.max(0, Math.floor(Number(startIndex) || 0));
+          pages = Math.max(1, Math.floor(Number(pages) || 1));
+          const results = [];
+          for(let p=0;p<pages;p++){
+            const s = startIndex + p * pageSize;
+            const page = this.nextPage(s);
+            results.push(page);
+          }
+          return results;
+        },
+
+        // clear page cache
+        clearCache(){
+          pageCache.clear();
+          pageOrder.length = 0;
+        },
+
+        // info for debugging
+        info(){
+          return {
+            pageSize,
+            totalSize,
+            cachedPages: pageOrder.slice(),
+            cacheCount: pageOrder.length
+          };
+        }
+      };
+    }, // end createGeneratorView
+
   };
 
   // attach globally
