@@ -241,7 +241,7 @@
         while(lru.has(h) && attempts < 6){
           // regenerate with slight seed tweak to vary wording
           const alt = this._generateMessageForIndex(i + attempts + 1, { size, seedBase: seedBase + attempts + 1, spanDays });
-          // FIX: pass a RNG function into pickFrom (not a numeric sample)
+          // pickFrom expects a rnd function; pass generator
           m.text = alt.text + ((attempts % 2 === 0) ? (' ' + pickFrom(EMOJI, xorshift32(seedBase + attempts + i))) : '');
           h = contentHash(m.text);
           attempts++;
@@ -481,9 +481,9 @@
           };
         }
       };
-    }, // end createGeneratorView
+    } // end createGeneratorView
 
-  };
+  }; // end MessagePool object
 
   // attach globally
   window.MessagePool = MessagePool;
