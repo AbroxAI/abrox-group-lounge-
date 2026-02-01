@@ -1,17 +1,17 @@
- // ui-adapter.js
+// ui-adapter.js
 // Full UI glue for Abrox + presence wiring that uses SyntheticPeople.simulatePresenceStep()
 // - Exposes window._abrox.setSampleMembers and window._abrox.showTyping
 // - Renders members list and messages
 // - Attaches interactions (context menu / long-press / pin / reply)
 // - Presence wiring updates #onlineCount periodically
-// - Demo: prefill chat from MessagePool.createGeneratorView()/getRange (preferred) or MessagePool.getRange (fallback)
+// - Demo: prefill chat using generator view (MessagePool.createGeneratorView) when available
 (function uiAdapterGlobal(){
   if(window._abrox && window._abrox._uiAdapterLoaded) return;
   window._abrox = window._abrox || {};
   window._abrox._uiAdapterLoaded = true;
 
   /* ---------- Helpers ---------- */
-  function escapeHtml(s){ return (''+s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;', '"':'&quot;', "'":'&#39;'})[c]); }
+  function escapeHtml(s){ return (''+s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); }
   function formatTime(ts) {
     const d = new Date(ts || Date.now());
     return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
@@ -356,42 +356,59 @@
     }catch(e){}
   })();
 
-  /* ---------- Demo: prefill chat from MessagePool (generator view preferred) ---------- */
+  /* ---------- Generator-aware fetch helper ---------- */
+  function fetchMessagesViaGenerator(start, count){
+    try{
+      // prefer generator view if provided by MessagePool
+      if(window.MessagePool && typeof window.MessagePool.createGeneratorView === 'function'){
+        try{
+          const view = window.MessagePool.createGeneratorView({ pageSize: Math.max(1, count) });
+          // accept multiple possible method names on the view for compatibility
+          if(view){
+            if(typeof view.getRange === 'function') return view.getRange(start, count) || [];
+            if(typeof view.getPage === 'function'){
+              const pageIndex = Math.floor(start / count);
+              const page = view.getPage(pageIndex) || [];
+              const offset = start % count;
+              return page.slice(offset, offset + count);
+            }
+            if(typeof view.read === 'function') return view.read(start, count) || [];
+            if(typeof view.fetch === 'function') return view.fetch(start, count) || [];
+            // fallback: if view is an iterator-like with next(), collect items
+            if(typeof view.next === 'function'){
+              const out = [];
+              let iter = view.next();
+              while(out.length < count && iter){
+                out.push(iter);
+                iter = view.next();
+              }
+              return out;
+            }
+          }
+        }catch(err){
+          console.warn('fetchMessagesViaGenerator: generator view failed, falling back', err);
+        }
+      }
+    }catch(e){/* ignore */}
+
+    // fallback to the old direct getRange (may allocate larger pool)
+    try{
+      if(window.MessagePool && typeof window.MessagePool.getRange === 'function') return window.MessagePool.getRange(start, count) || [];
+    }catch(e){/* ignore */}
+    return [];
+  }
+
+  /* ---------- Demo: prefill chat using generator view when available ---------- */
   // Exposed as window._abrox.prefillFromMessagePool(start = 0, count = 40)
   window._abrox.prefillFromMessagePool = function(start = 0, count = 40){
     try{
-      if(!window.MessagePool){ console.warn('prefillFromMessagePool: MessagePool not available'); return []; }
-
-      const s = Number(start) || 0;
-      const c = Math.max(0, Math.min(Number(count) || 40, 200));
-      let msgs = [];
-
-      // Prefer generator view when available (no large allocations)
-      if(typeof window.MessagePool.createGeneratorView === 'function'){
-        try{
-          const metaSize = (window.MessagePool.meta && window.MessagePool.meta.size) ? window.MessagePool.meta.size : (window.MessagePool.meta ? window.MessagePool.meta.size : 100000);
-          const seedBase = (window.MessagePool.meta && window.MessagePool.meta.seedBase) ? window.MessagePool.meta.seedBase : undefined;
-          const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: metaSize, seedBase: seedBase });
-          msgs = view.getRange(s, c);
-        }catch(e){
-          console.warn('prefillFromMessagePool: generator view failed, falling back', e);
-        }
+      if(typeof window.renderMessage !== 'function'){
+        console.warn('prefillFromMessagePool: renderMessage not available');
+        return [];
       }
-
-      // fallback: old getRange
-      if(!msgs || !msgs.length){
-        if(typeof window.MessagePool.getRange === 'function'){
-          try{ msgs = window.MessagePool.getRange(s, c) || []; }catch(e){ console.warn('prefillFromMessagePool fallback getRange failed', e); }
-        } else if(typeof window.MessagePool.getMessageByIndex === 'function'){
-          try{ for(let i=0;i<c;i++){ msgs.push(window.MessagePool.getMessageByIndex(s + i)); } }catch(e){ console.warn('prefillFromMessagePool fallback per-index failed', e); }
-        }
-      }
-
-      if(!msgs || !msgs.length){ console.warn('prefillFromMessagePool: no messages to prefill'); return []; }
-
-      // ensure chat cleared of previous date pills for clarity
+      const msgs = fetchMessagesViaGenerator(Number(start) || 0, Number(count) || 40) || [];
       const chat = document.getElementById('chat');
-      if(chat) chat.innerHTML = '';
+      if(chat) chat.innerHTML = ''; // clear previous content
       for(let i=0;i<msgs.length;i++){
         try{ window.renderMessage(msgs[i], false); }catch(e){ console.warn('renderMessage failed for prefill', e); }
       }
@@ -402,33 +419,20 @@
     }
   };
 
-  // Auto-run once shortly after load if generator view / MessagePool and renderMessage are present.
-  // This prefill is conservative (40 messages) and only runs once.
+  // Auto-run once shortly after load if both MessagePool (or generator) and renderMessage are present.
   setTimeout(()=>{
     try{
+      if(typeof window.renderMessage !== 'function') return;
+      // do not auto-run if user explicitly disabled via global flag
       if(window._abrox && window._abrox.disableAutoPrefill) return;
-      if(!window.MessagePool || typeof window.renderMessage !== 'function') return;
-
-      // prefer generator view
-      if(typeof window.MessagePool.createGeneratorView === 'function'){
-        try{
-          const metaSize = (window.MessagePool.meta && window.MessagePool.meta.size) ? window.MessagePool.meta.size : (window.MessagePool.meta ? window.MessagePool.meta.size : 100000);
-          const seedBase = (window.MessagePool.meta && window.MessagePool.meta.seedBase) ? window.MessagePool.meta.seedBase : undefined;
-          const view = window._simulation_cachedView = window._simulation_cachedView || window.MessagePool.createGeneratorView({ size: metaSize, seedBase: seedBase });
-          const sample = view.getRange(0, 40);
-          if(sample && sample.length){ const chat = document.getElementById('chat'); if(chat) chat.innerHTML = ''; sample.forEach(m => { try{ window.renderMessage(m, false); }catch(e){} }); }
-          return;
-        }catch(e){ console.warn('auto prefill (generator) failed', e); }
+      // attempt generator-aware prefill
+      const sample = fetchMessagesViaGenerator(0, 40);
+      if(sample && sample.length){
+        const chat = document.getElementById('chat');
+        if(chat) chat.innerHTML = '';
+        sample.forEach(m => { try{ window.renderMessage(m, false); }catch(e){} });
       }
-
-      // fallback: MessagePool.getRange
-      if(typeof window.MessagePool.getRange === 'function'){
-        try{
-          const sample = window.MessagePool.getRange(0, 40);
-          if(sample && sample.length){ const chat = document.getElementById('chat'); if(chat) chat.innerHTML = ''; sample.forEach(m => { try{ window.renderMessage(m, false); }catch(e){} }); }
-        }catch(e){ console.warn('auto prefill (getRange) failed', e); }
-      }
-    }catch(e){}
+    }catch(e){ console.warn('auto prefill failed', e); }
   }, 700);
 
   /* ---------- Exports for testing/debugging ---------- */
@@ -437,5 +441,5 @@
   window._abrox.clearReplyPreview = function(){ try{ clearReplyPreview(); }catch(e){} };
 
   // friendly log
-  console.info('ui-adapter loaded — presence wiring active. Demo prefill uses generator view when available.');
+  console.info('ui-adapter loaded — presence wiring active. Demo prefill now uses generator view when available (window.MessagePool.createGeneratorView).');
 })();
