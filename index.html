@@ -55,7 +55,12 @@ html,body{height:100%}
 @keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
 
 /* ================= CHAT ================= */
-.msg{display:flex;gap:8px;margin-bottom:8px;align-items:flex-end;transition:transform .18s ease, opacity .18s ease}
+.msg{
+  display:flex;gap:8px;margin-bottom:8px;align-items:flex-end;
+  transition:transform .18s ease, opacity .18s ease;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
 .msg.out{justify-content:flex-end}
 .grouped{margin-top:-6px}
 
@@ -69,7 +74,8 @@ html,body{height:100%}
   font-size:14px;
   line-height:1.5;
   position:relative;
-  box-shadow:0 2px 8px rgba(0,0,0,.18)
+  box-shadow:0 2px 8px rgba(0,0,0,.18);
+  transform: translateZ(0);
 }
 .msg.in .bubble{
   background:#262b38;
@@ -188,9 +194,10 @@ html,body{height:100%}
   display:none;
 }
 
-/* whatsapp-style lock icon: slide-up */
+/* whatsapp-style lock icon: slide-up; initial off-screen and animated via transform */
 .input-shell .mic-lock-icon{
-  position:absolute;left:12px;top:calc(50% + 6px);transform:translateY(8px);display:flex;align-items:center;gap:6px;opacity:0;transition:transform .18s ease, opacity .18s ease;
+  position:absolute;left:12px;bottom:50%;transform:translateY(14px);display:flex;align-items:center;gap:6px;opacity:0;transition:transform .18s ease, opacity .18s ease;
+  pointer-events:none;
 }
 .input-shell.locked .mic-lock-icon{transform:translateY(0);opacity:1}
 
@@ -333,18 +340,18 @@ requestAnimationFrame(()=>{ try{ lucide.createIcons(); }catch(e){} });
 // TUNABLES: adjust these to match exact feel
 const TUNABLES = {
   WAVE: {
-    amplitude: 0.5,      // 0.35 -> 0.5 increases amplitude
-    glow: 18,            // shadow blur
-    backOpacity: 0.42,   // back layer opacity
-    smooth: 0.86         // smoothing factor (0..1)
+    amplitude: 0.7,
+    glow: 24,
+    backOpacity: 0.42,
+    smooth: 0.92
   },
   LOCK: {
-    lockThreshold: 42,   // px needed to lock (tightened to WhatsApp feel)
-    slideDistance: 80,   // distance used to show progress
-    slideEase: 160       // ms for transition
+    lockThreshold: 48,
+    slideDistance: 90,
+    slideEase: 160
   },
   SEEN: {
-    aggressiveness: 0.6, // 0..1 larger => faster seen increments
+    aggressiveness: 0.6,
     baseOutgoing: 75
   },
   ONLINE: {
@@ -407,14 +414,15 @@ let replyTo = null;
 function saveMemberCount(){ localStorage.setItem('member_count', String(persistedMemberCount)); }
 function saveVirtualOnline(){ localStorage.setItem('virtual_online', String(virtualOnlineCount)); }
 function tickMemberGrowth(){ if(Math.random() < 0.35){ persistedMemberCount += Math.random() < 0.7 ? 1 : 2; saveMemberCount(); } }
-setInterval(tickMemberGrowth, 30000 + Math.random()*60000);
+// slower growth checks to reduce background churn
+setInterval(tickMemberGrowth, 45000 + Math.random()*60000);
 
 /* ================= REALISTIC ONLINE COUNT (time-aware, smoothed, bursts) ================= */
 let onlineSpike = { until: 0, extra: 0 };
 function getDayActivityFactor() {
   const now = new Date();
   const hour = now.getHours() + now.getMinutes() / 60;
-  const peakHour = 20.5; // peak at ~8:30pm
+  const peakHour = 20.5;
   const phase = (hour - peakHour) / 24 * 2 * Math.PI;
   const normalized = 0.5 + 0.5 * Math.cos(phase);
   return 0.6 * normalized + 0.4 * Math.pow(normalized, 2);
@@ -451,7 +459,7 @@ function driftOnlineCount(){
   saveVirtualOnline();
   onlineCountEl.textContent = virtualOnlineCount.toLocaleString();
 }
-setInterval(driftOnlineCount, 3000);
+setInterval(driftOnlineCount, 5000);
 driftOnlineCount();
 
 /* ================= render members / presence ================= */
@@ -467,135 +475,652 @@ function renderMembers(){ const q = (memberSearch.value||'').toLowerCase(); memb
           <span class="text-[10px] px-2 py-[1px] rounded-full ${ m.role==='ADMIN'?'bg-red-600': m.role==='MOD'?'bg-purple-600':'bg-green-600' }">${m.role}</span>
         </div>
       </div>`; }); }
-setInterval(renderMembers, 3000); memberSearch.oninput = renderMembers; renderMembers();
+setInterval(renderMembers, 3500);
+memberSearch.oninput = renderMembers;
+renderMembers();
 
 /* ================= TYPING SIMULATION ================= */
 function typingSimulation(){ if(Math.random() > 0.6) return (typingRow.classList.remove('active'), membersRow.classList.remove('hidden')); const onlinePool = sampleMembers.filter(m=>presenceOf(m) === 'online' && m.role!=='ADMIN'); if(onlinePool.length === 0) return; const count = Math.min(3, 1 + Math.floor(Math.random()*3)); const picks = []; for(let i=0;i<count && onlinePool.length;i++){ const idx = Math.floor(Math.random()*onlinePool.length); picks.push(onlinePool.splice(idx,1)[0]); } if(picks.length === 1){ typingText.textContent = `${picks[0].name} is typing…`; } else if(picks.length === 2){ typingText.textContent = `${picks[0].name} and ${picks[1].name} are typing…`; } else { typingText.textContent = `3 people are typing…`; } typingRow.classList.add('active'); membersRow.classList.add('hidden'); setTimeout(()=>{ typingRow.classList.remove('active'); membersRow.classList.remove('hidden'); }, 900 + Math.random()*2200); }
 setInterval(typingSimulation, 3500);
 
-/* ================= MESSAGE CORE & SEEN RECEIPTS ================= */
-let lastSender=null, lastTime=0, lastDate=''; let unread=0; const seenCache = {};
-function seenCount(msg){ if(!seenCache[msg.id]){ // start number: outgoing bigger base, incoming scaled by online
-    const base = msg.out ? TUNABLES.SEEN.baseOutgoing + Math.floor(Math.random()*6) : Math.max(3, Math.floor(virtualOnlineCount * (0.02 + Math.random()*0.06)));
-    seenCache[msg.id] = base;
-    const pace = 1800 * (1 - TUNABLES.SEEN.aggressiveness) + 600 * TUNABLES.SEEN.aggressiveness; // faster with higher aggressiveness
-    const grow = setInterval(()=>{
-      if(Math.random() < 0.55 + 0.25 * TUNABLES.SEEN.aggressiveness) seenCache[msg.id] += Math.floor(Math.random()*2);
-      const cap = Math.max(virtualOnlineCount, TUNABLES.SEEN.baseOutgoing);
-      if(seenCache[msg.id] >= cap) { seenCache[msg.id] = cap; clearInterval(grow); }
-      const el = document.querySelector(`[data-id="${msg.id}"] .time`);
-      if(el) { const span = el.querySelector('span'); if(span) span.textContent = seenCache[msg.id]; }
-    }, pace + Math.random()*1000);
+/* ================= MESSAGE CORE & GLOBAL SEEN TICKER ================= */
+let lastSender=null, lastTime=0, lastDate=''; let unread=0;
+const seenCache = {}; // id -> {count, cap}
+
+function initSeenForMessage(msg){
+  if(seenCache[msg.id]) return;
+  const base = msg.out ? TUNABLES.SEEN.baseOutgoing + Math.floor(Math.random()*6) : Math.max(3, Math.floor(virtualOnlineCount * (0.02 + Math.random()*0.06)));
+  const cap = Math.max(virtualOnlineCount, TUNABLES.SEEN.baseOutgoing);
+  seenCache[msg.id] = { count: base, cap };
+}
+function getSeenCountValue(id){ return seenCache[id] ? seenCache[id].count : '·'; }
+
+setInterval(()=>{
+  const ids = Object.keys(seenCache);
+  if(!ids.length) return;
+  const upTo = Math.max(1, Math.floor(ids.length * 0.12));
+  for(let i=0;i<upTo;i++){
+    const id = ids[Math.floor(Math.random()*ids.length)];
+    const entry = seenCache[id];
+    if(!entry) continue;
+    if(entry.count >= entry.cap) continue;
+    if(Math.random() < 0.55 + 0.25 * TUNABLES.SEEN.aggressiveness){
+      entry.count += Math.floor(Math.random()*2);
+      if(entry.count > entry.cap) entry.count = entry.cap;
+      const el = document.querySelector(`[data-id="${id}"] .time span`);
+      if(el) el.textContent = entry.count;
+    }
   }
-  return seenCache[msg.id]; }
+}, 1600);
 
 function postMessage(m){ m.id = crypto.randomUUID(); m.time = Date.now(); setTimeout(()=> renderMessage(m, true), m.out ? 10 : (200 + Math.random()*450)); }
 function dateLabel(d){ const today = new Date(); const diff = Math.floor((today - d)/(86400000)); if(diff===0) return 'Today'; if(diff===1) return 'Yesterday'; return d.toDateString(); }
 function scrollToMessageId(id){ const el = document.querySelector(`[data-id="${id}"]`); if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.transition = 'box-shadow .4s ease'; el.style.boxShadow = '0 0 0 3px rgba(107,219,167,0.12)'; setTimeout(()=>{ el.style.boxShadow = ''; }, 800); } }
 
-function renderMessage(m,isNew){ const d = new Date(m.time); if(d.toDateString() !== lastDate){ const pill = document.createElement('div'); pill.className = 'date-pill'; pill.textContent = dateLabel(d); chat.appendChild(pill); lastDate = d.toDateString(); } const grouped = lastSender===m.name && (m.time-lastTime)<120000; lastSender = m.name; lastTime = m.time; const badge = m.role==='ADMIN'?'<span class="role-pill admin">ADMIN</span>': m.role==='MOD'?'<span class="role-pill mod">MOD</span>':'<span class="verified-bubble"><i data-lucide="gem"></i></span>'; const el = document.createElement('div'); el.className = `msg ${m.out? 'out' : 'in'} ${grouped? 'grouped' : ''}`; el.dataset.id = m.id; const avatarHtml = !m.out ? `<img class="avatar" src="${sampleMembers.find(x=>x.name===m.name)?.avatar||''}" alt="${m.name}">` : ''; el.innerHTML = ` ${avatarHtml} <div class="bubble"> ${m.replyTo?`<div class="reply-preview" data-reply-to="${m.replyTo}"><div class="sender-sn">${m.replyMeta?m.replyMeta.sender:'Reply'}</div><div class="snippet">${m.replyMeta?m.replyMeta.snippet:''}</div></div>`:''} ${!grouped && !m.out?`<div class="sender">${m.name} ${badge}</div>`:''} <div class="content">${m.text}</div> <div class="time"> <i data-lucide="eye" class="w-3 h-3"></i> <span>${seenCount(m)}</span> · ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} </div> </div> `; chat.appendChild(el); try{ lucide.createIcons(); }catch(e){} attachMessageInteractions(el, m); if(isNew && chat.scrollTop+chat.clientHeight < chat.scrollHeight-60){ unread++; unreadBtn.textContent = `⬇ ${unread} new messages`; unreadBtn.style.display = 'block'; } else { chat.scrollTop = chat.scrollHeight; } }
+function renderMessage(m,isNew){
+  const d = new Date(m.time);
+  if(d.toDateString() !== lastDate){
+    const pill = document.createElement('div');
+    pill.className = 'date-pill';
+    pill.textContent = dateLabel(d);
+    chat.appendChild(pill);
+    lastDate = d.toDateString();
+  }
+
+  const grouped = lastSender===m.name && (m.time-lastTime)<120000;
+  lastSender = m.name;
+  lastTime = m.time;
+
+  const badge =
+    m.role==='ADMIN'?'<span class="role-pill admin">ADMIN</span>':
+    m.role==='MOD'?'<span class="role-pill mod">MOD</span>':
+    '<span class="verified-bubble"><i data-lucide="gem"></i></span>';
+
+  const el = document.createElement('div');
+  el.className = `msg ${m.out? 'out' : 'in'} ${grouped? 'grouped' : ''}`;
+  el.dataset.id = m.id;
+
+  const avatarHtml = !m.out ? `<img class="avatar" src="${sampleMembers.find(x=>x.name===m.name)?.avatar||''}" alt="${m.name}">` : '';
+
+  initSeenForMessage(m);
+
+  el.innerHTML = `
+    ${avatarHtml}
+    <div class="bubble">
+      ${m.replyTo?`<div class="reply-preview" data-reply-to="${m.replyTo}"><div class="sender-sn">${m.replyMeta?m.replyMeta.sender:'Reply'}</div><div class="snippet">${m.replyMeta?m.replyMeta.snippet:''}</div></div>`:''}
+      ${!grouped && !m.out?`<div class="sender">${m.name} ${badge}</div>`:''}
+      <div class="content">${m.text}</div>
+      <div class="time">
+        <i data-lucide="eye" class="w-3 h-3"></i>
+        <span>${getSeenCountValue(m.id)}</span>
+        · ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+      </div>
+    </div>
+  `;
+  chat.appendChild(el);
+
+  attachMessageInteractions(el, m);
+
+  if(isNew && chat.scrollTop+chat.clientHeight < chat.scrollHeight-60){
+    unread++;
+    unreadBtn.textContent = `⬇ ${unread} new messages`;
+    unreadBtn.style.display = 'block';
+  } else {
+    chat.scrollTop = chat.scrollHeight;
+  }
+}
+
+setInterval(()=>{ try{ lucide.createIcons(); }catch(e){} }, 1800);
 
 /* interactions: long-press (cancellable on move) & context-menu */
-function attachMessageInteractions(domEl, msg){ domEl.addEventListener('contextmenu', (ev) => { ev.preventDefault(); showContextMenuAt(ev.clientX, ev.clientY, msg, domEl); }); let touchTimer = null; let startX = 0, startY = 0; domEl.addEventListener('touchstart', (ev) => { if(touchTimer) { clearTimeout(touchTimer); touchTimer = null; } const t = ev.touches[0]; startX = t.clientX; startY = t.clientY; touchTimer = setTimeout(()=> { showContextMenuAt(t.clientX, t.clientY, msg, domEl); touchTimer = null; }, 600); }, {passive:true}); domEl.addEventListener('touchmove', (ev) => { if(!touchTimer) return; const t = ev.touches[0]; const dx = Math.abs(t.clientX - startX); const dy = Math.abs(t.clientY - startY); if(dx > 10 || dy > 10) { clearTimeout(touchTimer); touchTimer = null; } }, {passive:true}); domEl.addEventListener('touchend', ()=>{ if(touchTimer) { clearTimeout(touchTimer); touchTimer = null; } }); }
+function attachMessageInteractions(domEl, msg){
+  domEl.addEventListener('contextmenu', (ev) => {
+    ev.preventDefault();
+    showContextMenuAt(ev.clientX, ev.clientY, msg, domEl);
+  });
 
-function showContextMenuAt(x,y,msg,anchorEl){ document.querySelectorAll('.context-menu').forEach(m=>m.remove()); const menu = document.createElement('div'); menu.className = 'context-menu'; menu.style.position = 'fixed'; menu.style.left = `${x}px`; menu.style.top = `${y}px`; menu.style.zIndex = 9999; menu.innerHTML = ` <div class="menu-item" data-action="reply">Reply</div> <div class="menu-item" data-action="pin">Pin</div> `; document.body.appendChild(menu); const rect = menu.getBoundingClientRect(); let left = x, top = y; if(left + rect.width > window.innerWidth - 8) left = window.innerWidth - rect.width - 8; if(top + rect.height > window.innerHeight - 8) top = window.innerHeight - rect.height - 8; menu.style.left = `${Math.max(8, left)}px`; menu.style.top = `${Math.max(8, top)}px`; menu.querySelector('[data-action="reply"]').addEventListener('click', ()=>{ document.querySelectorAll('.context-menu').forEach(m=>m.remove()); setReplyTo(msg.id); }); menu.querySelector('[data-action="pin"]').addEventListener('click', ()=>{ document.querySelectorAll('.context-menu').forEach(m=>m.remove()); pinMessage(msg.id); }); setTimeout(()=> { document.addEventListener('click', function closer(e){ if(!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', closer); } }); }, 10); }
+  let touchTimer = null;
+  let startX = 0, startY = 0;
+  domEl.addEventListener('touchstart', (ev) => {
+    if(touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+    const t = ev.touches[0];
+    startX = t.clientX; startY = t.clientY;
+    touchTimer = setTimeout(()=> {
+      showContextMenuAt(t.clientX, t.clientY, msg, domEl);
+      touchTimer = null;
+    }, 600);
+  }, {passive:true});
+
+  domEl.addEventListener('touchmove', (ev) => {
+    if(!touchTimer) return;
+    const t = ev.touches[0];
+    const dx = Math.abs(t.clientX - startX);
+    const dy = Math.abs(t.clientY - startY);
+    if(dx > 10 || dy > 10) { clearTimeout(touchTimer); touchTimer = null; }
+  }, {passive:true});
+
+  domEl.addEventListener('touchend', ()=>{ if(touchTimer) { clearTimeout(touchTimer); touchTimer = null; }});
+}
+
+function showContextMenuAt(x,y,msg,anchorEl){
+  document.querySelectorAll('.context-menu').forEach(m=>m.remove());
+  const menu = document.createElement('div');
+  menu.className = 'context-menu';
+  menu.style.position = 'fixed';
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+  menu.style.zIndex = 9999;
+  menu.innerHTML = `
+    <div class="menu-item" data-action="reply">Reply</div>
+    <div class="menu-item" data-action="pin">Pin</div>
+  `;
+  document.body.appendChild(menu);
+
+  const rect = menu.getBoundingClientRect();
+  let left = x, top = y;
+  if(left + rect.width > window.innerWidth - 8) left = window.innerWidth - rect.width - 8;
+  if(top + rect.height > window.innerHeight - 8) top = window.innerHeight - rect.height - 8;
+  menu.style.left = `${Math.max(8, left)}px`;
+  menu.style.top = `${Math.max(8, top)}px`;
+
+  menu.querySelector('[data-action="reply"]').addEventListener('click', ()=>{
+    document.querySelectorAll('.context-menu').forEach(m=>m.remove());
+    setReplyTo(msg.id);
+  });
+  menu.querySelector('[data-action="pin"]').addEventListener('click', ()=>{
+    document.querySelectorAll('.context-menu').forEach(m=>m.remove());
+    pinMessage(msg.id);
+  });
+
+  setTimeout(()=> {
+    document.addEventListener('click', function closer(e){
+      if(!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', closer); }
+    });
+  }, 10);
+}
 
 /* ================= PIN ================= */
-function pinMessage(id){ const target = document.querySelector(`[data-id="${id}"]`); let msgContent = 'Pinned message'; if(target && target.querySelector('.content')) msgContent = target.querySelector('.content').textContent; else { const existingText = localStorage.getItem('pinned_message_text'); if(existingText) msgContent = existingText; } pinnedMessageId = id; localStorage.setItem('pinned_message_id', id); localStorage.setItem('pinned_message_text', msgContent); pinnedText.textContent = msgContent.length > 120 ? msgContent.slice(0,117) + '...' : msgContent; pinnedBanner.classList.remove('hidden'); try{ lucide.createIcons(); }catch(e){} }
+function pinMessage(id){
+  const target = document.querySelector(`[data-id="${id}"]`);
+  let msgContent = 'Pinned message';
+  if(target && target.querySelector('.content')) msgContent = target.querySelector('.content').textContent;
+  else { const existingText = localStorage.getItem('pinned_message_text'); if(existingText) msgContent = existingText; }
+  pinnedMessageId = id;
+  localStorage.setItem('pinned_message_id', id);
+  localStorage.setItem('pinned_message_text', msgContent);
+  pinnedText.textContent = msgContent.length > 120 ? msgContent.slice(0,117) + '...' : msgContent;
+  pinnedBanner.classList.remove('hidden');
+  try{ lucide.createIcons(); }catch(e){}
+}
 function unpinMessage(){ pinnedMessageId = null; localStorage.removeItem('pinned_message_id'); localStorage.removeItem('pinned_message_text'); pinnedText.textContent = ''; pinnedBanner.classList.add('hidden'); }
-pinnedBanner.addEventListener('click', ()=>{ if(pinnedMessageId) scrollToMessageId(pinnedMessageId); }); unpinBtn.addEventListener('click', (e)=>{ e.stopPropagation(); unpinMessage(); }); const storedPinnedText = localStorage.getItem('pinned_message_text'); if(storedPinnedText){ pinnedText.textContent = storedPinnedText; pinnedBanner.classList.remove('hidden'); } if(pinnedMessageId){ const tryScroll = setInterval(()=>{ if(document.querySelector(`[data-id="${pinnedMessageId}"]`)){ clearInterval(tryScroll); try{ lucide.createIcons(); }catch(e){} } }, 500); setTimeout(()=> clearInterval(tryScroll), 10000); }
+pinnedBanner.addEventListener('click', ()=>{ if(pinnedMessageId) scrollToMessageId(pinnedMessageId); });
+unpinBtn.addEventListener('click', (e)=>{ e.stopPropagation(); unpinMessage(); });
+const storedPinnedText = localStorage.getItem('pinned_message_text');
+if(storedPinnedText){ pinnedText.textContent = storedPinnedText; pinnedBanner.classList.remove('hidden'); }
+if(pinnedMessageId){
+  const tryScroll = setInterval(()=>{
+    if(document.querySelector(`[data-id="${pinnedMessageId}"]`)){
+      clearInterval(tryScroll);
+      try{ lucide.createIcons(); }catch(e){}
+    }
+  }, 500);
+  setTimeout(()=> clearInterval(tryScroll), 10000);
+}
 
 /* ================= REPLY PREVIEW UI ================= */
-function setReplyTo(msgId){ const target = document.querySelector(`[data-id="${msgId}"]`); if(!target) return; replyTo = msgId; const senderEl = target.querySelector('.sender'); const sender = senderEl ? senderEl.textContent : (target.querySelector('.content') ? target.querySelector('.content').textContent.slice(0,18) : 'Message'); const snippet = target.querySelector('.content') ? target.querySelector('.content').textContent.slice(0,120) : ''; replyPreviewContainer.innerHTML = `<div class="reply-preview" id="replyPreview"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:700">${sender}</div><div style="font-size:11px;opacity:.65;cursor:pointer" id="clearReply">✕</div></div><div class="snippet">${snippet}</div></div>`; document.getElementById('replyPreview').addEventListener('click', ()=> scrollToMessageId(msgId)); document.getElementById('clearReply').addEventListener('click', (e)=> { e.stopPropagation(); clearReply(); }); send.classList.remove('hidden'); mediaBtn.classList.add('hidden'); micBtn.classList.add('hidden'); input.focus(); }
+function setReplyTo(msgId){
+  const target = document.querySelector(`[data-id="${msgId}"]`);
+  if(!target) return;
+  replyTo = msgId;
+  const senderEl = target.querySelector('.sender');
+  const sender = senderEl ? senderEl.textContent : (target.querySelector('.content') ? target.querySelector('.content').textContent.slice(0,18) : 'Message');
+  const snippet = target.querySelector('.content') ? target.querySelector('.content').textContent.slice(0,120) : '';
+  replyPreviewContainer.innerHTML = `<div class="reply-preview" id="replyPreview"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:700">${sender}</div><div style="font-size:11px;opacity:.65;cursor:pointer" id="clearReply">✕</div></div><div class="snippet">${snippet}</div></div>`;
+  document.getElementById('replyPreview').addEventListener('click', ()=> scrollToMessageId(msgId));
+  document.getElementById('clearReply').addEventListener('click', (e)=> { e.stopPropagation(); clearReply(); });
+  send.classList.remove('hidden'); mediaBtn.classList.add('hidden'); micBtn.classList.add('hidden'); input.focus();
+}
 function clearReply(){ replyTo = null; replyPreviewContainer.innerHTML = ''; const has = input.value.trim(); if(!has){ send.classList.add('hidden'); mediaBtn.classList.remove('hidden'); micBtn.classList.remove('hidden'); } }
 
 /* ================= SEND HANDLING ================= */
-send.addEventListener('click', (ev) => { if(recording && locked){ stopMic(true); return; } if(input.value.trim()){ postMessage({ name:'You', role:'VERIFIED', text: input.value.trim(), out:true, replyTo, replyMeta: getReplyMeta(replyTo) }); clearReply(); input.value = ''; send.classList.add('hidden'); mediaBtn.classList.remove('hidden'); micBtn.classList.remove('hidden'); input.focus(); } });
+send.addEventListener('click', (ev) => {
+  if(recording && locked){
+    stopMic(true); return;
+  }
+  if(input.value.trim()){
+    postMessage({ name:'You', role:'VERIFIED', text: input.value.trim(), out:true, replyTo, replyMeta: getReplyMeta(replyTo) });
+    clearReply();
+    input.value = '';
+    send.classList.add('hidden');
+    mediaBtn.classList.remove('hidden');
+    micBtn.classList.remove('hidden');
+    input.focus();
+  }
+});
 function getReplyMeta(msgId){ if(!msgId) return null; const target = document.querySelector(`[data-id="${msgId}"]`); if(!target) return null; return { sender: target.querySelector('.sender') ? target.querySelector('.sender').textContent : 'Message', snippet: target.querySelector('.content') ? target.querySelector('.content').textContent.slice(0,120) : '' }; }
 
-/* Enter to send (desktop) */
 input.addEventListener('keydown', (e) => { if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); if(!send.classList.contains('hidden')) send.click(); } });
-
-/* send visibility */
 input.oninput = ()=>{ const has = input.value.trim(); if(has || replyTo){ send.classList.remove('hidden'); mediaBtn.classList.add('hidden'); micBtn.classList.add('hidden'); } else { send.classList.add('hidden'); mediaBtn.classList.remove('hidden'); micBtn.classList.remove('hidden'); } };
 
 /* ================= EMOJI / MEDIA ================= */
 emojiBtn.onclick = ()=>window.EmojiPack && EmojiPack.openPicker(input);
 mediaBtn.onclick = ()=>fileInput.click();
-fileInput.onchange = e=>{ if(!e.target.files.length) return; const f = e.target.files[0]; const url = URL.createObjectURL(f); postMessage({ name:'You', role:'VERIFIED', text: f.type.startsWith('image/') ? `<img src="${url}" class="rounded-lg max-w-full">` : `📎 ${f.name}`, out:true, replyTo, replyMeta: getReplyMeta(replyTo) }); clearReply(); fileInput.value=''; };
+fileInput.onchange = e=>{
+  if(!e.target.files.length) return;
+  const f = e.target.files[0];
+  const url = URL.createObjectURL(f);
+  postMessage({
+    name:'You',
+    role:'VERIFIED',
+    text: f.type.startsWith('image/') ? `<img src="${url}" class="rounded-lg max-w-full">` : `📎 ${f.name}`,
+    out:true,
+    replyTo,
+    replyMeta: getReplyMeta(replyTo)
+  });
+  clearReply();
+  fileInput.value='';
+};
 
-/* ================= MIC + WAVEFORM ================= */
-const canvas = document.getElementById('waveform'); const ctx = canvas.getContext('2d'); let audioCtx, analyser, micStream, mediaRecorder; let waveAnim = null, locked=false, recording=false, canceled=false; let chunks=[]; let prevSamples = null;
+/* ================= MIC + WAVEFORM (optimized) ================= */
+const canvas = document.getElementById('waveform');
+const ctx = canvas.getContext('2d');
 
-function resizeWave(){ const style = getComputedStyle(inputShell); const padLeft = parseInt(style.paddingLeft || 12); const padRight = parseInt(style.paddingRight || 12); const total = inputShell.clientWidth - padLeft - padRight - 40; const dpr = window.devicePixelRatio || 1; const w = Math.max(180, total); const h = Math.max(28, inputShell.clientHeight - 6); canvas.style.width = `${w}px`; canvas.style.height = `${h}px`; canvas.width = Math.floor(w * dpr); canvas.height = Math.floor(h * dpr); ctx.setTransform(dpr,0,0,dpr,0,0); }
-window.addEventListener('resize', resizeWave); resizeWave();
+let audioCtx, analyser, micStream, mediaRecorder;
+let waveAnim = null, locked=false, recording=false, canceled=false;
+let chunks=[];
+let prevSamples = null;
+let resizeScheduled = false;
 
-function drawWave(){ if(!analyser) return; const bufferLength = analyser.fftSize; const raw = new Uint8Array(bufferLength); analyser.getByteTimeDomainData(raw); const w = canvas.width / (window.devicePixelRatio || 1); const h = canvas.height / (window.devicePixelRatio || 1); ctx.clearRect(0,0,w,h);
+function resizeWave(){
+  if(resizeScheduled) return;
+  resizeScheduled = true;
+  requestAnimationFrame(()=>{
+    try{
+      const style = getComputedStyle(inputShell);
+      const padLeft = parseInt(style.paddingLeft || 12);
+      const padRight = parseInt(style.paddingRight || 12);
+      const total = inputShell.clientWidth - padLeft - padRight - 40;
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.max(180, total);
+      const h = Math.max(28, inputShell.clientHeight - 6);
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }catch(e){}
+    resizeScheduled = false;
+  });
+}
+window.addEventListener('resize', resizeWave);
+resizeWave();
 
-  // convert to float -1..1 and smooth across frames for a softer feel
+function drawWave(){
+  if(!analyser || !recording) return;
+  const bufferLength = analyser.fftSize;
+  const raw = new Uint8Array(bufferLength);
+  analyser.getByteTimeDomainData(raw);
+  const w = canvas.width / (window.devicePixelRatio || 1);
+  const h = canvas.height / (window.devicePixelRatio || 1);
+  ctx.clearRect(0,0,w,h);
+
   const samples = new Float32Array(bufferLength);
   for(let i=0;i<bufferLength;i++){ samples[i] = (raw[i] - 128) / 128; }
   if(!prevSamples){ prevSamples = new Float32Array(bufferLength); prevSamples.set(samples); }
   const smooth = TUNABLES.WAVE.smooth;
   for(let i=0;i<bufferLength;i++){ samples[i] = prevSamples[i] * smooth + samples[i] * (1 - smooth); prevSamples[i] = samples[i]; }
 
-  const centerY = h/2; const slice = w / bufferLength;
+  const centerY = h/2;
+  const slice = w / bufferLength;
 
-  // main wave - amplified
-  ctx.beginPath(); let x=0; for(let i=0;i<bufferLength;i++){ const eased = samples[i] * (h * TUNABLES.WAVE.amplitude); const y = centerY + eased; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); x += slice; } ctx.lineWidth = 2.6; ctx.strokeStyle = 'rgba(59,130,246,0.98)'; ctx.shadowBlur = TUNABLES.WAVE.glow; ctx.shadowColor = 'rgba(59,130,246,0.45)'; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+  ctx.beginPath();
+  let x=0;
+  for(let i=0;i<bufferLength;i++){
+    const eased = samples[i] * (h * TUNABLES.WAVE.amplitude);
+    const y = centerY + eased;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    x += slice;
+  }
+  ctx.lineWidth = 2.6;
+  ctx.strokeStyle = 'rgba(59,130,246,0.98)';
+  ctx.shadowBlur = TUNABLES.WAVE.glow;
+  ctx.shadowColor = 'rgba(59,130,246,0.45)';
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
 
-  // back faint layer
-  ctx.beginPath(); x=0; for(let i=0;i<bufferLength;i++){ const y = centerY + samples[i] * (h * (TUNABLES.WAVE.amplitude * 0.38)); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); x += slice; } ctx.lineWidth = 1.2; ctx.shadowBlur = 0; ctx.strokeStyle = `rgba(59,130,246,${TUNABLES.WAVE.backOpacity})`; ctx.globalCompositeOperation = 'lighter'; ctx.stroke(); ctx.globalCompositeOperation = 'source-over';
+  // faint back layer
+  ctx.beginPath();
+  x=0;
+  for(let i=0;i<bufferLength;i++){
+    const y = centerY + samples[i] * (h * (TUNABLES.WAVE.amplitude * 0.38));
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    x += slice;
+  }
+  ctx.lineWidth = 1.2;
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = `rgba(59,130,246,${TUNABLES.WAVE.backOpacity})`;
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.stroke();
+  ctx.globalCompositeOperation = 'source-over';
 
-  // subtle center guide
-  ctx.beginPath(); ctx.lineWidth = 0.6; ctx.strokeStyle = 'rgba(255,255,255,0.02)'; ctx.moveTo(0,centerY); ctx.lineTo(w,centerY); ctx.stroke();
+  // center guide
+  ctx.beginPath();
+  ctx.lineWidth = 0.6;
+  ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+  ctx.moveTo(0,centerY);
+  ctx.lineTo(w,centerY);
+  ctx.stroke();
 
   waveAnim = requestAnimationFrame(drawWave);
 }
 
-async function startMic(){ try{ canceled = false; chunks = []; recording = true; locked = false; micBtn.setAttribute('aria-pressed','true'); inputShell.classList.add('recording'); inputShell.classList.remove('locked'); micLockIcon.querySelector('span').textContent = 'Recording locked'; input.style.display = 'none'; canvas.style.display = 'block'; cancelOverlay.classList.remove('visible'); cancelOverlay.textContent = 'Swipe left to cancel'; micStream = await navigator.mediaDevices.getUserMedia({audio:true}); audioCtx = new (window.AudioContext || window.webkitAudioContext)(); analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; const source = audioCtx.createMediaStreamSource(micStream); source.connect(analyser); resizeWave(); let mime = 'audio/webm'; try { if(!MediaRecorder.isTypeSupported(mime)){ mime = MediaRecorder.isTypeSupported('audio/ogg') ? 'audio/ogg' : ''; } } catch (e) { mime = ''; } try { mediaRecorder = mime ? new MediaRecorder(micStream, {mimeType: mime}) : new MediaRecorder(micStream); } catch (err) { console.error('MediaRecorder creation failed', err); cancelOverlay.classList.add('visible'); cancelOverlay.textContent = 'Recording not supported'; recording = false; try{ micStream.getTracks().forEach(t=>t.stop()); }catch(e){} input.style.display='block'; canvas.style.display='none'; inputShell.classList.remove('recording'); micBtn.setAttribute('aria-pressed','false'); return; } mediaRecorder.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); }; mediaRecorder.onstop = ()=>{ cancelAnimationFrame(waveAnim); canvas.style.display = 'none'; input.style.display = 'block'; inputShell.classList.remove('recording'); inputShell.classList.remove('locked'); micBtn.style.display = ''; micBtn.setAttribute('aria-pressed','false'); if(canceled){ chunks = []; try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){} if(audioCtx && audioCtx.state !== 'closed') audioCtx.close(); return; } if(chunks.length){ const blob = new Blob(chunks,{type: mime || 'audio/webm'}); const url = URL.createObjectURL(blob); postMessage({ name:'You', role:'VERIFIED', text:`<audio controls src="${url}"></audio>`, out:true, replyTo, replyMeta: getReplyMeta(replyTo) }); } chunks=[]; try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){} if(audioCtx && audioCtx.state !== 'closed') audioCtx.close(); recording = false; locked = false; canceled = false; clearReply(); }; mediaRecorder.start(); drawWave(); }catch(err){ console.error('Mic start error', err); recording = false; input.style.display = 'block'; canvas.style.display = 'none'; inputShell.classList.remove('recording'); micBtn.setAttribute('aria-pressed','false'); cancelOverlay.classList.add('visible'); cancelOverlay.textContent = 'Allow mic access'; setTimeout(()=> cancelOverlay.classList.remove('visible'), 2500); } }
+async function startMic(){
+  try{
+    canceled = false;
+    chunks = [];
+    recording = true;
+    locked = false;
+    micBtn.setAttribute('aria-pressed','true');
+    inputShell.classList.add('recording');
+    inputShell.classList.remove('locked');
+    micLockIcon.querySelector('span').textContent = 'Recording locked';
+    input.style.display = 'none';
+    canvas.style.display = 'block';
+    cancelOverlay.classList.remove('visible');
+    cancelOverlay.textContent = 'Swipe left to cancel';
 
-function stopMic(forceSend=false){ if(!recording) return; if(forceSend) canceled = false; if(canceled && mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); return; } if(mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); } }
-function cancelRecording(){ if(!recording) return; canceled = true; if(mediaRecorder && mediaRecorder.state !== 'inactive'){ mediaRecorder.stop(); } else { try{ micStream.getTracks().forEach(t=>t.stop()); }catch(e){} recording = false; canceled = false; locked = false; input.style.display='block'; canvas.style.display='none'; inputShell.classList.remove('recording'); micBtn.setAttribute('aria-pressed','false'); } }
+    micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 1024; // smaller fft -> lower CPU
+    analyser.smoothingTimeConstant = 0.85; // extra smoothing at source
 
-/* gestures + lock-slide visual feedback */
+    const source = audioCtx.createMediaStreamSource(micStream);
+    source.connect(analyser);
+
+    let mime = 'audio/webm';
+    try {
+      if(!MediaRecorder.isTypeSupported(mime)){
+        mime = MediaRecorder.isTypeSupported('audio/ogg') ? 'audio/ogg' : '';
+      }
+    } catch (e) { mime = ''; }
+    try {
+      mediaRecorder = mime ? new MediaRecorder(micStream, {mimeType: mime}) : new MediaRecorder(micStream);
+    } catch (err) {
+      console.error('MediaRecorder creation failed', err);
+      cancelOverlay.classList.add('visible');
+      cancelOverlay.textContent = 'Recording not supported';
+      recording = false;
+      try{ micStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+      input.style.display='block';
+      canvas.style.display='none';
+      inputShell.classList.remove('recording');
+      micBtn.setAttribute('aria-pressed','false');
+      return;
+    }
+
+    mediaRecorder.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+    mediaRecorder.onstop = ()=>{
+      cancelAnimationFrame(waveAnim);
+      canvas.style.display = 'none';
+      input.style.display = 'block';
+      inputShell.classList.remove('recording');
+      inputShell.classList.remove('locked');
+      micBtn.style.display = '';
+      micBtn.setAttribute('aria-pressed','false');
+
+      if(canceled){
+        chunks = [];
+        try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){}
+        if(audioCtx && audioCtx.state !== 'closed') audioCtx.close();
+        return;
+      }
+
+      if(chunks.length){
+        const blob = new Blob(chunks,{type: mime || 'audio/webm'});
+        const url = URL.createObjectURL(blob);
+        postMessage({
+          name:'You',
+          role:'VERIFIED',
+          text:`<audio controls src="${url}"></audio>`,
+          out:true,
+          replyTo,
+          replyMeta: getReplyMeta(replyTo)
+        });
+      }
+      chunks=[];
+      try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){}
+      if(audioCtx && audioCtx.state !== 'closed') audioCtx.close();
+      recording = false;
+      locked = false;
+      canceled = false;
+      clearReply();
+    };
+
+    mediaRecorder.start();
+    resizeWave();
+    cancelAnimationFrame(waveAnim);
+    waveAnim = requestAnimationFrame(drawWave);
+  }catch(err){
+    console.error('Mic start error', err);
+    recording = false;
+    input.style.display = 'block';
+    canvas.style.display = 'none';
+    inputShell.classList.remove('recording');
+    micBtn.setAttribute('aria-pressed','false');
+    cancelOverlay.classList.add('visible');
+    cancelOverlay.textContent = 'Allow mic access';
+    setTimeout(()=> cancelOverlay.classList.remove('visible'), 2500);
+  }
+}
+
+function stopMic(forceSend=false){
+  if(!recording) return;
+  if(forceSend) canceled = false;
+  if(canceled && mediaRecorder && mediaRecorder.state !== 'inactive'){
+    mediaRecorder.stop();
+    return;
+  }
+  if(mediaRecorder && mediaRecorder.state !== 'inactive'){
+    mediaRecorder.stop();
+  }
+}
+function cancelRecording(){
+  if(!recording) return;
+  canceled = true;
+  if(mediaRecorder && mediaRecorder.state !== 'inactive'){
+    mediaRecorder.stop();
+  } else {
+    try{ micStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+    recording = false; canceled = false; locked = false;
+    input.style.display='block'; canvas.style.display='none'; inputShell.classList.remove('recording');
+    micBtn.setAttribute('aria-pressed','false');
+  }
+}
+
+/* gestures + lock-slide visual feedback (smoother using rAF) */
 let startY = 0, startX = 0, lastTouchId = null;
-function startGesture(e){ const touch = e.touches ? e.touches[0] : e; startY = touch.clientY; startX = touch.clientX; lastTouchId = touch.identifier !== undefined ? touch.identifier : null; canceled = false; cancelOverlay.classList.remove('visible'); cancelOverlay.textContent = 'Swipe left to cancel'; micLockIcon.style.transition = `transform ${TUNABLES.LOCK.slideEase}ms ease, opacity ${TUNABLES.LOCK.slideEase}ms ease`; micLockIcon.style.transform = 'translateY(8px)'; micLockIcon.style.opacity = 0; }
-micBtn.addEventListener('touchstart', (e)=>{ e.preventDefault(); startGesture(e); startMic(); }, {passive:false}); micBtn.addEventListener('mousedown', (e)=>{ if(e.button!==0) return; startGesture(e); startMic(); });
+let lockAnimFrame = null;
+let lockProgress = 0;
+function startGesture(e){
+  const touch = e.touches ? e.touches[0] : e;
+  startY = touch.clientY;
+  startX = touch.clientX;
+  lastTouchId = touch.identifier !== undefined ? touch.identifier : null;
+  canceled = false;
+  cancelOverlay.classList.remove('visible');
+  cancelOverlay.textContent = 'Swipe left to cancel';
+  micLockIcon.style.transition = `transform ${TUNABLES.LOCK.slideEase}ms ease, opacity ${TUNABLES.LOCK.slideEase}ms ease`;
+  micLockIcon.style.transform = 'translateY(14px)';
+  micLockIcon.style.opacity = 0;
+  if(lockAnimFrame) cancelAnimationFrame(lockAnimFrame);
+  lockProgress = 0;
+  updateLockVisual(0);
+}
+function updateLockVisual(prog){
+  const translate = (1 - prog) * 14;
+  micLockIcon.style.transform = `translateY(${translate}px)`;
+  micLockIcon.style.opacity = prog;
+}
+micBtn.addEventListener('touchstart', (e)=>{ e.preventDefault(); startGesture(e); startMic(); }, {passive:false});
+micBtn.addEventListener('mousedown', (e)=>{ if(e.button!==0) return; startGesture(e); startMic(); });
 
 micBtn.addEventListener('touchmove', (e)=> {
   if(!recording) return;
   const t = Array.from(e.touches).find(t=> t.identifier === lastTouchId) || e.touches[0];
   const dy = startY - t.clientY;
   const dx = t.clientX - startX;
+
   const prog = Math.max(0, Math.min(1, dy / TUNABLES.LOCK.slideDistance));
-  micLockIcon.style.transform = `translateY(${(1-prog)*8}px)`;
-  micLockIcon.style.opacity = prog;
-  if(dy > TUNABLES.LOCK.lockThreshold && !locked && !canceled){ locked = true; inputShell.classList.add('locked'); micLockIcon.querySelector('span').textContent = 'Recording locked'; send.classList.remove('hidden'); micBtn.style.display = 'none'; cancelOverlay.classList.remove('visible'); }
-  if(dx < -40 && !canceled && !locked){ canceled = true; cancelOverlay.classList.add('visible'); cancelOverlay.textContent = 'Release to cancel'; } else if(!canceled){ cancelOverlay.classList.remove('visible'); cancelOverlay.textContent = 'Swipe left to cancel'; }
+  lockProgress = prog;
+  if(lockAnimFrame) cancelAnimationFrame(lockAnimFrame);
+  lockAnimFrame = requestAnimationFrame(()=> updateLockVisual(lockProgress));
+
+  if(dy > TUNABLES.LOCK.lockThreshold && !locked && !canceled){
+    locked = true;
+    inputShell.classList.add('locked');
+    micLockIcon.querySelector('span').textContent = 'Recording locked';
+    send.classList.remove('hidden');
+    micBtn.style.display = 'none';
+    cancelOverlay.classList.remove('visible');
+  }
+
+  if(dx < -40 && !canceled && !locked){
+    canceled = true;
+    cancelOverlay.classList.add('visible');
+    cancelOverlay.textContent = 'Release to cancel';
+  } else if(!canceled){
+    cancelOverlay.classList.remove('visible');
+    cancelOverlay.textContent = 'Swipe left to cancel';
+  }
 }, {passive:true});
 
-micBtn.addEventListener('touchend', (e)=> { if(canceled){ cancelRecording(); cancelOverlay.classList.remove('visible'); return; } if(locked){ recording = true; return; } if(recording && !locked) stopMic(); }, {passive:false});
-micBtn.addEventListener('mouseup', (e)=>{ if(canceled){ cancelRecording(); cancelOverlay.classList.remove('visible'); return; } if(locked) return; if(recording && !locked) stopMic(); });
+micBtn.addEventListener('touchend', (e)=> {
+  if(canceled){
+    cancelRecording();
+    cancelOverlay.classList.remove('visible');
+    updateLockVisual(0);
+    return;
+  }
+  if(locked){
+    recording = true;
+    updateLockVisual(1);
+    return;
+  }
+  if(recording && !locked){
+    stopMic();
+  }
+}, {passive:false});
 
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden && recording) cancelRecording(); });
+micBtn.addEventListener('mouseup', (e)=>{
+  if(canceled){ cancelRecording(); cancelOverlay.classList.remove('visible'); return; }
+  if(locked) return;
+  if(recording && !locked) stopMic();
+});
+
+/* unlock via tapping mic area while locked (convenience) */
+document.addEventListener('click', (e)=>{
+  if(!locked) return;
+  const inside = e.target.closest('#inputShell') || e.target.closest('#micBtn');
+  if(inside) {
+    cancelRecording();
+    updateLockVisual(0);
+  }
+});
+
+/* visibility change cleanup */
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){
+    if(recording) cancelRecording();
+  }
+});
 
 /* ================= SWIPE-TO-REPLY ================= */
 let swipeX = 0, swipingEl = null;
-chat.addEventListener('touchstart', e =>{ const msg = e.target.closest('.msg'); if(!msg) return; swipeX = e.touches[0].clientX; swipingEl = msg; });
-chat.addEventListener('touchmove', e =>{ if(!swipingEl) return; const dx = e.touches[0].clientX - swipeX; if(dx > 12 && dx < 160){ swipingEl.style.transform = `translateX(${Math.min(dx/6,20)}px)`; swipingEl.style.opacity = `${Math.max(0.65, 1 - dx/400)}`; } });
-chat.addEventListener('touchend', e =>{ if(!swipingEl) return; const finalDx = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX - swipeX : 0; swipingEl.style.transform = ''; swipingEl.style.opacity = ''; if(finalDx > 70){ const id = swipingEl.dataset.id; setReplyTo(id); } swipingEl = null; });
+chat.addEventListener('touchstart', e =>{
+  const msg = e.target.closest('.msg');
+  if(!msg) return;
+  swipeX = e.touches[0].clientX;
+  swipingEl = msg;
+}, {passive:true});
+chat.addEventListener('touchmove', e =>{
+  if(!swipingEl) return;
+  const dx = e.touches[0].clientX - swipeX;
+  if(dx > 12 && dx < 160){
+    swipingEl.style.transform = `translateX(${Math.min(dx/6,20)}px)`;
+    swipingEl.style.opacity = `${Math.max(0.65, 1 - dx/400)}`;
+  }
+}, {passive:true});
+chat.addEventListener('touchend', e =>{
+  if(!swipingEl) return;
+  const finalDx = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX - swipeX : 0;
+  swipingEl.style.transform = '';
+  swipingEl.style.opacity = '';
+  if(finalDx > 70){
+    const id = swipingEl.dataset.id;
+    setReplyTo(id);
+  }
+  swipingEl = null;
+});
 
 /* ================= UI helpers & boot ================= */
 emojiBtn.onclick = ()=>window.EmojiPack && EmojiPack.openPicker(input);
-membersBtn.onclick = ()=>sidebar.classList.toggle('translate-x-full'); closeSidebar.onclick = ()=>sidebar.classList.add('translate-x-full');
-if(!localStorage.getItem('joined')){ localStorage.setItem('joined','1'); setTimeout(()=>{ postMessage({ name:'You', role:'VERIFIED', text:'👋 You joined the group', out:false }); },400); }
-setTimeout(()=>{ postMessage({name:ADMIN.name,role:'ADMIN',text:'Welcome everyone 👋',out:false}); postMessage({name:MOD.name,role:'MOD',text:'Please follow the rules.',out:false}); postMessage({name:'Member_1',role:'VERIFIED',text:'Hey, excited to be here!',out:false}); postMessage({name:'Member_2',role:'VERIFIED',text:'Does anyone share indicators?',out:false}); },600);
-unreadBtn.addEventListener('click', ()=>{ chat.scrollTop = chat.scrollHeight; unread = 0; unreadBtn.style.display = 'none'; });
-setTimeout(()=>{ if(chat.children.length<=1){ postMessage({ name:ADMIN.name, role:'ADMIN', text:'Chat initialized successfully.', out:false }); } try{ lucide.createIcons(); }catch(e){} }, 900);
-chat.addEventListener('click', (e)=>{ const rp = e.target.closest('.reply-preview'); if(rp && rp.dataset && rp.dataset.replyTo){ const id = rp.dataset.replyTo; scrollToMessageId(id); } });
-window.addEventListener('beforeunload', ()=>{ try{ if(recording) cancelRecording(); }catch(e){} });
-window._abrox = { postMessage, renderMessage, pinMessage, unpinMessage, setReplyTo: (id)=> setReplyTo(id) };
+membersBtn.onclick = ()=>sidebar.classList.toggle('translate-x-full');
+closeSidebar.onclick = ()=>sidebar.classList.add('translate-x-full');
+
+if(!localStorage.getItem('joined')){
+  localStorage.setItem('joined','1');
+  setTimeout(()=>{
+    postMessage({ name:'You', role:'VERIFIED', text:'👋 You joined the group', out:false });
+  },400);
+}
+
+setTimeout(()=>{
+  postMessage({name:ADMIN.name,role:'ADMIN',text:'Welcome everyone 👋',out:false});
+  postMessage({name:MOD.name,role:'MOD',text:'Please follow the rules.',out:false});
+  postMessage({name:'Member_1',role:'VERIFIED',text:'Hey, excited to be here!',out:false});
+  postMessage({name:'Member_2',role:'VERIFIED',text:'Does anyone share indicators?',out:false});
+},600);
+
+unreadBtn.addEventListener('click', ()=>{
+  chat.scrollTop = chat.scrollHeight;
+  unread = 0;
+  unreadBtn.style.display = 'none';
+});
+
+setTimeout(()=>{
+  if(chat.children.length<=1){
+    postMessage({
+      name:ADMIN.name,
+      role:'ADMIN',
+      text:'Chat initialized successfully.',
+      out:false
+    });
+  }
+  try{ lucide.createIcons(); }catch(e){}
+}, 900);
+
+chat.addEventListener('click', (e)=>{
+  const rp = e.target.closest('.reply-preview');
+  if(rp && rp.dataset && rp.dataset.replyTo){
+    const id = rp.dataset.replyTo;
+    scrollToMessageId(id);
+  }
+});
+
+window.addEventListener('beforeunload', ()=>{
+  try{ if(recording) cancelRecording(); }catch(e){}
+});
+
+/* expose small helper for debugging */
+window._abrox = {
+  postMessage,
+  renderMessage,
+  pinMessage,
+  unpinMessage,
+  setReplyTo: (id)=> setReplyTo(id)
+};
 </script>
 </body>
 </html>
