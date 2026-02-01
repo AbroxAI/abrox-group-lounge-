@@ -28,6 +28,7 @@ tailwind.config = {
 </script>
 <style>
 *{box-sizing:border-box}
+html,body{height:100%}
 
 /* ================= HEADER ================= */
 .header{background:#232833;border-bottom:1px solid #343a4a}
@@ -61,6 +62,7 @@ tailwind.config = {
 .avatar{width:42px;height:42px;border-radius:999px;object-fit:cover}
 .msg.grouped .avatar{visibility:hidden}
 
+/* move tails slightly inward so they don't sit too close to the avatar */
 .bubble{
   max-width:74%;
   padding:10px 16px;
@@ -76,8 +78,9 @@ tailwind.config = {
 .msg.in .bubble::before{
   content:'';
   position:absolute;
-  left:-8px;bottom:14px;
-  width:12px;height:12px;
+  left:-4px;
+  bottom:12px;
+  width:10px;height:10px;
   background:#262b38;
   transform:rotate(45deg)
 }
@@ -89,8 +92,9 @@ tailwind.config = {
 .msg.out .bubble::after{
   content:'';
   position:absolute;
-  right:-8px;bottom:14px;
-  width:12px;height:12px;
+  right:-4px;
+  bottom:12px;
+  width:10px;height:10px;
   background:#2b3242;
   transform:rotate(45deg)
 }
@@ -131,7 +135,7 @@ tailwind.config = {
 
 /* ================= REPLY / REACTIONS ================= */
 .reply-preview{
-  font-size:11px;opacity:.9;
+  font-size:11px;opacity:.95;
   border-left:3px solid #6bdba7;
   padding-left:8px;margin-bottom:6px;
   cursor:pointer;background:rgba(0,0,0,.06);border-radius:6px;padding-top:6px;padding-bottom:6px
@@ -198,6 +202,11 @@ tailwind.config = {
 }
 .recording-cancel-overlay.visible{opacity:1;pointer-events:auto}
 
+/* context menu style */
+.context-menu{background:#11121a;border:1px solid #343a4a;border-radius:8px;padding:6px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.context-menu .menu-item{padding:6px 10px;cursor:pointer;white-space:nowrap}
+.context-menu .menu-item:hover{background:rgba(255,255,255,0.02)}
+
 /* ================= UNREAD ================= */
 #unreadBtn{
   position:fixed;bottom:110px;left:50%;
@@ -232,71 +241,95 @@ section{-webkit-overflow-scrolling:touch}
 </style>
 </head>
 <body class="bg-bg text-white h-[100dvh] overflow-hidden">
-<div class="flex h-full">  <main class="flex flex-col flex-1 border-r border-border">  <header class="header">
-  <div class="flex items-center justify-between px-4 py-3">
-    <div class="flex gap-3 items-center">
-      <img src="assets/logo.png" class="w-9 h-9 rounded">
-      <div>
-        <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
-        <div class="flex items-center gap-1 text-xs text-muted">
-          <i data-lucide="lock" class="w-3 h-3"></i>
-          <span>Private Group</span>
+<div class="flex h-full">
+  <main class="flex flex-col flex-1 border-r border-border">
+    <header class="header">
+      <div class="flex items-center justify-between px-4 py-3">
+        <div class="flex gap-3 items-center">
+          <img src="assets/logo.png" class="w-9 h-9 rounded" alt="logo">
+          <div>
+            <div class="text-sm font-semibold">Abrox Binary Bot – Private Lounge</div>
+            <div class="flex items-center gap-1 text-xs text-muted">
+              <i data-lucide="lock" class="w-3 h-3" aria-hidden="true"></i>
+              <span>Private Group</span>
+            </div>
+          </div>
+        </div>
+        <button id="membersBtn" aria-label="Members"><i data-lucide="users"></i></button>
+      </div>
+
+      <div class="members-row" id="membersRow">
+        Members: <strong id="memberCount">4,872</strong>
+        <span class="mx-2">•</span>
+        Online: <strong id="onlineCount">0</strong>
+      </div>
+
+      <div class="typing-row" id="typingRow">
+        <div class="typing-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+        <span id="typingText"></span>
+      </div>
+
+      <div class="px-4 text-xs text-muted pb-1">Demo discussion · Verification required</div>
+    </header>
+
+    <div id="pinnedBanner" class="pinned-banner hidden" role="button" tabindex="0">
+      <i data-lucide="pin" id="pinnedIcon"></i>
+      <span id="pinnedText" class="flex-1 truncate"></span>
+      <button id="unpinBtn" aria-label="Unpin"><i data-lucide="x"></i></button>
+    </div>
+
+    <section id="chat" class="flex-1 overflow-y-auto px-4 py-4" aria-live="polite">
+      <div class="text-center text-muted text-sm mb-4">
+        📌 <strong>Group Rules</strong><br>
+        New members are read-only until verified<br>
+        Admins DM individually<br>
+        No screenshots in chat<br>
+        Ignore unsolicited messages
+      </div>
+    </section>
+
+    <button id="unreadBtn" aria-hidden="true">⬇ New messages</button>
+
+    <footer class="bg-panel border-t border-border px-4 py-3 footer-wrap">
+      <div id="replyPreviewContainer" class="px-2"></div>
+      <div class="recording-cancel-overlay" id="cancelOverlay">Swipe left to cancel</div>
+      <div class="flex items-center gap-2">
+        <button id="emojiBtn" aria-label="Emoji"><i data-lucide="smile"></i></button>
+
+        <div class="input-shell" id="inputShell" aria-live="polite">
+          <div class="mic-lock-icon" aria-hidden="true"><i data-lucide="lock"></i><span class="text-xs text-muted">Recording locked</span></div>
+          <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message" autocomplete="off" aria-label="Message input">
+          <canvas id="waveform"></canvas>
+        </div>
+
+        <div class="flex items-center gap-2 ml-auto">
+          <button id="mediaBtn" aria-label="Attach"><i data-lucide="paperclip"></i></button>
+          <button id="micBtn" aria-pressed="false" aria-label="Record voice"><i data-lucide="mic"></i></button>
+          <button id="send" class="hidden text-send" aria-label="Send"><i data-lucide="send"></i></button>
         </div>
       </div>
-    </div>
-    <button id="membersBtn"><i data-lucide="users"></i></button>
-  </div>    <div class="members-row" id="membersRow">
-    Members: <strong id="memberCount">4,872</strong>
-    <span class="mx-2">•</span>
-    Online: <strong id="onlineCount">0</strong>
-  </div>    <div class="typing-row" id="typingRow">
-    <div class="typing-dots"><span></span><span></span><span></span></div>
-    <span id="typingText"></span>
-  </div>    <div class="px-4 text-xs text-muted pb-1">
-    Demo discussion · Verification required
-  </div>
-</header>  <div id="pinnedBanner" class="pinned-banner hidden" role="button" tabindex="0">
-  <i data-lucide="pin" id="pinnedIcon"></i>
-  <span id="pinnedText" class="flex-1 truncate"></span>
-  <button id="unpinBtn"><i data-lucide="x"></i></button>
-</div>  <section id="chat" class="flex-1 overflow-y-auto px-4 py-4">
-  <div class="text-center text-muted text-sm mb-4">
-    📌 <strong>Group Rules</strong><br>
-    New members are read-only until verified<br>
-    Admins DM individually<br>
-    No screenshots in chat<br>
-    Ignore unsolicited messages
-  </div>
-</section>  <button id="unreadBtn">⬇ New messages</button>
+    </footer>
+  </main>
 
-<footer class="bg-panel border-t border-border px-4 py-3 footer-wrap">
-  <div id="replyPreviewContainer" class="px-2"></div>
-  <div class="recording-cancel-overlay" id="cancelOverlay">Swipe left to cancel</div>
-  <div class="flex items-center gap-2">
-    <button id="emojiBtn"><i data-lucide="smile"></i></button>
-    <div class="input-shell" id="inputShell" aria-live="polite">
-      <div class="mic-lock-icon" aria-hidden="true"><i data-lucide="lock"></i><span class="text-xs text-muted">Recording locked</span></div>
-      <input id="input" class="flex-1 bg-transparent outline-none text-sm" placeholder="Message" autocomplete="off">
-      <canvas id="waveform"></canvas>
+  <aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full z-50 flex flex-col" aria-hidden="true">
+    <div class="p-4 border-b border-border flex justify-between">
+      <strong>Members</strong>
+      <button id="closeSidebar" aria-label="Close"><i data-lucide="x"></i></button>
     </div>
+    <div class="p-3">
+      <input id="memberSearch" placeholder="Search members…" aria-label="Search members">
+    </div>
+    <div id="memberList" class="flex-1 overflow-y-auto p-3 space-y-3" role="list"></div>
+  </aside>
 
-    <div class="flex items-center gap-2 ml-auto">
-      <button id="mediaBtn"><i data-lucide="paperclip"></i></button>
-      <button id="micBtn" aria-pressed="false"><i data-lucide="mic"></i></button>
-      <button id="send" class="hidden text-send"><i data-lucide="send"></i></button>
-    </div>
-  </div>
-</footer>  </main>  <aside id="sidebar" class="fixed right-0 top-0 w-72 h-full bg-panel border-l border-border translate-x-full z-50 flex flex-col">
-  <div class="p-4 border-b border-border flex justify-between">
-    <strong>Members</strong>
-    <button id="closeSidebar"><i data-lucide="x"></i></button>
-  </div>    <div class="p-3">
-    <input id="memberSearch" placeholder="Search members…">
-  </div>    <div id="memberList" class="flex-1 overflow-y-auto p-3 space-y-3"></div>
-</aside>  <input type="file" id="fileInput" class="hidden">
+  <input type="file" id="fileInput" class="hidden" aria-hidden="true">
+</div>
+
 <script>
 /* ================= INIT ================= */
-requestAnimationFrame(()=>lucide.createIcons());  /* ================= CORE */
+requestAnimationFrame(()=>{ try{ lucide.createIcons(); }catch(e){} });
+
+/* DOM refs */
 const chat = document.getElementById('chat');
 const input = document.getElementById('input');
 const send = document.getElementById('send');
@@ -324,15 +357,12 @@ const memberSearch = document.getElementById('memberSearch');
 
 const pinnedBanner = document.getElementById('pinnedBanner');
 const pinnedText = document.getElementById('pinnedText');
-const pinnedIcon = document.getElementById('pinnedIcon');
 const unpinBtn = document.getElementById('unpinBtn');
 
 /* ================= STATE ================= */
 const ADMIN = { name:'Profit Hunter 🌐', role:'ADMIN', avatar:'assets/admin.jpg', lastActive:Date.now() };
 const MOD   = { name:'Kitty Star ⭐', role:'MOD', avatar:'assets/mod.jpg', lastActive:Date.now()-60000 };
 
-let members = [ADMIN, MOD];
-// For sidebar display we keep a small sample list; counts and presence are simulated separately to avoid huge arrays.
 let sampleMembers = [ADMIN, MOD];
 for(let i=0;i<40;i++){
   sampleMembers.push({
@@ -343,47 +373,83 @@ for(let i=0;i<40;i++){
   });
 }
 
-// Persistent member count (realistic growth, stored)
 let persistedMemberCount = Number(localStorage.getItem('member_count') || 4872);
 localStorage.setItem('member_count', String(persistedMemberCount));
 let virtualOnlineCount = Number(localStorage.getItem('virtual_online') || 75);
-
-// pinned message state (id stored)
-// pinned text stored separately for robust restore
 let pinnedMessageId = localStorage.getItem('pinned_message_id') || null;
-
-// reply state
 let replyTo = null;
 
 /* ================= MEMBERS / PRESENCE ================= */
-function saveMemberCount(){
-  localStorage.setItem('member_count', String(persistedMemberCount));
-}
-function saveVirtualOnline(){
-  localStorage.setItem('virtual_online', String(virtualOnlineCount));
-}
-
-function tickMemberGrowth(){
-  // slow organic growth: sometimes increments 0-2 members every 20-90s
-  if(Math.random() < 0.35){
-    persistedMemberCount += Math.random() < 0.7 ? 1 : 2;
-    saveMemberCount();
-  }
-}
+function saveMemberCount(){ localStorage.setItem('member_count', String(persistedMemberCount)); }
+function saveVirtualOnline(){ localStorage.setItem('virtual_online', String(virtualOnlineCount)); }
+function tickMemberGrowth(){ if(Math.random() < 0.35){ persistedMemberCount += Math.random() < 0.7 ? 1 : 2; saveMemberCount(); } }
 setInterval(tickMemberGrowth, 30000 + Math.random()*60000);
 
-// online count drifts (60-120) with slight random changes; persisted across reloads
-function driftOnlineCount(){
-  const drift = Math.floor((Math.random()-0.5)*8);
-  virtualOnlineCount = Math.max(60, Math.min(120, virtualOnlineCount + drift));
-  saveVirtualOnline();
-  onlineCountEl.textContent = virtualOnlineCount;
-}
-setInterval(driftOnlineCount, 5000);
-onlineCountEl.textContent = virtualOnlineCount;
-memberCountEl.textContent = persistedMemberCount.toLocaleString();
+/* ================= REALISTIC ONLINE COUNT (time-aware, smoothed, bursts) ================= */
+let onlineSpike = { until: 0, extra: 0 };
 
-// render sidebar sample members (mixed states)
+function getDayActivityFactor() {
+  // Peak around 20:30 local time; trough in early morning.
+  const now = new Date();
+  const hour = now.getHours() + now.getMinutes() / 60;
+  const peakHour = 20.5;
+  const phase = (hour - peakHour) / 24 * 2 * Math.PI;
+  const normalized = 0.5 + 0.5 * Math.cos(phase);
+  return 0.6 * normalized + 0.4 * Math.pow(normalized, 2);
+}
+
+function computeOnlineTarget() {
+  const members = Math.max(50, persistedMemberCount || 4872);
+  const dayFactor = getDayActivityFactor(); // 0..1
+  const basePercent = 0.008 + dayFactor * 0.032; // 0.8% -> 4.0%
+  let target = Math.round(members * basePercent);
+
+  const relativeNoise = Math.round(Math.max(6, members * (0.002 + Math.random() * 0.004)));
+  target += (Math.random() > 0.5 ? 1 : -1) * Math.floor(Math.random() * relativeNoise);
+
+  const now = Date.now();
+  if(now < onlineSpike.until){
+    target += onlineSpike.extra;
+  } else if(Math.random() < 0.02){
+    const burst = Math.round(members * (0.005 + Math.random() * 0.015));
+    onlineSpike.extra = burst;
+    onlineSpike.until = now + (5000 + Math.floor(Math.random() * 15000)); // 5-20s spike
+    target += onlineSpike.extra;
+  }
+
+  target = Math.max(5, Math.min(members, target));
+  return target;
+}
+
+function driftOnlineCount(){
+  const target = computeOnlineTarget();
+  const diff = target - virtualOnlineCount;
+  const step = Math.max(1, Math.round(Math.abs(diff) * (0.12 + Math.random()*0.08))); // 12%-20% of gap
+  if(diff > 0){
+    virtualOnlineCount += Math.min(step, diff);
+  } else if(diff < 0){
+    virtualOnlineCount -= Math.min(step, -diff);
+  } else {
+    if(Math.random() < 0.12){
+      virtualOnlineCount += (Math.random() > 0.5 ? 1 : -1) * Math.max(1, Math.round(Math.random()*3));
+    }
+  }
+
+  if(Math.random() < 0.15){
+    virtualOnlineCount += (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random()*3));
+  }
+
+  const members = Math.max(50, persistedMemberCount || 4872);
+  virtualOnlineCount = Math.max(1, Math.min(members, virtualOnlineCount));
+  saveVirtualOnline();
+
+  onlineCountEl.textContent = virtualOnlineCount.toLocaleString();
+}
+
+setInterval(driftOnlineCount, 3000);
+driftOnlineCount();
+
+/* ================= render members / presence ================= */
 function presenceOf(m){
   const d = Date.now() - m.lastActive;
   if(d < 90000) return 'online';
@@ -397,9 +463,9 @@ function renderMembers(){
     const p = presenceOf(m);
     const color = p==='online'?'bg-green-500':p==='idle'?'bg-yellow-400':'bg-gray-500';
     memberList.innerHTML += `
-      <div class="flex gap-3 items-center">
+      <div class="flex gap-3 items-center" role="listitem">
         <div class="relative">
-          <img src="${m.avatar}" class="w-10 h-10 rounded-full">
+          <img src="${m.avatar}" class="w-10 h-10 rounded-full" alt="${m.name}">
           <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full ${color}"></span>
         </div>
         <div>
@@ -413,11 +479,9 @@ setInterval(renderMembers, 3000);
 memberSearch.oninput = renderMembers;
 renderMembers();
 
-/* ================= TYPING SIMULATION (1-3 users) ================= */
+/* ================= TYPING SIMULATION ================= */
 function typingSimulation(){
-  // Occasionally show 1-3 typers. Not spammy.
   if(Math.random() > 0.6) return (typingRow.classList.remove('active'), membersRow.classList.remove('hidden'));
-  // choose 1-3 distinct online sample members
   const onlinePool = sampleMembers.filter(m=>presenceOf(m) === 'online' && m.role!=='ADMIN');
   if(onlinePool.length === 0) return;
   const count = Math.min(3, 1 + Math.floor(Math.random()*3));
@@ -442,14 +506,12 @@ setInterval(typingSimulation, 3500);
 /* ================= MESSAGE CORE & SEEN RECEIPTS ================= */
 let lastSender=null, lastTime=0, lastDate='';
 let unread=0;
-const seenCache = {}; // msgId -> seen count
+const seenCache = {};
 
 function seenCount(msg){
   if(!seenCache[msg.id]){
-    // start at 75, then slowly tick up
     seenCache[msg.id] = 75 + Math.floor(Math.random()*6);
     const grow = setInterval(()=>{
-      // increment by 0-2 occasionally
       if(Math.random() < 0.6) seenCache[msg.id] += Math.floor(Math.random()*2);
       const cap = Math.max(virtualOnlineCount, 75);
       if(seenCache[msg.id] >= cap) { seenCache[msg.id] = cap; clearInterval(grow); }
@@ -466,7 +528,6 @@ function seenCount(msg){
 function postMessage(m){
   m.id = crypto.randomUUID();
   m.time = Date.now();
-  // small incoming delay for realism
   setTimeout(()=> renderMessage(m, true), m.out ? 10 : (200 + Math.random()*450));
 }
 
@@ -482,7 +543,6 @@ function scrollToMessageId(id){
   const el = document.querySelector(`[data-id="${id}"]`);
   if(el){
     el.scrollIntoView({behavior:'smooth', block:'center'});
-    // flash
     el.style.transition = 'box-shadow .4s ease';
     el.style.boxShadow = '0 0 0 3px rgba(107,219,167,0.12)';
     setTimeout(()=>{ el.style.boxShadow = ''; }, 800);
@@ -529,9 +589,8 @@ function renderMessage(m,isNew){
     </div>
   `;
   chat.appendChild(el);
-  lucide.createIcons();
+  try{ lucide.createIcons(); }catch(e){}
 
-  // add long-press/context menu handling for pin/reply on this message
   attachMessageInteractions(el, m);
 
   if(isNew && chat.scrollTop+chat.clientHeight < chat.scrollHeight-60){
@@ -543,15 +602,13 @@ function renderMessage(m,isNew){
   }
 }
 
-/* interactions: improved long-press (cancellable on move) and context menu */
+/* interactions: long-press (cancellable on move) & context-menu */
 function attachMessageInteractions(domEl, msg){
-  // right-click menu
   domEl.addEventListener('contextmenu', (ev) => {
     ev.preventDefault();
     showContextMenuAt(ev.clientX, ev.clientY, msg, domEl);
   });
 
-  // long-press (touch) with cancellation on move
   let touchTimer = null;
   let startX = 0, startY = 0;
   domEl.addEventListener('touchstart', (ev) => {
@@ -569,13 +626,12 @@ function attachMessageInteractions(domEl, msg){
     const t = ev.touches[0];
     const dx = Math.abs(t.clientX - startX);
     const dy = Math.abs(t.clientY - startY);
-    if(dx > 10 || dy > 10) { clearTimeout(touchTimer); touchTimer = null; } // cancel long-press during swipe
+    if(dx > 10 || dy > 10) { clearTimeout(touchTimer); touchTimer = null; }
   }, {passive:true});
 
   domEl.addEventListener('touchend', ()=>{ if(touchTimer) { clearTimeout(touchTimer); touchTimer = null; }});
 }
 
-/* context menu creation with viewport clamping */
 function showContextMenuAt(x,y,msg,anchorEl){
   document.querySelectorAll('.context-menu').forEach(m=>m.remove());
   const menu = document.createElement('div');
@@ -583,18 +639,13 @@ function showContextMenuAt(x,y,msg,anchorEl){
   menu.style.position = 'fixed';
   menu.style.left = `${x}px`;
   menu.style.top = `${y}px`;
-  menu.style.background = '#11121a';
-  menu.style.border = '1px solid #343a4a';
-  menu.style.padding = '6px';
-  menu.style.borderRadius = '8px';
   menu.style.zIndex = 9999;
   menu.innerHTML = `
-    <div class="menu-item" data-action="reply" style="padding:6px 10px;cursor:pointer">Reply</div>
-    <div class="menu-item" data-action="pin" style="padding:6px 10px;cursor:pointer">Pin</div>
+    <div class="menu-item" data-action="reply">Reply</div>
+    <div class="menu-item" data-action="pin">Pin</div>
   `;
   document.body.appendChild(menu);
 
-  // clamp so menu never goes off-screen
   const rect = menu.getBoundingClientRect();
   let left = x, top = y;
   if(left + rect.width > window.innerWidth - 8) left = window.innerWidth - rect.width - 8;
@@ -611,7 +662,6 @@ function showContextMenuAt(x,y,msg,anchorEl){
     pinMessage(msg.id);
   });
 
-  // close on outside tap
   setTimeout(()=> {
     document.addEventListener('click', function closer(e){
       if(!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', closer); }
@@ -619,24 +669,21 @@ function showContextMenuAt(x,y,msg,anchorEl){
   }, 10);
 }
 
-/* ================= PIN MESSAGE (store id + text for robust restore) ================= */
+/* ================= PIN ================= */
 function pinMessage(id){
   const target = document.querySelector(`[data-id="${id}"]`);
   let msgContent = 'Pinned message';
-  if(target && target.querySelector('.content')){
-    msgContent = target.querySelector('.content').textContent;
-  } else {
-    // try to find stored content from rendered messages
+  if(target && target.querySelector('.content')) msgContent = target.querySelector('.content').textContent;
+  else {
     const existingText = localStorage.getItem('pinned_message_text');
     if(existingText) msgContent = existingText;
   }
-  // persist both id and text
   pinnedMessageId = id;
   localStorage.setItem('pinned_message_id', id);
   localStorage.setItem('pinned_message_text', msgContent);
   pinnedText.textContent = msgContent.length > 120 ? msgContent.slice(0,117) + '...' : msgContent;
   pinnedBanner.classList.remove('hidden');
-  lucide.createIcons();
+  try{ lucide.createIcons(); }catch(e){}
 }
 function unpinMessage(){
   pinnedMessageId = null;
@@ -645,23 +692,19 @@ function unpinMessage(){
   pinnedText.textContent = '';
   pinnedBanner.classList.add('hidden');
 }
-pinnedBanner.addEventListener('click', ()=>{
-  if(pinnedMessageId) scrollToMessageId(pinnedMessageId);
-});
+pinnedBanner.addEventListener('click', ()=>{ if(pinnedMessageId) scrollToMessageId(pinnedMessageId); });
 unpinBtn.addEventListener('click', (e)=>{ e.stopPropagation(); unpinMessage(); });
 
-// restore pinned on load: show stored text immediately and try to resolve id later
 const storedPinnedText = localStorage.getItem('pinned_message_text');
 if(storedPinnedText){
   pinnedText.textContent = storedPinnedText;
   pinnedBanner.classList.remove('hidden');
 }
 if(pinnedMessageId){
-  // try to find pinned message element for up to 10s
   const tryScroll = setInterval(()=>{
     if(document.querySelector(`[data-id="${pinnedMessageId}"]`)){
       clearInterval(tryScroll);
-      lucide.createIcons();
+      try{ lucide.createIcons(); }catch(e){}
     }
   }, 500);
   setTimeout(()=> clearInterval(tryScroll), 10000);
@@ -672,30 +715,34 @@ function setReplyTo(msgId){
   const target = document.querySelector(`[data-id="${msgId}"]`);
   if(!target) return;
   replyTo = msgId;
-  // build preview: sender + snippet
   const senderEl = target.querySelector('.sender');
   const sender = senderEl ? senderEl.textContent : (target.querySelector('.content') ? target.querySelector('.content').textContent.slice(0,18) : 'Message');
   const snippet = target.querySelector('.content') ? target.querySelector('.content').textContent.slice(0,120) : '';
   replyPreviewContainer.innerHTML = `<div class="reply-preview" id="replyPreview"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:700">${sender}</div><div style="font-size:11px;opacity:.65;cursor:pointer" id="clearReply">✕</div></div><div class="snippet">${snippet}</div></div>`;
-  // jump to original on preview tap
   document.getElementById('replyPreview').addEventListener('click', ()=> scrollToMessageId(msgId));
   document.getElementById('clearReply').addEventListener('click', (e)=> { e.stopPropagation(); clearReply(); });
+  send.classList.remove('hidden');
+  mediaBtn.classList.add('hidden');
+  micBtn.classList.add('hidden');
   input.focus();
 }
 function clearReply(){
   replyTo = null;
   replyPreviewContainer.innerHTML = '';
+  const has = input.value.trim();
+  if(!has){
+    send.classList.add('hidden');
+    mediaBtn.classList.remove('hidden');
+    micBtn.classList.remove('hidden');
+  }
 }
 
-/* ================= SEND HANDLING (text + voice send while locked) ================= */
+/* ================= SEND HANDLING ================= */
 send.addEventListener('click', (ev) => {
-  // If we're recording and locked, this acts as "send voice now"
   if(recording && locked){
-    // stopMic triggers mediaRecorder.onstop which posts the audio message
-    stopMic(true); // pass true to indicate send (not cancel)
+    stopMic(true);
     return;
   }
-  // otherwise send text if present
   if(input.value.trim()){
     postMessage({ name:'You', role:'VERIFIED', text: input.value.trim(), out:true, replyTo, replyMeta: getReplyMeta(replyTo) });
     clearReply();
@@ -706,8 +753,6 @@ send.addEventListener('click', (ev) => {
     input.focus();
   }
 });
-
-/* helper: collect reply metadata for preview in message */
 function getReplyMeta(msgId){
   if(!msgId) return null;
   const target = document.querySelector(`[data-id="${msgId}"]`);
@@ -717,6 +762,28 @@ function getReplyMeta(msgId){
     snippet: target.querySelector('.content') ? target.querySelector('.content').textContent.slice(0,120) : ''
   };
 }
+
+/* Enter to send (desktop) */
+input.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    if(!send.classList.contains('hidden')) send.click();
+  }
+});
+
+/* send visibility */
+input.oninput = ()=>{
+  const has = input.value.trim();
+  if(has || replyTo){
+    send.classList.remove('hidden');
+    mediaBtn.classList.add('hidden');
+    micBtn.classList.add('hidden');
+  } else {
+    send.classList.add('hidden');
+    mediaBtn.classList.remove('hidden');
+    micBtn.classList.remove('hidden');
+  }
+};
 
 /* ================= EMOJI / MEDIA ================= */
 emojiBtn.onclick = ()=>window.EmojiPack && EmojiPack.openPicker(input);
@@ -737,7 +804,7 @@ fileInput.onchange = e=>{
   fileInput.value='';
 };
 
-/* ================= MIC + WAVEFORM (WhatsApp behaviour) ================= */
+/* ================= MIC + WAVEFORM ================= */
 const canvas = document.getElementById('waveform');
 const ctx = canvas.getContext('2d');
 
@@ -745,14 +812,19 @@ let audioCtx, analyser, micStream, mediaRecorder;
 let waveAnim = null, locked=false, recording=false, canceled=false;
 let chunks=[];
 
-// waveform sizing: fill inputShell minus padding & show centered
 function resizeWave(){
   const style = getComputedStyle(inputShell);
   const padLeft = parseInt(style.paddingLeft || 12);
   const padRight = parseInt(style.paddingRight || 12);
-  const total = inputShell.clientWidth - padLeft - padRight - 40; // reserve mic icon area
-  canvas.width = Math.max(180, total);
-  canvas.height = Math.max(28, inputShell.clientHeight - 6);
+  const total = inputShell.clientWidth - padLeft - padRight - 40;
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(180, total);
+  const h = Math.max(28, inputShell.clientHeight - 6);
+  canvas.style.width = `${w}px`;
+  canvas.style.height = `${h}px`;
+  canvas.width = Math.floor(w * dpr);
+  canvas.height = Math.floor(h * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
 }
 window.addEventListener('resize', resizeWave);
 resizeWave();
@@ -762,20 +834,38 @@ function drawWave(){
   const bufferLength = analyser.fftSize;
   const data = new Uint8Array(bufferLength);
   analyser.getByteTimeDomainData(data);
+  const w = canvas.width / (window.devicePixelRatio || 1);
+  const h = canvas.height / (window.devicePixelRatio || 1);
+  ctx.clearRect(0,0,w,h);
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.save();
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = '#3b82f6';
   ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.strokeStyle = '#3b82f6';
 
-  const slice = canvas.width / data.length;
-  let x=0;
+  const amplitude = h * 0.45;
+  const centerY = h / 2;
+  const slice = w / data.length;
+  let x = 0;
   for(let i=0;i<data.length;i++){
-    const v = data[i]/128;
-    const y = (v*canvas.height)/2;
-    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    x+=slice;
+    const v = (data[i] - 128) / 128;
+    const y = centerY + v * amplitude;
+    if(i===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    x += slice;
   }
+  ctx.strokeStyle = '#3b82f6';
+  ctx.globalAlpha = 0.95;
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+  ctx.moveTo(0, centerY);
+  ctx.lineTo(w, centerY);
   ctx.stroke();
 
   waveAnim = requestAnimationFrame(drawWave);
@@ -783,7 +873,6 @@ function drawWave(){
 
 async function startMic(){
   try{
-    // reset states
     canceled = false;
     chunks = [];
     recording = true;
@@ -793,7 +882,6 @@ async function startMic(){
     inputShell.classList.remove('locked');
     micLockIcon.querySelector('span').textContent = 'Recording locked';
 
-    // hide text input and show waveform
     input.style.display = 'none';
     canvas.style.display = 'block';
     cancelOverlay.classList.remove('visible');
@@ -807,13 +895,10 @@ async function startMic(){
     const source = audioCtx.createMediaStreamSource(micStream);
     source.connect(analyser);
 
-    // mime fallback: try webm, then ogg, else default
+    resizeWave();
+
     let mime = 'audio/webm';
-    try {
-      if(!MediaRecorder.isTypeSupported(mime)){
-        mime = MediaRecorder.isTypeSupported('audio/ogg') ? 'audio/ogg' : '';
-      }
-    } catch (e) { mime = ''; }
+    try { if(!MediaRecorder.isTypeSupported(mime)){ mime = MediaRecorder.isTypeSupported('audio/ogg') ? 'audio/ogg' : ''; } } catch (e) { mime = ''; }
     try {
       mediaRecorder = mime ? new MediaRecorder(micStream, {mimeType: mime}) : new MediaRecorder(micStream);
     } catch (err) {
@@ -832,7 +917,6 @@ async function startMic(){
     mediaRecorder.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
     mediaRecorder.onstop = ()=>{
       cancelAnimationFrame(waveAnim);
-      // restore UI
       canvas.style.display = 'none';
       input.style.display = 'block';
       inputShell.classList.remove('recording');
@@ -840,7 +924,6 @@ async function startMic(){
       micBtn.style.display = '';
       micBtn.setAttribute('aria-pressed','false');
 
-      // if canceled -> discard
       if(canceled){
         chunks = [];
         try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){}
@@ -863,10 +946,7 @@ async function startMic(){
       chunks=[];
       try{ micStream.getTracks().forEach(t => t.stop()); }catch(e){}
       if(audioCtx && audioCtx.state !== 'closed') audioCtx.close();
-      // finalize
-      recording = false;
-      locked = false;
-      canceled = false;
+      recording = false; locked = false; canceled = false;
       clearReply();
     };
 
@@ -887,7 +967,6 @@ async function startMic(){
 
 function stopMic(forceSend=false){
   if(!recording) return;
-  // if user requested forceSend, ensure we don't treat as canceled
   if(forceSend) canceled = false;
   if(canceled && mediaRecorder && mediaRecorder.state !== 'inactive'){
     mediaRecorder.stop();
@@ -911,7 +990,7 @@ function cancelRecording(){
   }
 }
 
-/* gesture handling */
+/* gestures */
 let startY = 0, startX = 0, lastTouchId = null;
 function startGesture(e){
   const touch = e.touches ? e.touches[0] : e;
@@ -923,7 +1002,6 @@ function startGesture(e){
   cancelOverlay.textContent = 'Swipe left to cancel';
 }
 
-// start / stop handling for touch and mouse
 micBtn.addEventListener('touchstart', (e)=>{ e.preventDefault(); startGesture(e); startMic(); }, {passive:false});
 micBtn.addEventListener('mousedown', (e)=>{ if(e.button!==0) return; startGesture(e); startMic(); });
 
@@ -933,17 +1011,15 @@ micBtn.addEventListener('touchmove', (e)=> {
   const dy = startY - t.clientY;
   const dx = t.clientX - startX;
 
-  // swipe up to lock
   if(dy > 60 && !locked && !canceled){
     locked = true;
     inputShell.classList.add('locked');
     micLockIcon.querySelector('span').textContent = 'Recording locked';
-    send.classList.remove('hidden'); // show send button when locked
-    micBtn.style.display = 'none'; // hide mic button when locked
+    send.classList.remove('hidden');
+    micBtn.style.display = 'none';
     cancelOverlay.classList.remove('visible');
   }
 
-  // swipe left to cancel
   if(dx < -40 && !canceled && !locked){
     canceled = true;
     cancelOverlay.classList.add('visible');
@@ -955,47 +1031,21 @@ micBtn.addEventListener('touchmove', (e)=> {
 }, {passive:true});
 
 micBtn.addEventListener('touchend', (e)=> {
-  // if cancel was active and user releases -> cancel recording
-  if(canceled){
-    cancelRecording();
-    cancelOverlay.classList.remove('visible');
-    return;
-  }
-  if(locked){
-    // remain recording; user must tap send to send, or tap mic to cancel in other UI flows
-    recording = true;
-    return;
-  }
-  // else normal release -> stop & auto-send
-  if(recording && !locked){
-    stopMic();
-  }
+  if(canceled){ cancelRecording(); cancelOverlay.classList.remove('visible'); return; }
+  if(locked){ recording = true; return; }
+  if(recording && !locked) stopMic();
 }, {passive:false});
 
 micBtn.addEventListener('mouseup', (e)=>{
-  if(canceled){
-    cancelRecording();
-    cancelOverlay.classList.remove('visible');
-    return;
-  }
-  if(locked){
-    return;
-  }
-  if(recording && !locked){
-    stopMic();
-  }
+  if(canceled){ cancelRecording(); cancelOverlay.classList.remove('visible'); return; }
+  if(locked) return;
+  if(recording && !locked) stopMic();
 });
 
-/* visibility change cleanup (avoid stuck media) */
-document.addEventListener('visibilitychange', ()=>{
-  if(document.hidden){
-    if(recording){
-      cancelRecording();
-    }
-  }
-});
+/* cleanup on visibility change */
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden && recording) cancelRecording(); });
 
-/* ================= SWIPE-TO-REPLY (touch on message) ================= */
+/* ================= SWIPE-TO-REPLY ================= */
 let swipeX = 0, swipingEl = null;
 chat.addEventListener('touchstart', e =>{
   const msg = e.target.closest('.msg');
@@ -1017,61 +1067,39 @@ chat.addEventListener('touchend', e =>{
   swipingEl.style.transform = '';
   swipingEl.style.opacity = '';
   if(finalDx > 70){
-    // trigger reply mode on that message
     const id = swipingEl.dataset.id;
     setReplyTo(id);
   }
   swipingEl = null;
 });
 
-/* ================= TAP/CLOSE CONTEXTS ================= */
-document.addEventListener('click', e=>{
-  document.querySelectorAll('.context-menu').forEach(m=>m.remove());
-});
-
-/* ================= SIDEBAR TOGGLE ================= */
+/* ================= UI helpers & boot ================= */
+emojiBtn.onclick = ()=>window.EmojiPack && EmojiPack.openPicker(input);
+mediaBtn.onclick = ()=>fileInput.click();
 membersBtn.onclick = ()=>sidebar.classList.toggle('translate-x-full');
 closeSidebar.onclick = ()=>sidebar.classList.add('translate-x-full');
 
-/* ================= JOIN / SAMPLE MESSAGES ================= */
 if(!localStorage.getItem('joined')){
   localStorage.setItem('joined','1');
-  setTimeout(()=>{
-    postMessage({ name:'You', role:'VERIFIED', text:'👋 You joined the group', out:false });
-  },400);
+  setTimeout(()=>{ postMessage({ name:'You', role:'VERIFIED', text:'👋 You joined the group', out:false }); },400);
 }
 
-/* bootstrap sample messages */
 setTimeout(()=>{
   postMessage({name:ADMIN.name,role:'ADMIN',text:'Welcome everyone 👋',out:false});
   postMessage({name:MOD.name,role:'MOD',text:'Please follow the rules.',out:false});
-  // sample content
   postMessage({name:'Member_1',role:'VERIFIED',text:'Hey, excited to be here!',out:false});
   postMessage({name:'Member_2',role:'VERIFIED',text:'Does anyone share indicators?',out:false});
 },600);
 
-/* unread button behaviour */
-unreadBtn.addEventListener('click', ()=>{
-  chat.scrollTop = chat.scrollHeight;
-  unread = 0;
-  unreadBtn.style.display = 'none';
-});
+unreadBtn.addEventListener('click', ()=>{ chat.scrollTop = chat.scrollHeight; unread = 0; unreadBtn.style.display = 'none'; });
 
-/* ================= BOOT SAFETY ================= */
 setTimeout(()=>{
   if(chat.children.length<=1){
-    postMessage({
-      name:ADMIN.name,
-      role:'ADMIN',
-      text:'Chat initialized successfully.',
-      out:false
-    });
+    postMessage({ name:ADMIN.name, role:'ADMIN', text:'Chat initialized successfully.', out:false });
   }
-  // re-init lucide icons after rendering
-  lucide.createIcons();
+  try{ lucide.createIcons(); }catch(e){}
 }, 900);
 
-/* ================= MESSAGE INTERACTIONS: tap reply-preview inside messages to jump ================= */
 chat.addEventListener('click', (e)=>{
   const rp = e.target.closest('.reply-preview');
   if(rp && rp.dataset && rp.dataset.replyTo){
@@ -1080,19 +1108,10 @@ chat.addEventListener('click', (e)=>{
   }
 });
 
-/* ================= SAFETY / HOUSEKEEPING ================= */
-window.addEventListener('beforeunload', ()=>{
-  try{ if(recording) cancelRecording(); }catch(e){}
-});
+window.addEventListener('beforeunload', ()=>{ try{ if(recording) cancelRecording(); }catch(e){} });
 
 /* expose small helper for debugging */
-window._abrox = {
-  postMessage,
-  renderMessage,
-  pinMessage,
-  unpinMessage,
-  setReplyTo: (id)=> setReplyTo(id)
-};
+window._abrox = { postMessage, renderMessage, pinMessage, unpinMessage, setReplyTo: (id)=> setReplyTo(id) };
 </script>
 </body>
 </html>
